@@ -94,7 +94,7 @@ docker compose up -d --build
 docker compose ps
 
 # Stream logs from the Spring Boot service
-docker compose logs -f api
+docker compose logs -f ticketpeak-api
 
 # Stop all services (keeps data volumes)
 docker compose down
@@ -166,13 +166,13 @@ Tests run inside Docker. `docker-compose.yml` is in `api/`, so `cd api` first. T
 cd api
 
 # Run all tests (unit + integration)
-docker compose run --rm api ./mvnw verify
+docker compose run --rm ticketpeak-api ./mvnw verify
 
 # Unit tests only (faster, no Testcontainers)
-docker compose run --rm api ./mvnw test
+docker compose run --rm ticketpeak-api ./mvnw test
 
 # Single test class
-docker compose run --rm api ./mvnw test -Dtest=TicketServiceTest
+docker compose run --rm ticketpeak-api ./mvnw test -Dtest=TicketServiceTest
 ```
 
 **Rules:**
@@ -291,7 +291,7 @@ chore(api): upgrade Spring Boot to 3.5.1
 cd web && npm run check && npm run lint && npm test
 
 # api/ — phải cd vào api/ trước vì docker-compose.yml nằm ở đó
-cd api && docker compose run --rm api ./mvnw verify
+cd api && docker compose run --rm ticketpeak-api ./mvnw verify
 ```
 
 PRs require passing GitHub Actions CI before merge.
@@ -314,3 +314,16 @@ PRs require passing GitHub Actions CI before merge.
 - **On PR to `dev`:** lint, type-check, unit tests, integration tests.
 - **On merge to `main`:** build Docker images, push to registry, deploy to staging.
 - Secrets are managed in GitHub repository settings — never committed to the repo.
+
+
+## Feature Plans
+
+Feature plans are stored in `plan/` as individual files.
+
+Naming: `NNN-feature-name.md` (e.g. `001-user-auth.md`)
+
+Each file contains:
+- Description
+- Acceptance criteria (defined before implementation)
+- Status: planned / in-progress / done
+- Outcome (filled after implementation)
