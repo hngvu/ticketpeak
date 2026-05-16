@@ -7,8 +7,14 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
+import java.util.TimeZone;
+
 @TestConfiguration(proxyBeanMethods = false)
-class TestcontainersConfiguration {
+public class TestcontainersConfiguration {
+
+    static {
+        TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+    }
 
     @Bean
     @ServiceConnection

@@ -18,7 +18,7 @@ public class Permission {
     @Column(nullable = false)
     String name;
     @Enumerated(EnumType.STRING)
-    Role role;
+    PermissionScope scope;
     String action;
     String resource;
 

@@ -140,7 +140,7 @@ npm run preview    # Preview production build
 - All API response objects are Java **records** (DTOs). Never expose `@Entity` classes directly in API responses.
 - Use **Spring Data JPA** for queries; write JPQL for complex cases — raw SQL lives only in Flyway migrations.
 - **Flyway migrations**: add new files named `V{n}__{description}.sql`. **Never modify existing migration files.**
-- REST endpoints: plural nouns, versioned under `/api/v1/...`.
+- REST endpoints: plural nouns, base path `/api/...` (do NOT use versioning like `/v1/`).
 - All controllers return `ResponseEntity<ApiResponse<T>>`.
 - Exceptions are handled globally via `@RestControllerAdvice` — do not catch-and-swallow exceptions in services.
 
@@ -316,14 +316,33 @@ PRs require passing GitHub Actions CI before merge.
 - Secrets are managed in GitHub repository settings — never committed to the repo.
 
 
-## Feature Plans
+## Feature Plans & Agent Workflow
 
-Feature plans are stored in `plan/` as individual files.
+Feature plans are stored in `plan/` as individual files. Creating a plan is a **mandatory** step before starting any implementation.
 
 Naming: `NNN-feature-name.md` (e.g. `001-user-auth.md`)
 
-Each file contains:
-- Description
-- Acceptance criteria (defined before implementation)
-- Status: planned / in-progress / done
-- Outcome (filled after implementation)
+Each plan file MUST contain:
+- Description: Detailed explanation of the feature or change.
+- Acceptance criteria: Clear conditions that must be met (defined before implementation).
+- Status: `planned` / `in-progress` / `done`
+- Outcome: Results, metrics, or notes (filled after implementation).
+
+Before implementing any feature or significant change, follow these steps in order:
+
+### Agent Workflow
+
+1. **Plan** — If no plan file exists, create `plan/NNN-feature-name.md` with description
+   and acceptance criteria. If it exists, read it first.
+
+2. **Pause for approval** — Present the plan to the user and wait for explicit approval
+   before writing any code.
+
+3. **Implement** — Set status to `in-progress`, then write code following all conventions
+   in this file.
+
+4. **Verify** — Run the relevant tests and confirm all acceptance criteria are met.
+
+5. **Complete** — Set status to `done`, fill in outcome, then commit following the
+   branch and commit format in this file.
+

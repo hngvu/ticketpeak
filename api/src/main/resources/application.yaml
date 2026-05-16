@@ -1,12 +1,13 @@
 spring:
   application:
     name: ${APP_NAME:ticketpeak-api}
-
+  config:
+    import: optional:file:.env
   # ── PostgreSQL ──────────────────────────────────────────────────────────────
   datasource:
-    url: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
-    username: ${POSTGRES_USER}
-    password: ${POSTGRES_PASSWORD}
+    url: jdbc:postgresql://postgres:5432/${POSTGRES_DB:ticketpeak_db}
+    username: ${POSTGRES_USER:pg}
+    password: ${POSTGRES_PASSWORD:ilovepostgres}
     driver-class-name: org.postgresql.Driver
     hikari:
       pool-name: ticketpeak-pool
@@ -26,6 +27,8 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
         default_batch_fetch_size: 50
+        jdbc:
+          time_zone: UTC
     open-in-view: false           # Tắt OSIV để tránh lazy-load ngoài transaction
 
   # ── Flyway ──────────────────────────────────────────────────────────────────
@@ -41,7 +44,7 @@ spring:
     redis:
       host: redis
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD}
+      password: ${REDIS_PASSWORD:iloveredis}
       timeout: 2000ms
       lettuce:
         pool:
@@ -89,10 +92,10 @@ management:
 
 # ── App custom properties ─────────────────────────────────────────────────────
 app:
-  version: ${APP_VERSION}
+  version: ${APP_VERSION:0.0.1}
 
   jwt:
-    secret: ${JWT_SECRET}
+    secret: ${JWT_SECRET:ticketpeak-development-secret-key-ticketpeak-development-secret-key}
     access-token-expiry: 900      # 15 phút (giây)
     refresh-token-expiry: 604800  # 7 ngày (giây)
 

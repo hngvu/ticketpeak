@@ -31,6 +31,7 @@ public class Account {
 
     @Column(unique = true, nullable = false)
     String email;
+    @Column(nullable = false)
     String password;
 
     // profile
@@ -40,8 +41,11 @@ public class Account {
     LocalDate birthDate;
     @Enumerated(EnumType.STRING)
     Gender gender;
+    Integer cityId;
+    String countryCode;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     Role role;
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
@@ -54,6 +58,6 @@ public class Account {
     @Column(nullable = false)
     Instant updatedAt;
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     AccountStatus status;
-
 }

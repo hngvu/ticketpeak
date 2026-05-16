@@ -3,6 +3,7 @@ package io.qzz.hoangvu.ticketpeak.api.iam.model;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -19,7 +20,7 @@ import java.util.UUID;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "account_permission", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"account_id", "permission_code"})
+        @UniqueConstraint(columnNames = {"account_id", "permission_code", "organization_id"})
 })
 public class AccountPermission {
 
@@ -30,22 +31,29 @@ public class AccountPermission {
     @Column(name = "account_id", nullable = false)
     UUID accountId; // Soft reference to Account module
 
+    @Column(name = "organization_id", nullable = false)
+    UUID organizationId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "permission_code", nullable = false)
     Permission permission;
 
     @Builder.Default
     @Column(nullable = false)
-    Boolean active = true;
+    Boolean isActive = true;
 
     @CreatedDate
     @Column(updatable = false, nullable = false)
     Instant grantedAt;
 
+    @CreatedBy
+    @Column(name = "granted_by", updatable = false)
+    UUID grantedBy;
+
     @LastModifiedDate
     @Column(nullable = false)
     Instant updatedAt;
 
-    @Column(name = "granted_by")
-    UUID grantedBy; // UUID of the admin who granted this permission
+    @Column(name = "revoked_by")
+    UUID revokedBy;
 }
