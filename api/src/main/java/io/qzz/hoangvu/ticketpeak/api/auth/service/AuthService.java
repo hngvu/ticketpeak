@@ -5,11 +5,9 @@ import io.qzz.hoangvu.ticketpeak.api.account.model.AccountStatus;
 import io.qzz.hoangvu.ticketpeak.api.account.repository.AccountRepository;
 import io.qzz.hoangvu.ticketpeak.api.auth.dto.LogoutRequest;
 import io.qzz.hoangvu.ticketpeak.api.auth.dto.LoginRequest;
-import io.qzz.hoangvu.ticketpeak.api.auth.dto.MeResponse;
 import io.qzz.hoangvu.ticketpeak.api.auth.dto.RefreshRequest;
 import io.qzz.hoangvu.ticketpeak.api.auth.dto.TokenPairResponse;
 import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
-import io.qzz.hoangvu.ticketpeak.api.iam.model.Role;
 import io.qzz.hoangvu.ticketpeak.api.security.JwtService;
 import io.qzz.hoangvu.ticketpeak.api.security.JwtTokenPair;
 import io.qzz.hoangvu.ticketpeak.api.security.RefreshTokenStore;
@@ -87,20 +85,6 @@ public class AuthService {
         }
 
         refreshTokenStore.delete(parsedToken.accountId());
-    }
-
-    public MeResponse me(UUID accountId) {
-        Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", "Account does not exist"));
-        return new MeResponse(
-                account.getId(),
-                account.getEmail(),
-                account.getRole(),
-                account.getFirstName(),
-                account.getLastName(),
-                account.getAvatarUrl(),
-                account.getStatus()
-        );
     }
 
     private Account loadActiveAccount(UUID accountId) {

@@ -124,10 +124,10 @@ class AuthControllerIT {
         JsonNode login = performLogin("protected@example.com", "Secret123!");
         String accessToken = login.path("data").path("accessToken").asText();
 
-        mockMvc.perform(get("/api/auth/me"))
+        mockMvc.perform(get("/api/accounts/me"))
                 .andExpect(status().isUnauthorized());
 
-        mockMvc.perform(get("/api/auth/me")
+        mockMvc.perform(get("/api/accounts/me")
                         .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.email").value("protected@example.com"))
