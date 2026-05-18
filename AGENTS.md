@@ -286,12 +286,34 @@ chore(api): upgrade Spring Boot to 3.5.1
 
 ### Before committing
 
+Chỉ chạy check cho layer bị thay đổi. Không cần chạy cả hai nếu chỉ sửa một bên.
+
+**Nếu sửa `web/`:**
+
 ```bash
-# web/ — chạy trực tiếp
+cd web && npm run check && npm run lint
+```
+
+**Nếu sửa `api/`:**
+
+```bash
+cd api
+docker compose up -d          # no-op nếu đã chạy
+docker compose run --rm ticketpeak-api ./mvnw compile -q
+```
+
+### Before opening PR
+
+Chạy full test suite cho các layer bị thay đổi:
+
+```bash
+# web/ — nếu có thay đổi
 cd web && npm run check && npm run lint && npm test
 
-# api/ — phải cd vào api/ trước vì docker-compose.yml nằm ở đó
-cd api && docker compose run --rm ticketpeak-api ./mvnw verify
+# api/ — nếu có thay đổi (chạy unit + integration tests)
+cd api
+docker compose up -d          # no-op nếu đã chạy
+docker compose run --rm ticketpeak-api ./mvnw verify
 ```
 
 PRs require passing GitHub Actions CI before merge.
