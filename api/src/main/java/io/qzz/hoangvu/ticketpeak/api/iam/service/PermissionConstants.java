@@ -7,4 +7,5 @@ public final class PermissionConstants {
     }
 
     public static final String ORG_MANAGE_PERMISSIONS = "ORG_MANAGE_PERMISSIONS";
+    public static final String ORG_MEMBER_INVITE = "ORG_MEMBER:INVITE";
 }

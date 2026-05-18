@@ -15,19 +15,20 @@ The API must respect the current invitation schema:
 each invitation belongs to exactly one organization, targets exactly one invitee account, carries a unique token, and has explicit status transitions.
 
 ## Acceptance Criteria
-- [ ] Organization owners, authorized orgainzers can create invitation records for specific invitee accounts.
-- [ ] Invitation creation generates a unique token and stores an expiration timestamp.
-- [ ] Invitation tokens can be validated without exposing unrelated organization data.
-- [ ] Invitees (Account with role 'ORGANIZER') can accept or reject valid invitations.
-- [ ] Accepting an invitation creates or activates the corresponding organization membership record.
-- [ ] Rejected or expired invitations cannot be accepted again.
-- [ ] Invitation status transitions are enforced and persisted correctly.
-- [ ] Public API responses use record DTOs wrapped in `ApiResponse<T>`.
-- [ ] Validation failures follow the standard `VALIDATION_FAILED` response shape.
-- [ ] Integration tests cover invitation creation, token validation, accept/reject flows, expiration behavior, and membership creation on acceptance.
+## Acceptance Criteria
+- [x] Organization owners, authorized organizers can create invitation records for specific invitee accounts.
+- [x] Invitation creation generates a unique token and stores an expiration timestamp.
+- [x] Invitation tokens can be validated without exposing unrelated organization data.
+- [x] Invitees (Account with role 'ORGANIZER') can accept or reject valid invitations.
+- [x] Accepting an invitation creates or activates the corresponding organization membership record.
+- [x] Rejected or expired invitations cannot be accepted again.
+- [x] Invitation status transitions are enforced and persisted correctly.
+- [x] Public API responses use record DTOs wrapped in `ApiResponse<T>`.
+- [x] Validation failures follow the standard `VALIDATION_FAILED` response shape.
+- [x] Integration tests cover invitation creation, token validation, accept/reject flows, expiration behavior, and membership creation on acceptance.
 
 ## Status
-`planned`
+`done`
 
 ## Outcome
-TBD
+Implemented the Organization Invitations API handling the token-based join flow. Organization owners, admins, and members with `ORG_MEMBER:INVITE` permission can invite other `ORGANIZER` accounts. Invitees can list their invitations via `/api/organizations/invitations/me` and accept/reject them. Accepting an invitation automatically activates the `OrganizationMember` record. Test suite `OrganizationInvitationControllerIT` verifies all flows and role constraints successfully.

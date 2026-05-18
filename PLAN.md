@@ -62,7 +62,7 @@ Phases are ordered by dependency — later phases build on the output of earlier
 ### `organization`
 - [x] Create an organization (name, logo, description, website)
 - [ ] Upload org logo to MinIO
-- [ ] Invite members to org via email, in-app
+- [x] Invite members to org via email, in-app
 - [ ] Remove / leave organization
 - [ ] Approval workflow: org events require admin approval before publishing
 - [ ] List organizations the current user belongs to
