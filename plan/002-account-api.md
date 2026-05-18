@@ -15,7 +15,7 @@ Server-managed or sensitive data such as `status`, `role`, `email`, `password`, 
 - [ ] Sensitive or server-managed fields such as `email`, `password`, `role`, `status`, `metadata`, `createdAt`, and `updatedAt` cannot be modified through the public account API.
 - [ ] All request and response payloads use record DTOs and `ApiResponse<T>` envelopes.
 - [ ] Request validation rejects invalid profile data with the standard `VALIDATION_FAILED` response shape.
-- [ ] Unauthorized requests are rejected, and authenticated users cannot access or modify another account’s profile.
+- [ ] Unauthorized requests are rejected, and authenticated users cannot access or modify another account's profile.
 - [ ] Integration tests cover successful account creation, profile read/update, validation failures, unauthorized access, duplicate-email rejection, and persistence of allowed field changes.
 
 ## Status

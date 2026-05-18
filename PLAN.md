@@ -40,8 +40,8 @@ Phases are ordered by dependency — later phases build on the output of earlier
 - [ ] Logout (revoke refresh token)
 
 ### `iam`
-- [ ] Define system roles: `ADMIN`, `ORGANIZER`, `BUYER`
-- [ ] Define permission set per role
+- [x] Define system roles: `ADMIN`, `ORGANIZER`, `BUYER`
+- [x] Define permission set per role
 - [ ] `@RequirePermission` annotation / interceptor for Spring controllers
 - [ ] Route guard in SvelteKit by role
 
