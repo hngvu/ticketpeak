@@ -60,7 +60,7 @@ Phases are ordered by dependency — later phases build on the output of earlier
 > No payments or orders yet — focus on content only.
 
 ### `organization`
-- [ ] Create an organization (name, logo, description, website)
+- [x] Create an organization (name, logo, description, website)
 - [ ] Upload org logo to MinIO
 - [ ] Invite members to org via email, in-app
 - [ ] Remove / leave organization

@@ -16,16 +16,16 @@ Member lifecycle is being planned separately because the codebase has a dedicate
 The API must protect server-managed fields such as `id`, `ownerAccountId`, `status`, `createdAt`, and `updatedAt`, and it must not allow arbitrary users to edit organizations they do not own or belong to.
 
 ## Acceptance Criteria
-- [ ] Only admins can create a new organization and assign organizer owner.
-- [ ] Organization creation validates required fields and generates a unique slug.
-- [ ] Organization owners/Authorized organizers can update editable organization fields such as `name`, `bio`, `logoUrl`, `websiteUrl`, `email`, `phone`, `cityId`, and `countryCode`.
-- [ ] Non-owners, authorized organizers cannot modify organization details.
-- [ ] Public API responses use record DTOs wrapped in `ApiResponse<T>`.
-- [ ] Validation failures follow the standard `VALIDATION_FAILED` response shape.
-- [ ] Integration tests cover organization creation, updates, permission checks, slug uniqueness, and validation failures.
+- [x] Only admins can create a new organization and assign organizer owner.
+- [x] Organization creation validates required fields and generates a unique slug.
+- [x] Organization owners/Authorized organizers can update editable organization fields such as `name`, `bio`, `logoUrl`, `websiteUrl`, `email`, `phone`, `cityId`, and `countryCode`.
+- [x] Non-owners, authorized organizers cannot modify organization details.
+- [x] Public API responses use record DTOs wrapped in `ApiResponse<T>`.
+- [x] Validation failures follow the standard `VALIDATION_FAILED` response shape.
+- [x] Integration tests cover organization creation, updates, permission checks, slug uniqueness, and validation failures.
 
 ## Status
-`planned`
+`done`
 
 ## Outcome
-TBD
+Implemented the REST API layer for organizations: `AdminOrganizationController` handles creation, fetching by UUID, paginated searching, and admin-overrides. `OrganizationController` handles public fetching by slug, and allows an owner to update their organization's details. Appropriate role and ownership checks are fully implemented, and integration tests verify all scenarios.
