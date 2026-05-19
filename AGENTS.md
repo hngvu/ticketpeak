@@ -160,19 +160,22 @@ npm run test:coverage # Coverage report
 
 ### `api/`
 
-Tests run inside Docker. `docker-compose.yml` is in `api/`, so `cd api` first. Testcontainers spins up its own isolated PostgreSQL/Redis instances — the running stack is not affected.
+Tests chạy bên trong container đang chạy — dùng `exec` để tránh tạo container mới từ image cũ. Testcontainers tự spin up PostgreSQL/Redis riêng biệt, không ảnh hưởng stack đang chạy.
 
 ```bash
 cd api
 
+# Đảm bảo container đang chạy với code mới nhất
+docker compose up -d --build
+
 # Run all tests (unit + integration)
-docker compose run --rm ticketpeak-api ./mvnw verify
+docker compose exec ticketpeak-api ./mvnw verify
 
 # Unit tests only (faster, no Testcontainers)
-docker compose run --rm ticketpeak-api ./mvnw test
+docker compose exec ticketpeak-api ./mvnw test
 
 # Single test class
-docker compose run --rm ticketpeak-api ./mvnw test -Dtest=TicketServiceTest
+docker compose exec ticketpeak-api ./mvnw test -Dtest=TicketServiceTest
 ```
 
 **Rules:**
@@ -298,8 +301,8 @@ cd web && npm run check && npm run lint
 
 ```bash
 cd api
-docker compose up -d          # no-op nếu đã chạy
-docker compose run --rm ticketpeak-api ./mvnw compile -q
+docker compose up -d --build  # build lại nếu có thay đổi code
+docker compose exec ticketpeak-api ./mvnw compile -q
 ```
 
 ### Before opening PR
@@ -312,8 +315,8 @@ cd web && npm run check && npm run lint && npm test
 
 # api/ — nếu có thay đổi (chạy unit + integration tests)
 cd api
-docker compose up -d          # no-op nếu đã chạy
-docker compose run --rm ticketpeak-api ./mvnw verify
+docker compose up -d --build  # build lại nếu có thay đổi code
+docker compose exec ticketpeak-api ./mvnw verify
 ```
 
 PRs require passing GitHub Actions CI before merge.

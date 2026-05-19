@@ -1,0 +1,13 @@
+package io.qzz.hoangvu.ticketpeak.api.venue.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+
+public record CreateGAAreaRequest(
+        @NotBlank String id,
+        @NotBlank String levelId,
+        @NotBlank String sectionId,
+        @NotBlank String priceLevelId,
+        @NotNull @Positive Integer capacity
+) {}

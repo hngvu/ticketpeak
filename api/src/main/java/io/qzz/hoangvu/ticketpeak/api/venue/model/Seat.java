@@ -31,4 +31,10 @@ public class Seat {
     SeatStatus status;
 
     Boolean accessibility;
+
+    @Column(name = "obstructed_view")
+    Boolean obstructedView;
+
+    Boolean aisle;
 }
+

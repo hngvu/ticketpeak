@@ -34,10 +34,10 @@ Phases are ordered by dependency — later phases build on the output of earlier
 > Every subsequent module depends on JWT + RBAC established here.
 
 ### `auth`
-- [ ] User registration (email + password)
-- [ ] Login — return access token + refresh token
-- [ ] Refresh access token
-- [ ] Logout (revoke refresh token)
+- [x] User registration (email + password)
+- [x] Login — return access token + refresh token
+- [x] Refresh access token
+- [x] Logout (revoke refresh token)
 
 ### `iam`
 - [x] Define system roles: `ADMIN`, `ORGANIZER`, `BUYER`
@@ -46,11 +46,11 @@ Phases are ordered by dependency — later phases build on the output of earlier
 - [ ] Route guard in SvelteKit by role
 
 ### `account`
-- [ ] View own profile
-- [ ] Update personal info (name, avatar, phone number)
-- [ ] Upload avatar to MinIO
-- [ ] Manage addresses (add, edit, delete, set default)
-- [ ] User preferences (language, timezone, notification settings)
+- [x] View own profile
+- [x] Update personal info (name, avatar, phone number)
+- [] Upload avatar to MinIO
+- [x] Manage addresses (add, edit, delete, set default)
+- [x] User preferences (language, timezone, notification settings)
 
 ---
 
