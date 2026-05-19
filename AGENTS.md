@@ -1,148 +1,139 @@
 # AGENTS.md
 
-> Instructions for AI coding agents working on the **Ticketpeak** codebase.
-> Read this file before making any changes.
+> Instructions for AI coding agents working on the Ticketpeak codebase.
 
 ---
 
 ## Project Overview
 
-**Ticketpeak** is a modern event ticketing platform for the Vietnamese market and beyond.
-It supports the full lifecycle: event creation, seat management, smart QR ticketing, and post-event payouts.
+Ticketpeak is an event ticketing platform for the Vietnamese market and beyond.
+It supports event creation, venue and seat management, smart QR ticketing, and post-event payouts.
 
-Three main personas:
-- **Organizers** — create events, manage seating, track revenue
-- **Buyers** — discover events, checkout securely, receive TOTP-based QR tickets
-- **Platform** — anti-scalping controls, i18n (Vietnamese + English)
+Main personas:
+- Organizers: create events, manage seating, track revenue
+- Buyers: discover events, checkout securely, receive TOTP-based QR tickets
+- Platform: anti-scalping controls, i18n for Vietnamese and English
 
 ---
 
 ## Feature Modules
 
-Each module lives under its own package in `api/` and its own route group in `web/`. New features belong in the most specific module listed below.
+Each module lives under its own package in `api/` and its own route group in `web/`.
+New features belong in the most specific module listed below.
 
-| Module           | Scope                                                                 |
-|------------------|-----------------------------------------------------------------------|
-| `auth`           | Login, logout, token refresh, OAuth (social login), MFA               |
-| `iam`            | Roles, permissions, policies (RBAC/ABAC)                              |
-| `account`        | User profile, KYC verification, address book, preferences             |
-| `organization`   | Org profile, member management, approval workflows                    |
-| `event`          | Create, update, publish, cancel, postpone events                      |
-| `venue`          | Venue management, manifest, seating chart                             |
-| `offer`          | Ticket types, pricing tiers, presale & sale windows, promo codes      |
-| `order`          | Cart, seat reservation, checkout, full order lifecycle                |
-| `ticket`         | Ticket generation (TOTP QR), check-in, transfer, status tracking      |
-| `resale`         | Secondary market listings, resale orders, commission calculation      |
-| `payment`        | Payment gateway integration, organizer payouts, refunds               |
-| `search`         | Full-text search, filtering, faceted search, result ranking           |
-| `discovery`      | Trending events, similar events, personalised feed                    |
-| `notification`   | Email, push notifications, in-app alerts                              |
-| `promotion`      | Coupons, discounts, campaigns, vouchers                               |
-| `report`         | Revenue analytics, attendance reports, sales dashboards               |
-| `admin`          | Content moderation, system management, audit logs                     |
+| Module | Scope |
+| --- | --- |
+| `auth` | Login, logout, token refresh, social login, MFA |
+| `iam` | Roles, permissions, policies (RBAC/ABAC) |
+| `account` | User profile, KYC verification, address book, preferences |
+| `organization` | Org profile, member management, approval workflows |
+| `event` | Create, update, publish, cancel, postpone events |
+| `venue` | Venue management, manifest, seating chart |
+| `offer` | Ticket types, pricing tiers, presale and sale windows, promo codes |
+| `order` | Cart, seat reservation, checkout, full order lifecycle |
+| `ticket` | Ticket generation (TOTP QR), check-in, transfer, status tracking |
+| `resale` | Secondary market listings, resale orders, commission calculation |
+| `payment` | Payment gateway integration, organizer payouts, refunds |
+| `search` | Full-text search, filtering, faceted search, result ranking |
+| `discovery` | Trending events, similar events, personalized feed |
+| `notification` | Email, push notifications, in-app alerts |
+| `promotion` | Coupons, discounts, campaigns, vouchers |
+| `report` | Revenue analytics, attendance reports, sales dashboards |
+| `admin` | Content moderation, system management, audit logs |
 
 ---
 
 ## Tech Stack
 
-| Layer       | Technology                                                          |
-|-------------|---------------------------------------------------------------------|
-| `web/`      | SvelteKit, shadcn-svelte, Tailwind CSS v4, TanStack Query           |
-| `api/`      | Java 21, Spring Boot 3.5, Spring Security, Spring Data JPA, Flyway |
-| Database       | PostgreSQL, Redis                                                   |
-| Object Storage | MinIO                                                               |
-| Infrastructure | Docker, GitHub Actions                                              |
+| Layer | Technology |
+| --- | --- |
+| `web/` | SvelteKit, shadcn-svelte, Tailwind CSS v4, TanStack Query |
+| `api/` | Java 21, Spring Boot 3.5, Spring Security, Spring Data JPA, Flyway |
+| Database | PostgreSQL, Redis |
+| Object Storage | MinIO |
+| Infrastructure | Docker, GitHub Actions |
 
 ---
 
 ## Repository Layout
 
-```
+```text
 ticketpeak/
 ├── api/                    # Spring Boot app + Docker Compose
-│   ├── docker-compose.yml  # ← tất cả lệnh docker compose chạy từ đây
+│   ├── docker-compose.yml  # all docker compose commands run from here
 │   ├── .env
 │   └── src/
 └── web/                    # SvelteKit app
     └── src/
 ```
 
-> `docker-compose.yml` nằm trong `api/`, **không phải** root. Mọi lệnh `docker compose` đều phải chạy từ thư mục `api/`. Chạy từ sai thư mục sẽ báo lỗi `no configuration file provided`.
+`docker-compose.yml` lives in `api/`, not the repo root.
+Always run `docker compose` commands from `api/`.
 
 ---
 
-## Setup & Running Locally
+## Setup and Running Locally
 
 ### Prerequisites
 
-- Docker & Docker Compose
-- Node.js ≥ 20 + npm
+- Docker and Docker Compose
+- Node.js 20+ and npm
 
-The entire backend (`api/`), database (PostgreSQL), cache (Redis), and object storage (MinIO) run inside Docker. There is **no way to run `api/` outside of Docker** — do not attempt to run it standalone with Maven.
+The backend, PostgreSQL, Redis, and MinIO run inside Docker.
+Do not try to run `api/` standalone with Maven outside Docker.
 
 ### Start the full stack
 
-`docker-compose.yml` is inside `api/` — always `cd api` first.
-
 ```bash
 cd api
-
-# Build images and start all services: api, PostgreSQL, Redis, MinIO
 docker compose up -d --build
-
-# Check all services are healthy
 docker compose ps
-
-# Stream logs from the Spring Boot service
 docker compose logs -f ticketpeak-api
-
-# Stop all services (keeps data volumes)
 docker compose down
-
-# Stop and wipe all data (PostgreSQL, Redis, MinIO) — use when resetting state
 docker compose down -v
 ```
 
-Flyway migrations run **automatically** when the `api` container starts — never edit existing migration files.
+Flyway migrations run automatically when the `api` container starts.
+Never edit existing migration files.
 
 ### `web/` (SvelteKit)
 
-`web/` has no Docker involvement — run it directly with npm.
+`web/` has no Docker involvement. Run it directly with npm.
 
 ```bash
 cd web
-
-npm install        # Install dependencies
-npm run dev        # Start dev server (proxies API calls to http://localhost:8080)
-npm run check      # Type-check with svelte-check
-npm run lint       # ESLint + Prettier check
-npm run build      # Production build
-npm run preview    # Preview production build
+npm install
+npm run dev
+npm run check
+npm run lint
+npm run build
+npm run preview
 ```
 
+---
 
 ## Code Style
 
 ### `web/` (SvelteKit / TypeScript)
 
-- **TypeScript strict mode** — always declare types explicitly, no `any`.
-- Single quotes, no semicolons.
-- Tailwind CSS v4 utility classes only — do **not** write custom CSS unless there is no alternative.
-- Use **shadcn-svelte** components before building anything from scratch.
-- All data fetching via **TanStack Query** (`createQuery`, `createMutation`) — no raw `fetch` calls inside components.
-- Svelte stores for global state; keep component state local when possible.
-- File naming: `kebab-case` for routes and files, `PascalCase` for Svelte components.
+- Use TypeScript strict mode and avoid `any`.
+- Use single quotes and no semicolons.
+- Use Tailwind CSS v4 utilities only; avoid custom CSS unless necessary.
+- Prefer shadcn-svelte components before building from scratch.
+- Use TanStack Query for data fetching; no raw `fetch` calls inside components.
+- Use Svelte stores for global state; keep local state local.
+- Use `kebab-case` for routes and files, `PascalCase` for Svelte components.
 
 ### `api/` (Java / Spring Boot)
 
-- Java 21 — prefer records, sealed classes, pattern matching, and text blocks where appropriate.
-- Follow the layered structure: `Controller → Service → Repository`. No business logic in controllers or repositories.
-- All API response objects are Java **records** (DTOs). Never expose `@Entity` classes directly in API responses.
-- Use **Spring Data JPA** for queries; write JPQL for complex cases — raw SQL lives only in Flyway migrations.
-- **Flyway migrations**: add new files named `V{n}__{description}.sql`. **Never modify existing migration files.**
-- REST endpoints: plural nouns, base path `/api/...` (do NOT use versioning like `/v1/`).
-- All controllers return `ResponseEntity<ApiResponse<T>>`.
-- Exceptions are handled globally via `@RestControllerAdvice` — do not catch-and-swallow exceptions in services.
+- Java 21: prefer records, sealed classes, pattern matching, and text blocks where appropriate.
+- Follow `Controller -> Service -> Repository`. No business logic in controllers or repositories.
+- All API response objects are Java records.
+- Use Spring Data JPA for queries; raw SQL belongs only in Flyway migrations.
+- Add migrations as `V{n}__{description}.sql`. Never modify existing migration files.
+- REST endpoints use plural nouns and base path `/api/...` with no versioning.
+- Controllers return `ResponseEntity<ApiResponse<T>>`.
+- Handle exceptions globally in `@RestControllerAdvice`; do not catch and swallow them in services.
 
 ---
 
@@ -152,37 +143,35 @@ npm run preview    # Preview production build
 
 ```bash
 cd web
-
-npm test              # Run all Vitest unit/component tests
-npm run test:watch    # Watch mode
-npm run test:coverage # Coverage report
+npm test
+npm run test:watch
+npm run test:coverage
 ```
 
 ### `api/`
 
-Tests chạy bên trong container đang chạy — dùng `exec` để tránh tạo container mới từ image cũ. Testcontainers tự spin up PostgreSQL/Redis riêng biệt, không ảnh hưởng stack đang chạy.
+Prefer `docker compose run --rm` for API tests. It starts a fresh container for each run, so tests do not depend on a previously running service container.
+Testcontainers still spins up isolated PostgreSQL and Redis instances, so the local stack is not affected.
 
 ```bash
 cd api
 
-# Đảm bảo container đang chạy với code mới nhất
-docker compose up -d --build
+# Build and run all tests
+docker compose run --rm ticketpeak-api ./mvnw verify
 
-# Run all tests (unit + integration)
-docker compose exec ticketpeak-api ./mvnw verify
-
-# Unit tests only (faster, no Testcontainers)
-docker compose exec ticketpeak-api ./mvnw test
+# Unit tests only
+docker compose run --rm ticketpeak-api ./mvnw test
 
 # Single test class
-docker compose exec ticketpeak-api ./mvnw test -Dtest=TicketServiceTest
+docker compose run --rm ticketpeak-api ./mvnw test -Dtest=TicketServiceTest
 ```
 
-**Rules:**
+Rules:
 - Every feature and bug fix must include tests.
-- Integration tests in `api/` use **Testcontainers** — do not mock PostgreSQL or Redis.
+- Integration tests in `api/` use Testcontainers. Do not mock PostgreSQL or Redis.
 - All tests must pass before committing.
 
+---
 
 ## API Conventions
 
@@ -194,13 +183,13 @@ docker compose exec ticketpeak-api ./mvnw test -Dtest=TicketServiceTest
 ```json
 {
   "success": true,
-  "data": { },
+  "data": {},
   "message": "OK",
   "timestamp": "2025-05-14T10:00:00Z"
 }
 ```
 
-### Error response (business / application error)
+### Error response
 
 ```json
 {
@@ -211,9 +200,10 @@ docker compose exec ticketpeak-api ./mvnw test -Dtest=TicketServiceTest
 }
 ```
 
-### Validation error response (HTTP 400)
+### Validation error response
 
-Returned when request body fails `@Valid` / `@Validated` constraints. The `errors` field is a map of `field → list of messages`.
+Returned when request body fails `@Valid` or `@Validated`.
+The `errors` field is a map of `field -> list of messages`.
 
 ```json
 {
@@ -230,56 +220,57 @@ Returned when request body fails `@Valid` / `@Validated` constraints. The `error
 ```
 
 Rules:
-- `errors` is only present on `VALIDATION_FAILED` responses — omit it on all other error types.
+- `errors` is only present on `VALIDATION_FAILED` responses.
 - Field names in `errors` must match the exact JSON property names in the request body, not the Java field names.
-- Global `@RestControllerAdvice` handles `MethodArgumentNotValidException` and produces this shape — do not handle it locally in controllers.
+- Global `@RestControllerAdvice` handles `MethodArgumentNotValidException` and produces this shape.
 
 ---
 
-## Git & PR Conventions
+## Git and PR Conventions
 
 ### Branch flow
 
-```
-feat/<scope>  ──►  dev  ──►  main
-fix/<scope>   ──►  dev  ──►  main
+```text
+feat/<scope> -> dev -> main
+fix/<scope>  -> dev -> main
 ```
 
-- All work branches cut from `dev`.
-- PRs merge into `dev` first; `dev` → `main` is a release merge.
-- Do **not** push directly to `dev` or `main`.
+- All work branches are cut from `dev`.
+- PRs merge into `dev` first; `dev` to `main` is a release merge.
+- Do not push directly to `dev` or `main`.
 
 ### Branch naming
 
-```
+```text
 feat/<module>/<short-description>
 fix/<module>/<short-description>
 chore/<short-description>
 docs/<short-description>
 ```
 
-Examples: `feat/ticket/totp-rotation`, `fix/order/seat-expiry`
+Examples:
+`feat/ticket/totp-rotation`, `fix/order/seat-expiry`
 
 ### Commit format
 
-```
+```text
 type(layer/module): short description
 ```
 
-`layer` is either `api` or `web` — always include it so the scope of a commit is immediately clear.
+`layer` is either `api` or `web`.
 
 | Type | Use for |
-|------|---------|
+| --- | --- |
 | `feat` | New functionality |
 | `fix` | Bug fix |
 | `chore` | Tooling, deps, config |
 | `docs` | Documentation only |
-| `refactor` | Restructure without behaviour change |
+| `refactor` | Restructure without behavior change |
 | `test` | Adding or fixing tests |
 | `style` | Formatting, whitespace |
 
 Examples:
-```
+```text
 feat(api/offer): add presale window scheduling
 feat(web/order): implement seat picker UI
 fix(api/order): fix seat double-booking race condition
@@ -289,85 +280,80 @@ chore(api): upgrade Spring Boot to 3.5.1
 
 ### Before committing
 
-Chỉ chạy check cho layer bị thay đổi. Không cần chạy cả hai nếu chỉ sửa một bên.
+Run checks only for the layer you changed.
 
-**Nếu sửa `web/`:**
+**If you changed `web/`:**
 
 ```bash
 cd web && npm run check && npm run lint
 ```
 
-**Nếu sửa `api/`:**
+**If you changed `api/`:**
 
 ```bash
 cd api
-docker compose up -d --build  # build lại nếu có thay đổi code
-docker compose exec ticketpeak-api ./mvnw compile -q
+docker compose run --rm ticketpeak-api ./mvnw compile -q
 ```
 
-### Before opening PR
+### Before opening a PR
 
-Chạy full test suite cho các layer bị thay đổi:
+Run the full test suite for the changed layer.
+
+**If you changed `web/`:**
 
 ```bash
-# web/ — nếu có thay đổi
 cd web && npm run check && npm run lint && npm test
+```
 
-# api/ — nếu có thay đổi (chạy unit + integration tests)
+**If you changed `api/`:**
+
+```bash
 cd api
-docker compose up -d --build  # build lại nếu có thay đổi code
-docker compose exec ticketpeak-api ./mvnw verify
+docker compose run --rm ticketpeak-api ./mvnw verify
 ```
 
 PRs require passing GitHub Actions CI before merge.
 
+---
 
 ## Common Gotchas
 
-- **Flyway:** never edit `V{n}__*.sql` files that already exist — always create a new migration.
-- **MinIO:** bucket names must be lowercase with no underscores. Check `StorageConfig` for bucket name constants.
-- **Redis seat locks:** reservations expire automatically via TTL. Do not manually delete Redis keys related to seat locking.
-- **Tailwind v4:** utility class names differ from v3 in places — check the [v4 docs](https://tailwindcss.com/docs) before adding unfamiliar classes.
-- **TanStack Query:** always invalidate relevant queries after mutations — do not rely on stale cache in booking-critical flows.
-- **`docker compose` phải chạy từ `api/`:** `docker-compose.yml` nằm trong `api/`, không phải root. Luôn `cd api` trước khi chạy bất kỳ lệnh `docker compose` nào — chạy từ sai thư mục sẽ không tìm thấy file config.
-- **Docker volumes:** để reset toàn bộ data (DB, Redis, MinIO) khi có migration conflict: `cd api && docker compose down -v`.
-- **`api/` là Docker-only:** không chạy Spring Boot bằng `./mvnw spring-boot:run` ngoài Docker — biến môi trường và service discovery được cấu hình cho Compose network, sẽ không hoạt động ngoài container.
+- Never edit existing `V{n}__*.sql` Flyway files. Always create a new migration.
+- MinIO bucket names must be lowercase with no underscores.
+- Redis seat locks expire automatically via TTL. Do not manually delete those keys.
+- Tailwind v4 utility names differ from v3 in places.
+- Always invalidate relevant queries after mutations in TanStack Query flows.
+- Always run `docker compose` from `api/`, not from the repo root.
+- Use `cd api && docker compose down -v` to reset DB, Redis, and MinIO data.
+- Do not run Spring Boot with `./mvnw spring-boot:run` outside Docker.
 
+---
 
-## CI/CD (GitHub Actions)
+## CI/CD
 
-- **On PR to `dev`:** lint, type-check, unit tests, integration tests.
-- **On merge to `main`:** build Docker images, push to registry, deploy to staging.
-- Secrets are managed in GitHub repository settings — never committed to the repo.
+- On PR to `dev`: lint, type-check, unit tests, integration tests.
+- On merge to `main`: build Docker images, push to registry, deploy to staging.
+- Secrets are managed in GitHub repository settings and must never be committed.
 
+---
 
-## Feature Plans & Agent Workflow
+## Feature Plans and Agent Workflow
 
-Feature plans are stored in `plan/` as individual files. Creating a plan is a **mandatory** step before starting any implementation.
+Feature plans live in `plan/` as individual files.
+Creating a plan is mandatory before starting implementation.
 
-Naming: `NNN-feature-name.md` (e.g. `001-user-auth.md`)
+Naming: `NNN-feature-name.md`
 
-Each plan file MUST contain:
-- Description: Detailed explanation of the feature or change.
-- Acceptance criteria: Clear conditions that must be met (defined before implementation).
-- Status: `planned` / `in-progress` / `done`
-- Outcome: Results, metrics, or notes (filled after implementation).
+Each plan file must contain:
+- Description
+- Acceptance criteria
+- Status: `planned`, `in-progress`, or `done`
+- Outcome
 
-Before implementing any feature or significant change, follow these steps in order:
+Before implementing any feature or significant change:
 
-### Agent Workflow
-
-1. **Plan** — If no plan file exists, create `plan/NNN-feature-name.md` with description
-   and acceptance criteria. If it exists, read it first.
-
-2. **Pause for approval** — Present the plan to the user and wait for explicit approval
-   before writing any code.
-
-3. **Implement** — Set status to `in-progress`, then write code following all conventions
-   in this file.
-
-4. **Verify** — Run the relevant tests and confirm all acceptance criteria are met.
-
-5. **Complete** — Set status to `done`, fill in outcome, then commit following the
-   branch and commit format in this file.
-
+1. Plan: if no plan file exists, create one. If it exists, read it first.
+2. Pause for approval: present the plan to the user and wait for explicit approval before writing code.
+3. Implement: set status to `in-progress`, then write code following this file.
+4. Verify: run the relevant tests and confirm acceptance criteria are met.
+5. Complete: set status to `done`, fill in outcome, then commit using the commit format above.
