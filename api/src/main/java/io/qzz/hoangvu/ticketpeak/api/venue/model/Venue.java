@@ -3,6 +3,8 @@ package io.qzz.hoangvu.ticketpeak.api.venue.model;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.Generated;
+import org.hibernate.annotations.GenerationTime;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
@@ -12,6 +14,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Getter @Setter @Builder
@@ -22,8 +25,9 @@ import java.util.List;
 public class Venue {
 
     @Id
-    @Column(nullable = false, unique = true)
-    String id; // Custom String ID (e.g., Ticketmaster ID "000001")
+    @Generated(GenerationTime.INSERT)
+    @Column(columnDefinition = "UUID DEFAULT uuidv7()", insertable = false, updatable = false, nullable = false)
+    UUID id;
 
     @Column(nullable = false)
     String name;

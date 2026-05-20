@@ -4,10 +4,11 @@ import io.qzz.hoangvu.ticketpeak.api.venue.model.Manifest;
 import io.qzz.hoangvu.ticketpeak.api.venue.model.ManifestStatus;
 
 import java.time.Instant;
+import java.util.UUID;
 
 public record ManifestResponse(
         String id,
-        String venueId,
+        UUID venueId,
         String description,
         Integer totalCapacity,
         ManifestStatus status,

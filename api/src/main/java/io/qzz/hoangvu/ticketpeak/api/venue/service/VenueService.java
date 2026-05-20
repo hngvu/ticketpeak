@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class VenueService {
@@ -45,11 +46,8 @@ public class VenueService {
 
     @Transactional
     public VenueResponse createVenue(CreateVenueRequest req) {
-        if (venueRepository.existsById(req.id())) {
-            throw new ApiException(HttpStatus.CONFLICT, "VENUE_ID_EXISTS", "Venue with id '" + req.id() + "' already exists");
-        }
         Venue venue = Venue.builder()
-                .id(req.id()).name(req.name()).address(req.address()).city(req.city()).country(req.country())
+                .name(req.name()).address(req.address()).city(req.city()).country(req.country())
                 .latitude(req.latitude()).longitude(req.longitude()).phone(req.phone()).email(req.email())
                 .website(req.website()).description(req.description()).thumbnailUrl(req.thumbnailUrl())
                 .images(req.images()).status(VenueStatus.ACTIVE)
@@ -63,12 +61,12 @@ public class VenueService {
     }
 
     @Transactional(readOnly = true)
-    public VenueResponse getVenue(String id) {
+    public VenueResponse getVenue(UUID id) {
         return VenueResponse.from(requireVenue(id));
     }
 
     @Transactional
-    public VenueResponse updateVenue(String id, UpdateVenueRequest req) {
+    public VenueResponse updateVenue(UUID id, UpdateVenueRequest req) {
         Venue venue = requireVenue(id);
         if (req.name() != null) venue.setName(req.name());
         if (req.address() != null) venue.setAddress(req.address());
@@ -86,14 +84,14 @@ public class VenueService {
     }
 
     @Transactional
-    public VenueResponse activateVenue(String id) {
+    public VenueResponse activateVenue(UUID id) {
         Venue venue = requireVenue(id);
         venue.setStatus(VenueStatus.ACTIVE);
         return VenueResponse.from(venueRepository.save(venue));
     }
 
     @Transactional
-    public VenueResponse deactivateVenue(String id) {
+    public VenueResponse deactivateVenue(UUID id) {
         Venue venue = requireVenue(id);
         venue.setStatus(VenueStatus.INACTIVE);
         return VenueResponse.from(venueRepository.save(venue));
@@ -102,7 +100,7 @@ public class VenueService {
     // ======================== MANIFEST ========================
 
     @Transactional
-    public ManifestResponse createManifest(String venueId, CreateManifestRequest req) {
+    public ManifestResponse createManifest(UUID venueId, CreateManifestRequest req) {
         Venue venue = requireVenue(venueId);
         if (manifestRepository.existsById(req.id())) {
             throw new ApiException(HttpStatus.CONFLICT, "MANIFEST_ID_EXISTS", "Manifest with id '" + req.id() + "' already exists");
@@ -115,7 +113,7 @@ public class VenueService {
     }
 
     @Transactional(readOnly = true)
-    public List<ManifestResponse> listManifests(String venueId) {
+    public List<ManifestResponse> listManifests(UUID venueId) {
         requireVenue(venueId);
         return manifestRepository.findByVenueId(venueId).stream().map(ManifestResponse::from).toList();
     }
@@ -316,7 +314,7 @@ public class VenueService {
 
     // ======================== HELPERS ========================
 
-    private Venue requireVenue(String id) {
+    private Venue requireVenue(UUID id) {
         return venueRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "VENUE_NOT_FOUND", "Venue not found: " + id));
     }
