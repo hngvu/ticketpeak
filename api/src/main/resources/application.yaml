@@ -5,7 +5,7 @@ spring:
     import: optional:file:.env
   # ── PostgreSQL ──────────────────────────────────────────────────────────────
   datasource:
-    url: jdbc:postgresql://postgres:5432/${POSTGRES_DB:ticketpeak_db}
+    url: ${DB_URL:jdbc:postgresql://localhost:5434/${POSTGRES_DB:ticketpeak_db}}
     username: ${POSTGRES_USER:pg}
     password: ${POSTGRES_PASSWORD:ilovepostgres}
     driver-class-name: org.postgresql.Driver
@@ -42,8 +42,8 @@ spring:
   # ── Redis ───────────────────────────────────────────────────────────────────
   data:
     redis:
-      host: redis
-      port: ${REDIS_PORT:6379}
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6377}
       password: ${REDIS_PASSWORD:iloveredis}
       timeout: 2000ms
       lettuce:

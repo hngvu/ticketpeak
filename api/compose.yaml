@@ -11,6 +11,8 @@ services:
 
     volumes:
       - postgres_data:/var/lib/postgresql
+    ports:
+      - "${POSTGRES_PORT:-5434}:5432"
     networks:
       - ticketpeak-network
     healthcheck:
@@ -26,6 +28,8 @@ services:
 
     volumes:
       - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6377}:6379"
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     healthcheck:
