@@ -231,13 +231,13 @@ Rules:
 ### Branch flow
 
 ```text
-feat/<scope> -> dev -> main
-fix/<scope>  -> dev -> main
+feat/<scope> -> main
+fix/<scope>  -> main
 ```
 
-- All work branches are cut from `dev`.
-- PRs merge into `dev` first; `dev` to `main` is a release merge.
-- Do not push directly to `dev` or `main`.
+- All work branches are cut from `main`.
+- PRs merge into `main` directly.
+- Do not push directly to `main`.
 
 ### Branch naming
 
@@ -331,7 +331,7 @@ PRs require passing GitHub Actions CI before merge.
 
 ## CI/CD
 
-- On PR to `dev`: lint, type-check, unit tests, integration tests.
+- On PR to `main`: lint, type-check, unit tests, integration tests.
 - On merge to `main`: build Docker images, push to registry, deploy to staging.
 - Secrets are managed in GitHub repository settings and must never be committed.
 
