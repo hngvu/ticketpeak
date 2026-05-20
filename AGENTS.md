@@ -48,7 +48,7 @@ New features belong in the most specific module listed below.
 | Layer | Technology |
 | --- | --- |
 | `web/` | SvelteKit, shadcn-svelte, Tailwind CSS v4, TanStack Query |
-| `api/` | Java 21, Spring Boot 3.5, Spring Security, Spring Data JPA, Flyway |
+| `api/` | GraalVM JDK 21, Spring Boot 3.5, Spring Security, Spring Data JPA, Flyway |
 | Database | PostgreSQL, Redis |
 | Object Storage | MinIO |
 | Infrastructure | Docker, GitHub Actions |
@@ -76,24 +76,57 @@ Always run `docker compose` commands from `api/`.
 
 ### Prerequisites
 
-- Docker and Docker Compose
-- Node.js 20+ and npm
+- **GraalVM JDK 21** — install via [SDKMAN](https://sdkman.io/) (`sdk install java 21-graalce`) or download from [graalvm.org](https://www.graalvm.org/)
+- **Docker and Docker Compose** — for infrastructure services and native image builds
+- **Node.js 20+** and npm
 
-The backend, PostgreSQL, Redis, and MinIO run inside Docker.
-Do not try to run `api/` standalone with Maven outside Docker.
+### Architecture: what runs where
 
-### Start the full stack
+| Component | Runs on | Notes |
+| --- | --- | --- |
+| `web/` (SvelteKit) | Host (npm) | No Docker involvement |
+| `api/` (Spring Boot) | Host (`./mvnw`) | Fast compile and test cycles |
+| PostgreSQL, Redis, MinIO | Docker Compose | Infrastructure only |
+| Native image build | Docker / CI | GraalVM native-image for production |
+
+### Start infrastructure services
+
+Docker Compose manages only infrastructure (database, cache, object storage).
+The Spring Boot application runs directly on the host.
 
 ```bash
 cd api
-docker compose up -d --build
+
+# Start infrastructure (PostgreSQL, Redis, MinIO)
+docker compose up -d postgres redis minio
 docker compose ps
-docker compose logs -f ticketpeak-api
+
+# Stop infrastructure
 docker compose down
+
+# Reset all data (DB, Redis, MinIO)
 docker compose down -v
 ```
 
-Flyway migrations run automatically when the `api` container starts.
+### `api/` (Spring Boot)
+
+Run the Spring Boot application directly with Maven on the host.
+Make sure infrastructure services are running first.
+
+```bash
+cd api
+
+# Start the API server
+./mvnw spring-boot:run
+
+# Compile check (fast feedback)
+./mvnw compile -q
+
+# AOT processing check (validates GraalVM native-image compatibility)
+./mvnw spring-boot:process-aot
+```
+
+Flyway migrations run automatically on application startup.
 Never edit existing migration files.
 
 ### `web/` (SvelteKit)
@@ -150,32 +183,40 @@ npm run test:coverage
 
 ### `api/`
 
-Prefer `docker compose run --rm` for API tests. It starts a fresh container for each run, so tests do not depend on a previously running service container.
-Testcontainers still spins up isolated PostgreSQL and Redis instances, so the local stack is not affected.
+Run tests directly on the host with Maven.
+Integration tests use Testcontainers, which requires Docker daemon to be running.
+Testcontainers spins up isolated PostgreSQL and Redis instances, so the local infrastructure stack is not affected.
 
 ```bash
 cd api
 
-# Build and run all tests
-docker compose run --rm ticketpeak-api ./mvnw verify
+# All tests (unit + integration)
+./mvnw verify
 
 # Unit tests only
-docker compose run --rm ticketpeak-api ./mvnw test
+./mvnw test
 
 # Single test class
-docker compose run --rm ticketpeak-api ./mvnw test -Dtest=TicketServiceTest
+./mvnw test -Dtest=TicketServiceTest
+
+# Skip tests during build
+./mvnw package -DskipTests
 ```
 
 Rules:
 - Every feature and bug fix must include tests.
 - Integration tests in `api/` use Testcontainers. Do not mock PostgreSQL or Redis.
+- Testcontainers requires Docker daemon running, but does not use Docker Compose services.
 - All tests must pass before committing.
 
 ---
 
 ## API Conventions
 
-- Base path: `/api`
+- Base path and Namespaces:
+  - `/api/internal/...` - Platform Admin (Internal platform management)
+  - `/api/partner/...` - Organizers (Partner portal)
+  - `/api/...` - Buyers/Public (General ticket discovery & purchase)
 - Auth: `Authorization: Bearer <JWT>`
 
 ### Success response
@@ -291,8 +332,7 @@ cd web && npm run check && npm run lint
 **If you changed `api/`:**
 
 ```bash
-cd api
-docker compose run --rm ticketpeak-api ./mvnw compile -q
+cd api && ./mvnw compile -q && ./mvnw spring-boot:process-aot
 ```
 
 ### Before opening a PR
@@ -308,8 +348,7 @@ cd web && npm run check && npm run lint && npm test
 **If you changed `api/`:**
 
 ```bash
-cd api
-docker compose run --rm ticketpeak-api ./mvnw verify
+cd api && ./mvnw verify
 ```
 
 PRs require passing GitHub Actions CI before merge.
@@ -325,14 +364,32 @@ PRs require passing GitHub Actions CI before merge.
 - Always invalidate relevant queries after mutations in TanStack Query flows.
 - Always run `docker compose` from `api/`, not from the repo root.
 - Use `cd api && docker compose down -v` to reset DB, Redis, and MinIO data.
-- Do not run Spring Boot with `./mvnw spring-boot:run` outside Docker.
+- Ensure Docker daemon is running before running integration tests (Testcontainers needs it).
+- Use GraalVM JDK 21 as default JDK to ensure native-image compatibility.
+- Avoid reflection-heavy patterns that break GraalVM native-image (register them in `reflect-config.json` if unavoidable).
 
 ---
 
 ## CI/CD
 
-- On PR to `main`: lint, type-check, unit tests, integration tests.
-- On merge to `main`: build Docker images, push to registry, deploy to staging.
+### Local vs GitHub Actions
+
+| Step | Local (developer) | GitHub Actions (CI) |
+| --- | --- | --- |
+| Infrastructure | `docker compose up -d postgres redis minio` | Testcontainers (auto) |
+| Compile | `./mvnw compile -q` | `./mvnw compile -q` |
+| AOT check | `./mvnw spring-boot:process-aot` | `./mvnw spring-boot:process-aot` |
+| Unit tests | `./mvnw test` | `./mvnw test` |
+| Integration tests | `./mvnw verify` (needs Docker daemon) | `./mvnw verify` (Testcontainers) |
+| Native image build | ❌ Not needed | `./mvnw -Pnative native:compile` |
+| Docker image | ❌ Not needed | Build + push to registry |
+| Deploy | ❌ Not needed | Auto-deploy to staging |
+
+### Pipeline
+
+- **On PR to `main`**: lint, type-check, AOT check, unit tests, integration tests.
+- **On merge to `main`**: build GraalVM native image → package into Docker image → push to registry → deploy to staging.
+- Native image builds run in CI with GraalVM (`native-maven-plugin`). Developers do not need to build native images locally.
 - Secrets are managed in GitHub repository settings and must never be committed.
 
 ---
