@@ -88,21 +88,38 @@ public class EventService {
                 .build();
 
         Event savedEvent = eventRepository.save(event);
+        if (req.attractionIds() != null && !req.attractionIds().isEmpty()) {
+            List<UUID> uniqueAttrIds = req.attractionIds().stream().distinct().toList();
+            java.util.Set<UUID> existing = new java.util.HashSet<>(attractionRepository.findAllById(uniqueAttrIds)
+                    .stream().map(Attraction::getId).toList());
+            uniqueAttrIds.stream()
+                    .filter(id -> !existing.contains(id))
+                    .findFirst()
+                    .ifPresent(id -> {
+                        throw new ApiException(HttpStatus.BAD_REQUEST, "ATTRACTION_NOT_FOUND", "Attraction with id " + id + " does not exist");
+                    });
 
-        if (req.attractionIds() != null) {
-            for (UUID attrId : req.attractionIds()) {
-                if (attractionRepository.existsById(attrId)) {
-                    eventAttractionRepository.save(new EventAttraction(savedEvent.getId(), attrId));
-                }
-            }
+            List<EventAttraction> attractionsToSave = uniqueAttrIds.stream()
+                    .map(attrId -> new EventAttraction(savedEvent.getId(), attrId))
+                    .toList();
+            eventAttractionRepository.saveAll(attractionsToSave);
         }
 
-        if (req.classificationIds() != null) {
-            for (UUID classId : req.classificationIds()) {
-                if (classificationRepository.existsById(classId)) {
-                    eventClassificationRepository.save(new EventClassification(savedEvent.getId(), classId));
-                }
-            }
+        if (req.classificationIds() != null && !req.classificationIds().isEmpty()) {
+            List<UUID> uniqueClassIds = req.classificationIds().stream().distinct().toList();
+            java.util.Set<UUID> existing = new java.util.HashSet<>(classificationRepository.findAllById(uniqueClassIds)
+                    .stream().map(Classification::getId).toList());
+            uniqueClassIds.stream()
+                    .filter(id -> !existing.contains(id))
+                    .findFirst()
+                    .ifPresent(id -> {
+                        throw new ApiException(HttpStatus.BAD_REQUEST, "CLASSIFICATION_NOT_FOUND", "Classification with id " + id + " does not exist");
+                    });
+
+            List<EventClassification> classificationsToSave = uniqueClassIds.stream()
+                    .map(classId -> new EventClassification(savedEvent.getId(), classId))
+                    .toList();
+            eventClassificationRepository.saveAll(classificationsToSave);
         }
 
         return convertToResponse(savedEvent);
@@ -139,21 +156,39 @@ public class EventService {
         Event savedEvent = eventRepository.save(event);
 
         eventAttractionRepository.deleteByEventId(id);
-        if (req.attractionIds() != null) {
-            for (UUID attrId : req.attractionIds()) {
-                if (attractionRepository.existsById(attrId)) {
-                    eventAttractionRepository.save(new EventAttraction(id, attrId));
-                }
-            }
+        if (req.attractionIds() != null && !req.attractionIds().isEmpty()) {
+            List<UUID> uniqueAttrIds = req.attractionIds().stream().distinct().toList();
+            java.util.Set<UUID> existing = new java.util.HashSet<>(attractionRepository.findAllById(uniqueAttrIds)
+                    .stream().map(Attraction::getId).toList());
+            uniqueAttrIds.stream()
+                    .filter(attrId -> !existing.contains(attrId))
+                    .findFirst()
+                    .ifPresent(attrId -> {
+                        throw new ApiException(HttpStatus.BAD_REQUEST, "ATTRACTION_NOT_FOUND", "Attraction with id " + attrId + " does not exist");
+                    });
+
+            List<EventAttraction> attractionsToSave = uniqueAttrIds.stream()
+                    .map(attrId -> new EventAttraction(id, attrId))
+                    .toList();
+            eventAttractionRepository.saveAll(attractionsToSave);
         }
 
         eventClassificationRepository.deleteByEventId(id);
-        if (req.classificationIds() != null) {
-            for (UUID classId : req.classificationIds()) {
-                if (classificationRepository.existsById(classId)) {
-                    eventClassificationRepository.save(new EventClassification(id, classId));
-                }
-            }
+        if (req.classificationIds() != null && !req.classificationIds().isEmpty()) {
+            List<UUID> uniqueClassIds = req.classificationIds().stream().distinct().toList();
+            java.util.Set<UUID> existing = new java.util.HashSet<>(classificationRepository.findAllById(uniqueClassIds)
+                    .stream().map(Classification::getId).toList());
+            uniqueClassIds.stream()
+                    .filter(classId -> !existing.contains(classId))
+                    .findFirst()
+                    .ifPresent(classId -> {
+                        throw new ApiException(HttpStatus.BAD_REQUEST, "CLASSIFICATION_NOT_FOUND", "Classification with id " + classId + " does not exist");
+                    });
+
+            List<EventClassification> classificationsToSave = uniqueClassIds.stream()
+                    .map(classId -> new EventClassification(id, classId))
+                    .toList();
+            eventClassificationRepository.saveAll(classificationsToSave);
         }
 
         return convertToResponse(savedEvent);
@@ -178,7 +213,6 @@ public class EventService {
     }
 
     @Transactional(readOnly = true)
-    @PreAuthorize("hasRole('ORGANIZER') or hasRole('ADMIN')")
     public Page<EventResponse> searchEvents(
             String query,
             List<EventStatus> statuses,
@@ -378,19 +412,6 @@ public class EventService {
         );
 
         return convertToResponse(savedClone);
-    }
-
-    @Transactional
-    @PreAuthorize("(hasRole('ORGANIZER') or hasRole('ADMIN')) and @orgSecurity.isEventOwnerOrMember(#id)")
-    public void deleteEvent(UUID id) {
-        Event event = eventRepository.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
-
-        if (event.getStatus() != EventStatus.DRAFT) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Only DRAFT events can be deleted");
-        }
-
-        eventRepository.delete(event);
     }
 
     private EventResponse convertToResponse(Event e) {

@@ -7,6 +7,7 @@ import io.qzz.hoangvu.ticketpeak.api.event.service.AttractionService;
 import io.qzz.hoangvu.ticketpeak.api.iam.model.Role;
 import io.qzz.hoangvu.ticketpeak.api.security.AuthenticatedAccount;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -31,17 +32,8 @@ public class InternalAttractionController {
     ) {
         verifyAdmin(authentication);
         AttractionResponse response = attractionService.createAttraction(request);
-        return ResponseEntity.ok(ApiResponse.success(response, "Attraction created successfully"));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteAttraction(
-            @PathVariable UUID id,
-            Authentication authentication
-    ) {
-        verifyAdmin(authentication);
-        attractionService.deleteAttraction(id);
-        return ResponseEntity.ok(ApiResponse.success(null, "Attraction deleted successfully"));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(response, "Attraction created successfully"));
     }
 
     private void verifyAdmin(Authentication authentication) {

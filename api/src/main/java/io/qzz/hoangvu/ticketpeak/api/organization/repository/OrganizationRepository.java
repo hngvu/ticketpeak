@@ -17,6 +17,8 @@ public interface OrganizationRepository extends JpaRepository<Organization, UUID
 
     boolean existsBySlug(String slug);
 
+    java.util.List<Organization> findByOwnerAccountId(UUID ownerAccountId);
+
     @Query("SELECT o FROM Organization o WHERE " +
            "(:name IS NULL OR LOWER(o.name) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
            "(:status IS NULL OR o.status = :status)")

@@ -58,14 +58,6 @@ public class AttractionService {
                 .toList();
     }
 
-    @Transactional
-    public void deleteAttraction(UUID id) {
-        if (!attractionRepository.existsById(id)) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "ATTRACTION_NOT_FOUND", "Attraction not found");
-        }
-        attractionRepository.deleteById(id);
-    }
-
     private String slugify(String name) {
         return name.toLowerCase()
                 .replaceAll("[^a-z0-9\\s]", "")

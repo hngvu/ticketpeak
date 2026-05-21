@@ -7,6 +7,7 @@ import io.qzz.hoangvu.ticketpeak.api.event.service.ClassificationService;
 import io.qzz.hoangvu.ticketpeak.api.iam.model.Role;
 import io.qzz.hoangvu.ticketpeak.api.security.AuthenticatedAccount;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -31,17 +32,19 @@ public class InternalClassificationController {
     ) {
         verifyAdmin(authentication);
         ClassificationResponse response = classificationService.createClassification(request);
-        return ResponseEntity.ok(ApiResponse.success(response, "Classification created successfully"));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(response, "Classification created successfully"));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteClassification(
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<ClassificationResponse>> updateClassification(
             @PathVariable UUID id,
+            @Valid @RequestBody CreateClassificationRequest request,
             Authentication authentication
     ) {
         verifyAdmin(authentication);
-        classificationService.deleteClassification(id);
-        return ResponseEntity.ok(ApiResponse.success(null, "Classification deleted successfully"));
+        ClassificationResponse response = classificationService.updateClassification(id, request);
+        return ResponseEntity.ok(ApiResponse.success(response, "Classification updated successfully"));
     }
 
     private void verifyAdmin(Authentication authentication) {

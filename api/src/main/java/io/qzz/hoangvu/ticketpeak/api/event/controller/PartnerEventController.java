@@ -5,10 +5,14 @@ import io.qzz.hoangvu.ticketpeak.api.event.dto.*;
 import io.qzz.hoangvu.ticketpeak.api.event.model.EventStatus;
 import io.qzz.hoangvu.ticketpeak.api.event.service.EventService;
 import io.qzz.hoangvu.ticketpeak.api.iam.model.Role;
+import io.qzz.hoangvu.ticketpeak.api.organization.model.OrganizationMemberStatus;
+import io.qzz.hoangvu.ticketpeak.api.organization.repository.OrganizationMemberRepository;
+import io.qzz.hoangvu.ticketpeak.api.organization.repository.OrganizationRepository;
 import io.qzz.hoangvu.ticketpeak.api.security.AuthenticatedAccount;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -24,9 +28,17 @@ import java.util.UUID;
 public class PartnerEventController {
 
     private final EventService eventService;
+    private final OrganizationRepository organizationRepository;
+    private final OrganizationMemberRepository organizationMemberRepository;
 
-    public PartnerEventController(EventService eventService) {
+    public PartnerEventController(
+            EventService eventService,
+            OrganizationRepository organizationRepository,
+            OrganizationMemberRepository organizationMemberRepository
+    ) {
         this.eventService = eventService;
+        this.organizationRepository = organizationRepository;
+        this.organizationMemberRepository = organizationMemberRepository;
     }
 
     @PostMapping
@@ -34,7 +46,8 @@ public class PartnerEventController {
             @Valid @RequestBody CreateEventRequest request
     ) {
         EventResponse response = eventService.createEvent(request);
-        return ResponseEntity.ok(ApiResponse.success(response, "Event created successfully"));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(response, "Event created successfully"));
     }
 
     @GetMapping
@@ -55,8 +68,18 @@ public class PartnerEventController {
     ) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof AuthenticatedAccount acc) {
-            if (acc.role() != Role.ADMIN && organizationId == null) {
-                throw new AccessDeniedException("Organization ID must be specified for non-admin search");
+            if (acc.role() != Role.ADMIN) {
+                if (organizationId == null) {
+                    throw new AccessDeniedException("Organization ID must be specified for non-admin search");
+                }
+                java.util.Set<UUID> memberOrgIds = new java.util.HashSet<>();
+                organizationRepository.findByOwnerAccountId(acc.accountId())
+                        .forEach(org -> memberOrgIds.add(org.getId()));
+                organizationMemberRepository.findByAccountIdAndStatus(acc.accountId(), OrganizationMemberStatus.ACTIVE)
+                        .forEach(m -> memberOrgIds.add(m.getOrganization().getId()));
+                if (!memberOrgIds.contains(organizationId)) {
+                    throw new AccessDeniedException("You do not have access to this organization");
+                }
             }
         }
 
@@ -117,11 +140,5 @@ public class PartnerEventController {
     ) {
         EventResponse response = eventService.cloneEvent(id, request);
         return ResponseEntity.ok(ApiResponse.success(response, "Event cloned successfully"));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteEvent(@PathVariable UUID id) {
-        eventService.deleteEvent(id);
-        return ResponseEntity.ok(ApiResponse.success(null, "Event deleted successfully"));
     }
 }

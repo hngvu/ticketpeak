@@ -52,6 +52,44 @@ public class ClassificationService {
         return ClassificationResponse.from(classificationRepository.save(classification));
     }
 
+    @Transactional
+    public ClassificationResponse updateClassification(UUID id, CreateClassificationRequest req) {
+        Classification classification = classificationRepository.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "CLASSIFICATION_NOT_FOUND", "Classification not found"));
+
+        if (req.parentId() != null && req.parentId().equals(id)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_PARENT",
+                    "A classification cannot be its own parent");
+        }
+
+        String slug = req.slug();
+        if (slug == null || slug.isBlank()) {
+            slug = slugify(req.name());
+        }
+        slug = slug.toLowerCase();
+
+        if (!classification.getSlug().equals(slug) && classificationRepository.existsBySlug(slug)) {
+            throw new ApiException(HttpStatus.CONFLICT, "SLUG_ALREADY_EXISTS", "Classification with slug '" + slug + "' already exists");
+        }
+
+        if (req.parentId() != null) {
+            Classification parent = classificationRepository.findById(req.parentId())
+                    .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PARENT_NOT_FOUND", "Parent classification not found"));
+            if (req.level() <= parent.getLevel()) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_LEVEL", "Child level must be greater than parent level");
+            }
+        }
+
+        classification.setName(req.name());
+        classification.setSlug(slug);
+        classification.setLevel(req.level());
+        classification.setIsActive(req.isActive());
+        classification.setParentId(req.parentId());
+
+        return ClassificationResponse.from(classificationRepository.save(classification));
+    }
+
+
     @Transactional(readOnly = true)
     public ClassificationResponse getClassification(UUID id) {
         Classification classification = classificationRepository.findById(id)
@@ -64,14 +102,6 @@ public class ClassificationService {
         return classificationRepository.findAll().stream()
                 .map(ClassificationResponse::from)
                 .toList();
-    }
-
-    @Transactional
-    public void deleteClassification(UUID id) {
-        if (!classificationRepository.existsById(id)) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "CLASSIFICATION_NOT_FOUND", "Classification not found");
-        }
-        classificationRepository.deleteById(id);
     }
 
     private String slugify(String name) {
