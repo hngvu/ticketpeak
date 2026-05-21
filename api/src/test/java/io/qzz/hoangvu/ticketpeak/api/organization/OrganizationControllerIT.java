@@ -65,7 +65,7 @@ class OrganizationControllerIT {
         organizationRepository.deleteAll();
         accountRepository.deleteAll();
 
-        String rawPassword = "Password123!";
+        String rawPassword = "password123";
         String encoded = passwordEncoder.encode(rawPassword);
 
         adminAccount = accountRepository.saveAndFlush(Account.builder()
@@ -100,7 +100,7 @@ class OrganizationControllerIT {
                 "Peak Events", ownerAccount.getId(), "Bio", null, null, null, null, null, null
         );
 
-        mockMvc.perform(post("/api/admin/organizations")
+        mockMvc.perform(post("/api/internal/organizations")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -117,7 +117,7 @@ class OrganizationControllerIT {
                 "Peak Events", ownerAccount.getId(), null, null, null, null, null, null, null
         );
 
-        mockMvc.perform(post("/api/admin/organizations")
+        mockMvc.perform(post("/api/internal/organizations")
                         .header("Authorization", "Bearer " + ownerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -133,14 +133,14 @@ class OrganizationControllerIT {
                 "Test Org", ownerAccount.getId(), null, null, null, null, null, null, null
         );
 
-        mockMvc.perform(post("/api/admin/organizations")
+        mockMvc.perform(post("/api/internal/organizations")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request1)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.slug").value("test-org"));
 
-        mockMvc.perform(post("/api/admin/organizations")
+        mockMvc.perform(post("/api/internal/organizations")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request2)))
@@ -157,7 +157,7 @@ class OrganizationControllerIT {
                 .status(OrganizationStatus.ACTIVE)
                 .build());
 
-        mockMvc.perform(get("/api/admin/organizations?name=find")
+        mockMvc.perform(get("/api/internal/organizations?name=find")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content.length()").value(1))
@@ -173,14 +173,14 @@ class OrganizationControllerIT {
                 .status(OrganizationStatus.ACTIVE)
                 .build());
 
-        mockMvc.perform(get("/api/admin/organizations/" + org.getId())
+        mockMvc.perform(get("/api/internal/organizations/" + org.getId())
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.name").value("GetMe"));
     }
 
     @Test
-    void anyone_can_get_by_slug() throws Exception {
+    void anyone_can_get_by_id() throws Exception {
         Organization org = organizationRepository.saveAndFlush(Organization.builder()
                 .name("Public Org")
                 .slug("public-org")
@@ -188,8 +188,7 @@ class OrganizationControllerIT {
                 .status(OrganizationStatus.ACTIVE)
                 .build());
 
-        // Authenticated user (buyer/organizer) can lookup by slug
-        mockMvc.perform(get("/api/organizations/public-org")
+        mockMvc.perform(get("/api/organizations/" + org.getId())
                         .header("Authorization", "Bearer " + otherToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.name").value("Public Org"));
@@ -208,7 +207,7 @@ class OrganizationControllerIT {
                 "New Name", "New Bio", null, null, null, null, null, null
         );
 
-        mockMvc.perform(put("/api/organizations/" + org.getId())
+        mockMvc.perform(put("/api/partner/organizations/" + org.getId())
                         .header("Authorization", "Bearer " + ownerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -230,7 +229,7 @@ class OrganizationControllerIT {
                 "Hacked Name", null, null, null, null, null, null, null
         );
 
-        mockMvc.perform(put("/api/organizations/" + org.getId())
+        mockMvc.perform(put("/api/partner/organizations/" + org.getId())
                         .header("Authorization", "Bearer " + otherToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))

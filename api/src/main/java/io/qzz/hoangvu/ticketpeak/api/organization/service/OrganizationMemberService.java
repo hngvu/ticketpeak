@@ -3,9 +3,6 @@ package io.qzz.hoangvu.ticketpeak.api.organization.service;
 import io.qzz.hoangvu.ticketpeak.api.account.model.Account;
 import io.qzz.hoangvu.ticketpeak.api.account.repository.AccountRepository;
 import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
-import io.qzz.hoangvu.ticketpeak.api.iam.model.Role;
-import io.qzz.hoangvu.ticketpeak.api.iam.repository.AccountPermissionRepository;
-import io.qzz.hoangvu.ticketpeak.api.iam.service.PermissionConstants;
 import io.qzz.hoangvu.ticketpeak.api.organization.dto.MemberAccountSummary;
 import io.qzz.hoangvu.ticketpeak.api.organization.dto.OrganizationMemberResponse;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.Organization;
@@ -15,7 +12,8 @@ import io.qzz.hoangvu.ticketpeak.api.organization.repository.OrganizationMemberR
 import io.qzz.hoangvu.ticketpeak.api.organization.repository.OrganizationRepository;
 import io.qzz.hoangvu.ticketpeak.api.security.AuthenticatedAccount;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,24 +29,20 @@ public class OrganizationMemberService {
     private final OrganizationRepository organizationRepository;
     private final OrganizationMemberRepository organizationMemberRepository;
     private final AccountRepository accountRepository;
-    private final AccountPermissionRepository accountPermissionRepository;
 
     public OrganizationMemberService(
             OrganizationRepository organizationRepository,
             OrganizationMemberRepository organizationMemberRepository,
-            AccountRepository accountRepository,
-            AccountPermissionRepository accountPermissionRepository
+            AccountRepository accountRepository
     ) {
         this.organizationRepository = organizationRepository;
         this.organizationMemberRepository = organizationMemberRepository;
         this.accountRepository = accountRepository;
-        this.accountPermissionRepository = accountPermissionRepository;
     }
 
     @Transactional(readOnly = true)
-    public List<OrganizationMemberResponse> getOrganizationMembers(UUID orgId, OrganizationMemberStatus status, AuthenticatedAccount principal) {
-        Organization org = getOrganizationAndVerifyReadAccess(orgId, principal);
-
+    @PreAuthorize("hasRole('ADMIN') or @orgSecurity.isOwnerOrMember(#orgId)")
+    public List<OrganizationMemberResponse> getOrganizationMembers(UUID orgId, OrganizationMemberStatus status) {
         List<OrganizationMember> members = (status != null)
                 ? organizationMemberRepository.findByOrganizationIdAndStatus(orgId, status)
                 : organizationMemberRepository.findByOrganizationId(orgId);
@@ -68,9 +62,8 @@ public class OrganizationMemberService {
     }
 
     @Transactional(readOnly = true)
-    public OrganizationMemberResponse getMemberStatus(UUID orgId, UUID accountId, AuthenticatedAccount principal) {
-        getOrganizationAndVerifyReadAccess(orgId, principal);
-
+    @PreAuthorize("hasRole('ADMIN') or @orgSecurity.isOwnerOrMember(#orgId)")
+    public OrganizationMemberResponse getMemberStatus(UUID orgId, UUID accountId) {
         OrganizationMember member = organizationMemberRepository.findByOrganizationIdAndAccountId(orgId, accountId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "Organization member not found"));
 
@@ -80,17 +73,10 @@ public class OrganizationMemberService {
     }
 
     @Transactional
-    public void removeMember(UUID orgId, UUID accountId, AuthenticatedAccount principal) {
+    @PreAuthorize("hasRole('ADMIN') or @orgSecurity.isOwner(#orgId)")
+    public void removeMember(UUID orgId, UUID accountId) {
         Organization org = organizationRepository.findById(orgId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "Organization not found"));
-
-        if (principal.role() != Role.ADMIN && !org.getOwnerAccountId().equals(principal.accountId())) {
-            boolean hasRemovePerm = accountPermissionRepository.existsByAccountIdAndPermissionCodeAndOrganizationIdAndIsActiveTrue(
-                    principal.accountId(), PermissionConstants.ORG_MEMBER_REMOVE, orgId);
-            if (!hasRemovePerm) {
-                throw new AccessDeniedException("You do not have permission to remove members from this organization");
-            }
-        }
 
         if (org.getOwnerAccountId().equals(accountId)) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "CANNOT_REMOVE_OWNER", "Cannot remove the organization owner");
@@ -109,9 +95,12 @@ public class OrganizationMemberService {
     }
 
     @Transactional
-    public void leaveOrganization(UUID orgId, AuthenticatedAccount principal) {
+    @PreAuthorize("hasRole('ADMIN') or @orgSecurity.isOwnerOrMember(#orgId)")
+    public void leaveOrganization(UUID orgId) {
         Organization org = organizationRepository.findById(orgId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "Organization not found"));
+
+        AuthenticatedAccount principal = (AuthenticatedAccount) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
         if (org.getOwnerAccountId().equals(principal.accountId())) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "CANNOT_LEAVE_AS_OWNER", "Organization owner cannot leave the organization");
@@ -130,18 +119,8 @@ public class OrganizationMemberService {
     }
 
     @Transactional
-    public OrganizationMemberResponse restoreMember(UUID orgId, UUID accountId, AuthenticatedAccount principal) {
-        Organization org = organizationRepository.findById(orgId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "Organization not found"));
-
-        if (principal.role() != Role.ADMIN && !org.getOwnerAccountId().equals(principal.accountId())) {
-            boolean hasInvitePerm = accountPermissionRepository.existsByAccountIdAndPermissionCodeAndOrganizationIdAndIsActiveTrue(
-                    principal.accountId(), PermissionConstants.ORG_MEMBER_INVITE, orgId);
-            if (!hasInvitePerm) {
-                throw new AccessDeniedException("You do not have permission to restore members for this organization");
-            }
-        }
-
+    @PreAuthorize("hasRole('ADMIN') or @orgSecurity.isOwner(#orgId)")
+    public OrganizationMemberResponse restoreMember(UUID orgId, UUID accountId) {
         OrganizationMember member = organizationMemberRepository.findByOrganizationIdAndAccountId(orgId, accountId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "Organization member not found"));
 
@@ -155,23 +134,5 @@ public class OrganizationMemberService {
 
         Account account = accountRepository.findById(accountId).orElse(null);
         return OrganizationMemberResponse.from(savedMember, MemberAccountSummary.from(account));
-    }
-
-    private Organization getOrganizationAndVerifyReadAccess(UUID orgId, AuthenticatedAccount principal) {
-        Organization org = organizationRepository.findById(orgId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "Organization not found"));
-
-        if (principal.role() == Role.ADMIN || org.getOwnerAccountId().equals(principal.accountId())) {
-            return org;
-        }
-
-        boolean isMember = organizationMemberRepository.existsByOrganizationIdAndAccountIdAndStatus(
-                orgId, principal.accountId(), OrganizationMemberStatus.ACTIVE);
-
-        if (!isMember) {
-            throw new AccessDeniedException("You are not an active member of this organization");
-        }
-
-        return org;
     }
 }

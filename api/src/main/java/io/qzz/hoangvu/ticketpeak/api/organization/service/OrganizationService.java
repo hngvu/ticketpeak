@@ -18,7 +18,8 @@ import io.qzz.hoangvu.ticketpeak.api.security.AuthenticatedAccount;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PostAuthorize;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,11 +49,8 @@ public class OrganizationService {
     }
 
     @Transactional
-    public OrganizationResponse createOrganization(CreateOrganizationRequest request, AuthenticatedAccount principal) {
-        if (principal.role() != Role.ADMIN) {
-            throw new AccessDeniedException("Only platform admins can create organizations");
-        }
-
+    @PreAuthorize("hasRole('ADMIN')")
+    public OrganizationResponse createOrganization(CreateOrganizationRequest request) {
         Account owner = accountRepository.findById(request.ownerAccountId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", "Owner account not found"));
 
@@ -90,23 +88,17 @@ public class OrganizationService {
     }
 
     @Transactional
-    public OrganizationResponse updateOrganization(UUID id, UpdateOrganizationRequest request, AuthenticatedAccount principal) {
+    @PreAuthorize("@orgSecurity.isOwner(#id)")
+    public OrganizationResponse updateOrganization(UUID id, UpdateOrganizationRequest request) {
         Organization org = organizationRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "Organization not found"));
-
-        if (!org.getOwnerAccountId().equals(principal.accountId())) {
-            throw new AccessDeniedException("Only the organization owner can update organization details");
-        }
 
         return updateFieldsAndSave(org, request);
     }
 
     @Transactional
-    public OrganizationResponse adminUpdateOrganization(UUID id, UpdateOrganizationRequest request, AuthenticatedAccount principal) {
-        if (principal.role() != Role.ADMIN) {
-            throw new AccessDeniedException("Only platform admins can perform administrative updates");
-        }
-
+    @PreAuthorize("hasRole('ADMIN')")
+    public OrganizationResponse adminUpdateOrganization(UUID id, UpdateOrganizationRequest request) {
         Organization org = organizationRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "Organization not found"));
 
@@ -127,27 +119,16 @@ public class OrganizationService {
     }
 
     @Transactional(readOnly = true)
-    public OrganizationResponse getOrganizationBySlug(String slug) {
-        Organization org = organizationRepository.findBySlug(slug)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "Organization not found"));
-        return OrganizationResponse.from(org);
-    }
-
-    @Transactional(readOnly = true)
-    public OrganizationResponse getOrganizationById(UUID id, AuthenticatedAccount principal) {
-        if (principal.role() != Role.ADMIN) {
-            throw new AccessDeniedException("Only platform admins can access this endpoint");
-        }
+    @PostAuthorize("returnObject.status() == T(io.qzz.hoangvu.ticketpeak.api.organization.model.OrganizationStatus).ACTIVE or hasRole('ADMIN') or @orgSecurity.isOwnerOrMember(#id)")
+    public OrganizationResponse getOrganization(UUID id) {
         Organization org = organizationRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "Organization not found"));
         return OrganizationResponse.from(org);
     }
 
     @Transactional(readOnly = true)
-    public Page<OrganizationResponse> searchOrganizations(OrganizationSearchParams params, Pageable pageable, AuthenticatedAccount principal) {
-        if (principal.role() != Role.ADMIN) {
-            throw new AccessDeniedException("Only platform admins can search organizations");
-        }
+    @PreAuthorize("hasRole('ADMIN')")
+    public Page<OrganizationResponse> searchOrganizations(OrganizationSearchParams params, Pageable pageable) {
         Page<Organization> orgs = organizationRepository.searchOrganizations(params.name(), params.status(), pageable);
         return orgs.map(OrganizationResponse::from);
     }

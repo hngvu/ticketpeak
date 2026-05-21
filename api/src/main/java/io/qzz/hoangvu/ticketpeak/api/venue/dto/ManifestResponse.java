@@ -6,6 +6,8 @@ import io.qzz.hoangvu.ticketpeak.api.venue.model.ManifestStatus;
 import java.time.Instant;
 import java.util.UUID;
 
+import java.util.UUID;
+
 public record ManifestResponse(
         String id,
         UUID venueId,

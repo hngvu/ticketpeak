@@ -2,11 +2,8 @@ package io.qzz.hoangvu.ticketpeak.api.venue.controller;
 
 import io.qzz.hoangvu.ticketpeak.api.common.api.ApiResponse;
 import io.qzz.hoangvu.ticketpeak.api.venue.dto.*;
-import io.qzz.hoangvu.ticketpeak.api.venue.model.VenueStatus;
 import io.qzz.hoangvu.ticketpeak.api.venue.service.VenueService;
 import jakarta.validation.Valid;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,12 +12,12 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/admin/venues")
-public class AdminVenueController {
+@RequestMapping("/api/internal/venues")
+public class InternalVenueController {
 
     private final VenueService venueService;
 
-    public AdminVenueController(VenueService venueService) {
+    public InternalVenueController(VenueService venueService) {
         this.venueService = venueService;
     }
 
@@ -29,19 +26,6 @@ public class AdminVenueController {
     @PostMapping
     public ResponseEntity<ApiResponse<VenueResponse>> createVenue(@Valid @RequestBody CreateVenueRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(venueService.createVenue(req), "Venue created"));
-    }
-
-    @GetMapping
-    public ResponseEntity<ApiResponse<Page<VenueResponse>>> listVenues(
-            @RequestParam(required = false) String name,
-            @RequestParam(required = false) VenueStatus status,
-            Pageable pageable) {
-        return ResponseEntity.ok(ApiResponse.success(venueService.listVenues(name, status, pageable), "OK"));
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<VenueResponse>> getVenue(@PathVariable UUID id) {
-        return ResponseEntity.ok(ApiResponse.success(venueService.getVenue(id), "OK"));
     }
 
     @PutMapping("/{id}")

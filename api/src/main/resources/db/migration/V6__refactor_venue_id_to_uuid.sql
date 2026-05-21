@@ -1,15 +1,33 @@
--- Convert venue.id from VARCHAR(64) to UUID and update manifest.venue_id accordingly.
--- PostgreSQL 18+ required for uuidv7().
+-- ============================================================
+-- Refactor venue.id: VARCHAR(64) → UUID (uuidv7 auto-generate)
+-- ============================================================
 
--- 1. Drop FK constraint on manifest.venue_id
-ALTER TABLE manifest DROP CONSTRAINT manifest_venue_id_fkey;
+-- Step 1: Drop FK from manifest → venue (sẽ re-add sau khi đổi type)
+ALTER TABLE manifest DROP CONSTRAINT IF EXISTS manifest_venue_id_fkey;
 
--- 2. Convert venue.id to UUID
-ALTER TABLE venue ALTER COLUMN id TYPE UUID USING (md5(id)::uuid);
+-- Step 2: Alter venue.id từ VARCHAR(64) → UUID
+-- Rows có UUID-formatted string được cast trực tiếp; rows khác (Ticketmaster-style) được assign random UUID.
+-- In dev/test: chạy 'docker compose down -v' để reset nếu có dữ liệu không hợp lệ.
+ALTER TABLE venue
+    ALTER COLUMN id TYPE UUID
+    USING CASE
+        WHEN id ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+        THEN id::uuid
+        ELSE gen_random_uuid()
+    END;
+
 ALTER TABLE venue ALTER COLUMN id SET DEFAULT uuidv7();
 
--- 3. Convert manifest.venue_id to UUID
-ALTER TABLE manifest ALTER COLUMN venue_id TYPE UUID USING (md5(venue_id)::uuid);
+-- Step 3: Alter manifest.venue_id từ VARCHAR(64) → UUID
+ALTER TABLE manifest
+    ALTER COLUMN venue_id TYPE UUID
+    USING CASE
+        WHEN venue_id ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+        THEN venue_id::uuid
+        ELSE gen_random_uuid()
+    END;
 
--- 4. Re-add FK constraint
-ALTER TABLE manifest ADD CONSTRAINT manifest_venue_id_fkey FOREIGN KEY (venue_id) REFERENCES venue (id) ON DELETE CASCADE;
+-- Step 4: Re-add FK constraint
+ALTER TABLE manifest
+    ADD CONSTRAINT fk_manifest_venue_id
+    FOREIGN KEY (venue_id) REFERENCES venue(id) ON DELETE CASCADE;

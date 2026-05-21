@@ -26,7 +26,7 @@ public class Venue {
 
     @Id
     @Generated(GenerationTime.INSERT)
-    @Column(columnDefinition = "UUID DEFAULT uuidv7()", insertable = false, updatable = false, nullable = false)
+    @Column(name = "id", columnDefinition = "UUID DEFAULT uuidv7()", insertable = false, updatable = false, nullable = false)
     UUID id;
 
     @Column(nullable = false)
