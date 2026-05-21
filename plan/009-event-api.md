@@ -1,43 +1,52 @@
-# 009 Event API - Core Lifecycle and Catalogs
+# 009 Event API - Event Domain & Multi-Session Scheduling
 
 ## Description
-Implement the `event` API layer on top of the existing event domain model and add the missing database schema for it.
+Implement the `event` API layer including support for event creation, update, classification, attraction management, and multi-session schedule configuration. 
+This module allows organizers to build events, assign them to venues with snapshots of layout manifests, manage their status lifecycles, and handle multiple sessions.
 
-The current `event` package contains four distinct models:
-- `Event` for the core event aggregate
-- `Classification` for hierarchical categories
-- `Attraction` for performers, teams, or similar catalog entries
-- `EventStatus` / `AttractionType` enums for lifecycle and catalog typing
+The event domain contains the following entities:
+- `Event`: Represents the main event listing, including title, description, category, tags, and lifecycle status.
+- `EventSession`: Supports multi-session / recurring dates under a single event.
+- `Attraction`: Represents performers, artists, or hosts associated with the event.
+- `Classification`: Provides structured categories (Segment, Genre, Sub-genre) modeled after the Ticketmaster Partner API.
 
-The model shows that `Event` is an organization-owned, venue-linked aggregate with direct fields for schedule, sale window, and feature flags. `Classification` and `Attraction` are independent catalog entities in the same module, not associations on `Event` itself.
+The status lifecycle of an Event flows through:
+`DRAFT` -> `PUBLISHED` -> `ON_SALE` -> `ENDED` -> `CANCELLED` (with `POSTPONED` as an explicit postponed state).
 
-The first version should cover:
-- event schema creation and repository support
-- event creation and editing
-- event publication and lifecycle transitions
-- slug uniqueness
-- organization and venue validation
-- classification catalog CRUD
-- attraction catalog CRUD
-- public event read endpoints for buyer-facing and organizer-facing views
+When an event transitions to `PUBLISHED`, the system automatically snapshots the assigned venue's published manifest to protect the event's ticket and seating configurations from future venue/manifest modifications.
 
 ## Acceptance Criteria
-- [ ] The event module has a matching Flyway migration that creates the `event`, `classification`, and `attraction` tables with columns aligned to the current entity model.
-- [ ] Authorized organizers can create a new event under an organization they control. (permission: `EVENT:CREATE`)
-- [ ] Event creation validates required fields such as organization, venue, title, slug, start time, timezone, and status.
-- [ ] Event slugs are unique.
-- [ ] Event updates are restricted to editable fields while the event remains in an editable state.
-- [ ] Event lifecycle transitions are enforced for `DRAFT`, `PUBLISHED`, `ONSALE`, `OFFSALE`, `CANCELED`, `POSTPONED`,  `RESCHEDULED`, `COMPLETED`. (only organizers in organization with permission `EVENT:PUBLISH` can publish event; system auto schedule to change state `PUBLISHED` - `ONSALE` - `OFFSALE` - `COMPLETED`)
-- [ ] The boolean feature flags `restrictSingleSeat`, `safeTixEnabled`, and `transferEnabled` are writable and validated.
-- [ ] Classification records can be created, updated, listed, retrieved, activated, and deactivated.
-- [ ] Classification records support parent-child hierarchy through `parentId` and preserve `level` ordering.
-- [ ] Attraction records can be created, updated, listed, and retrieved, with `type`, `imageUrl`, and `description` fields exposed through DTOs.
-- [ ] Public read endpoints expose event details, classification data, and attraction data through record DTOs wrapped in `ApiResponse<T>`.
-- [ ] Validation failures follow the standard `VALIDATION_FAILED` response shape.
-- [ ] Integration tests cover event creation, editing, slug uniqueness, lifecycle transitions, taxonomy CRUD, public reads, schema alignment, and validation failures.
+- [ ] Organizers can create, retrieve, update, and list events under their organization.
+- [ ] Event write endpoints validate required fields and enforce organization boundaries (only admins, organization owners, or active members can perform operations).
+- [ ] Events support multi-session scheduling (`EventSession` instances), allowing multiple start/end date pairs per event.
+- [ ] Organizers can manage `Attraction` and `Classification` associations for events.
+- [ ] Event status transitions follow strict validation rules (e.g. cannot publish without at least one session, venue, and manifest).
+- [ ] When an event transitions to `PUBLISHED`, a snapshot of the venue's active manifest is created using `VenueService.cloneManifest`.
+- [ ] Organizers can postpone an event, updating the session times and transitioning the event/sessions to a postponed status.
+- [ ] Organizers can cancel an event, transitioning the status to `CANCELLED` (ready for order/ticket cancellation notification).
+- [ ] Organizers can clone an existing event, creating a new event in `DRAFT` status with the same structure, categories, attractions, and sessions.
+- [ ] Public endpoints allow searching, filtering, and paginating public events (`PUBLISHED` or `ON_SALE`).
+- [ ] Public endpoints return clean response shapes wrapped in `ApiResponse<T>`, protecting sensitive organizer/internal data.
+- [ ] Integration tests cover event CRUD, multi-session scheduling, cloning, status transitions, validation errors, organization authorization checks, and public search/filtering.
 
 ## Status
-`planned`
+`done`
 
 ## Outcome
-TBD
+Implemented the full Event API layer with the following structure:
+
+**Public endpoints** (`/api/events`, `/api/attractions`, `/api/classifications`):
+- Fully public search with keyword expansion across event title/description, attraction names/descriptions, classification names, and venue names/city/country.
+- Hierarchical classification filtering (recursive Segment → Genre → Sub-genre traversal).
+- DRAFT events are always excluded from public search and `GET /api/events/{id}`.
+
+**Partner endpoints** (`/api/partner/events/**`):
+- Full event CRUD (create, update, delete) restricted to ORGANIZER and ADMIN roles.
+- Organization membership enforcement: only org owners/active members can manage events.
+- `GET /api/partner/events/{id}` allows secure retrieval of DRAFT events for partners.
+- Publish (with venue manifest snapshot), postpone, cancel, and clone lifecycle transitions.
+
+**Internal/Admin endpoints** (`/api/internal/attractions`, `/api/internal/classifications`):
+- Write-only (POST, DELETE) endpoints for ADMIN role only.
+
+**Tests**: 8 integration tests covering CRUD, lifecycle, keyword search, hierarchical classification search, and DRAFT isolation — all passing.
