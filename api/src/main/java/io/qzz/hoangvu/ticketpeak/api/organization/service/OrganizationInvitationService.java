@@ -4,8 +4,6 @@ import io.qzz.hoangvu.ticketpeak.api.account.model.Account;
 import io.qzz.hoangvu.ticketpeak.api.account.repository.AccountRepository;
 import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
 import io.qzz.hoangvu.ticketpeak.api.iam.model.Role;
-import io.qzz.hoangvu.ticketpeak.api.iam.repository.AccountPermissionRepository;
-import io.qzz.hoangvu.ticketpeak.api.iam.service.PermissionConstants;
 import io.qzz.hoangvu.ticketpeak.api.organization.dto.CreateInvitationRequest;
 import io.qzz.hoangvu.ticketpeak.api.organization.dto.InvitationDetailsResponse;
 import io.qzz.hoangvu.ticketpeak.api.organization.dto.InvitationResponse;
@@ -20,6 +18,8 @@ import io.qzz.hoangvu.ticketpeak.api.organization.repository.OrganizationReposit
 import io.qzz.hoangvu.ticketpeak.api.security.AuthenticatedAccount;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,25 +36,26 @@ public class OrganizationInvitationService {
     private final OrganizationRepository organizationRepository;
     private final OrganizationMemberRepository organizationMemberRepository;
     private final AccountRepository accountRepository;
-    private final AccountPermissionRepository accountPermissionRepository;
 
     public OrganizationInvitationService(
             OrganizationInvitationRepository invitationRepository,
             OrganizationRepository organizationRepository,
             OrganizationMemberRepository organizationMemberRepository,
-            AccountRepository accountRepository,
-            AccountPermissionRepository accountPermissionRepository
+            AccountRepository accountRepository
     ) {
         this.invitationRepository = invitationRepository;
         this.organizationRepository = organizationRepository;
         this.organizationMemberRepository = organizationMemberRepository;
         this.accountRepository = accountRepository;
-        this.accountPermissionRepository = accountPermissionRepository;
     }
 
     @Transactional
-    public InvitationResponse createInvitation(UUID orgId, CreateInvitationRequest request, AuthenticatedAccount principal) {
-        Organization org = getOrganizationAndVerifyPermission(orgId, principal);
+    @PreAuthorize("hasRole('ADMIN') or @orgSecurity.isOwner(#orgId)")
+    public InvitationResponse createInvitation(UUID orgId, CreateInvitationRequest request) {
+        Organization org = organizationRepository.findById(orgId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "Organization not found"));
+
+        AuthenticatedAccount principal = (AuthenticatedAccount) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
         Account invitee = accountRepository.findById(request.inviteeAccountId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", "Invitee account not found"));
@@ -90,15 +91,19 @@ public class OrganizationInvitationService {
     }
 
     @Transactional(readOnly = true)
-    public List<InvitationResponse> getOrganizationInvitations(UUID orgId, AuthenticatedAccount principal) {
-        getOrganizationAndVerifyPermission(orgId, principal);
+    @PreAuthorize("hasRole('ADMIN') or @orgSecurity.isOwnerOrMember(#orgId)")
+    public List<InvitationResponse> getOrganizationInvitations(UUID orgId) {
+        organizationRepository.findById(orgId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "Organization not found"));
+                
         return invitationRepository.findByOrganizationId(orgId).stream()
                 .map(InvitationResponse::from)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public List<InvitationResponse> getMyInvitations(AuthenticatedAccount principal) {
+    public List<InvitationResponse> getMyInvitations() {
+        AuthenticatedAccount principal = (AuthenticatedAccount) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return invitationRepository.findByInviteeAccountId(principal.accountId()).stream()
                 .map(InvitationResponse::from)
                 .collect(Collectors.toList());
@@ -126,7 +131,8 @@ public class OrganizationInvitationService {
     }
 
     @Transactional
-    public void acceptInvitation(String token, AuthenticatedAccount principal) {
+    public void acceptInvitation(String token) {
+        AuthenticatedAccount principal = (AuthenticatedAccount) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         OrganizationInvitation invitation = getAndCheckExpiration(token);
 
         if (invitation.getStatus() != OrganizationInvitationStatus.PENDING) {
@@ -154,7 +160,8 @@ public class OrganizationInvitationService {
     }
 
     @Transactional
-    public void rejectInvitation(String token, AuthenticatedAccount principal) {
+    public void rejectInvitation(String token) {
+        AuthenticatedAccount principal = (AuthenticatedAccount) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         OrganizationInvitation invitation = getAndCheckExpiration(token);
 
         if (invitation.getStatus() != OrganizationInvitationStatus.PENDING) {
@@ -168,25 +175,6 @@ public class OrganizationInvitationService {
         invitation.setStatus(OrganizationInvitationStatus.REJECTED);
         invitation.setRespondedAt(Instant.now());
         invitationRepository.save(invitation);
-    }
-
-    private Organization getOrganizationAndVerifyPermission(UUID orgId, AuthenticatedAccount principal) {
-        Organization org = organizationRepository.findById(orgId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "Organization not found"));
-
-        if (principal.role() == Role.ADMIN || org.getOwnerAccountId().equals(principal.accountId())) {
-            return org;
-        }
-
-        boolean hasInvitePermission = accountPermissionRepository
-                .existsByAccountIdAndPermissionCodeAndOrganizationIdAndIsActiveTrue(
-                        principal.accountId(), PermissionConstants.ORG_MEMBER_INVITE, orgId);
-
-        if (!hasInvitePermission) {
-            throw new AccessDeniedException("You do not have permission to manage invitations for this organization");
-        }
-
-        return org;
     }
 
     private OrganizationInvitation getAndCheckExpiration(String token) {

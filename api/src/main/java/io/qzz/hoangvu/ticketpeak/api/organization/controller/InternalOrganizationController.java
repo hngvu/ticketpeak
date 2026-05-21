@@ -7,34 +7,30 @@ import io.qzz.hoangvu.ticketpeak.api.organization.dto.OrganizationSearchParams;
 import io.qzz.hoangvu.ticketpeak.api.organization.dto.UpdateOrganizationRequest;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.OrganizationStatus;
 import io.qzz.hoangvu.ticketpeak.api.organization.service.OrganizationService;
-import io.qzz.hoangvu.ticketpeak.api.security.AuthenticatedAccount;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/admin/organizations")
-public class AdminOrganizationController {
+@RequestMapping("/api/internal/organizations")
+public class InternalOrganizationController {
 
     private final OrganizationService organizationService;
 
-    public AdminOrganizationController(OrganizationService organizationService) {
+    public InternalOrganizationController(OrganizationService organizationService) {
         this.organizationService = organizationService;
     }
 
     @PostMapping
     public ResponseEntity<ApiResponse<OrganizationResponse>> createOrganization(
-            @Valid @RequestBody CreateOrganizationRequest request,
-            Authentication authentication
+            @Valid @RequestBody CreateOrganizationRequest request
     ) {
-        AuthenticatedAccount principal = (AuthenticatedAccount) authentication.getPrincipal();
-        OrganizationResponse response = organizationService.createOrganization(request, principal);
+        OrganizationResponse response = organizationService.createOrganization(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(response, "Organization created"));
     }
@@ -43,33 +39,27 @@ public class AdminOrganizationController {
     public ResponseEntity<ApiResponse<Page<OrganizationResponse>>> searchOrganizations(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) OrganizationStatus status,
-            Pageable pageable,
-            Authentication authentication
+            Pageable pageable
     ) {
-        AuthenticatedAccount principal = (AuthenticatedAccount) authentication.getPrincipal();
         OrganizationSearchParams params = new OrganizationSearchParams(name, status);
-        Page<OrganizationResponse> response = organizationService.searchOrganizations(params, pageable, principal);
+        Page<OrganizationResponse> response = organizationService.searchOrganizations(params, pageable);
         return ResponseEntity.ok(ApiResponse.success(response, "OK"));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<OrganizationResponse>> getOrganizationById(
-            @PathVariable UUID id,
-            Authentication authentication
+            @PathVariable UUID id
     ) {
-        AuthenticatedAccount principal = (AuthenticatedAccount) authentication.getPrincipal();
-        OrganizationResponse response = organizationService.getOrganizationById(id, principal);
+        OrganizationResponse response = organizationService.getOrganization(id);
         return ResponseEntity.ok(ApiResponse.success(response, "OK"));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<OrganizationResponse>> updateOrganization(
             @PathVariable UUID id,
-            @Valid @RequestBody UpdateOrganizationRequest request,
-            Authentication authentication
+            @Valid @RequestBody UpdateOrganizationRequest request
     ) {
-        AuthenticatedAccount principal = (AuthenticatedAccount) authentication.getPrincipal();
-        OrganizationResponse response = organizationService.adminUpdateOrganization(id, request, principal);
+        OrganizationResponse response = organizationService.adminUpdateOrganization(id, request);
         return ResponseEntity.ok(ApiResponse.success(response, "Organization updated"));
     }
 }

@@ -69,7 +69,7 @@ public class EventService {
 
         // Validate venue exists
         try {
-            venueService.getVenue(req.venueId().toString());
+            venueService.getVenue(req.venueId());
         } catch (Exception ex) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "VENUE_NOT_FOUND", "The assigned venue does not exist");
         }
@@ -137,7 +137,7 @@ public class EventService {
 
         // Validate venue exists
         try {
-            venueService.getVenue(req.venueId().toString());
+            venueService.getVenue(req.venueId());
         } catch (Exception ex) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "VENUE_NOT_FOUND", "The assigned venue does not exist");
         }
@@ -217,7 +217,7 @@ public class EventService {
         List<UUID> venueIdsByLocation = null;
         if (city != null || country != null) {
             venueIdsByLocation = venueRepository.searchByLocation(city, country).stream()
-                    .map(v -> UUID.fromString(v.getId()))
+                    .map(v -> v.getId())
                     .toList();
         }
 
@@ -227,7 +227,7 @@ public class EventService {
 
         if (query != null && !query.isBlank()) {
             venueIdsByQuery = venueRepository.searchByKeyword(query).stream()
-                    .map(v -> UUID.fromString(v.getId()))
+                    .map(v -> v.getId())
                     .toList();
 
             List<Attraction> attractions = attractionRepository.searchByNameOrDescription(query);
@@ -290,7 +290,7 @@ public class EventService {
         }
 
         // Get active manifest of the venue
-        var manifests = venueService.listManifests(event.getVenueId().toString());
+        var manifests = venueService.listManifests(event.getVenueId());
         var activeManifest = manifests.stream()
                 .filter(m -> m.status() == io.qzz.hoangvu.ticketpeak.api.venue.model.ManifestStatus.PUBLISHED)
                 .findFirst()

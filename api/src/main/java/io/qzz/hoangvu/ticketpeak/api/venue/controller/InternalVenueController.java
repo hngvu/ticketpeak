@@ -2,24 +2,22 @@ package io.qzz.hoangvu.ticketpeak.api.venue.controller;
 
 import io.qzz.hoangvu.ticketpeak.api.common.api.ApiResponse;
 import io.qzz.hoangvu.ticketpeak.api.venue.dto.*;
-import io.qzz.hoangvu.ticketpeak.api.venue.model.VenueStatus;
 import io.qzz.hoangvu.ticketpeak.api.venue.service.VenueService;
 import jakarta.validation.Valid;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/admin/venues")
-public class AdminVenueController {
+@RequestMapping("/api/internal/venues")
+public class InternalVenueController {
 
     private final VenueService venueService;
 
-    public AdminVenueController(VenueService venueService) {
+    public InternalVenueController(VenueService venueService) {
         this.venueService = venueService;
     }
 
@@ -30,31 +28,18 @@ public class AdminVenueController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(venueService.createVenue(req), "Venue created"));
     }
 
-    @GetMapping
-    public ResponseEntity<ApiResponse<Page<VenueResponse>>> listVenues(
-            @RequestParam(required = false) String name,
-            @RequestParam(required = false) VenueStatus status,
-            Pageable pageable) {
-        return ResponseEntity.ok(ApiResponse.success(venueService.listVenues(name, status, pageable), "OK"));
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<VenueResponse>> getVenue(@PathVariable String id) {
-        return ResponseEntity.ok(ApiResponse.success(venueService.getVenue(id), "OK"));
-    }
-
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<VenueResponse>> updateVenue(@PathVariable String id, @Valid @RequestBody UpdateVenueRequest req) {
+    public ResponseEntity<ApiResponse<VenueResponse>> updateVenue(@PathVariable UUID id, @Valid @RequestBody UpdateVenueRequest req) {
         return ResponseEntity.ok(ApiResponse.success(venueService.updateVenue(id, req), "Venue updated"));
     }
 
     @PostMapping("/{id}/activate")
-    public ResponseEntity<ApiResponse<VenueResponse>> activate(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<VenueResponse>> activate(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.success(venueService.activateVenue(id), "Venue activated"));
     }
 
     @PostMapping("/{id}/deactivate")
-    public ResponseEntity<ApiResponse<VenueResponse>> deactivate(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<VenueResponse>> deactivate(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.success(venueService.deactivateVenue(id), "Venue deactivated"));
     }
 
@@ -62,12 +47,12 @@ public class AdminVenueController {
 
     @PostMapping("/{venueId}/manifests")
     public ResponseEntity<ApiResponse<ManifestResponse>> createManifest(
-            @PathVariable String venueId, @Valid @RequestBody CreateManifestRequest req) {
+            @PathVariable UUID venueId, @Valid @RequestBody CreateManifestRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(venueService.createManifest(venueId, req), "Manifest created"));
     }
 
     @GetMapping("/{venueId}/manifests")
-    public ResponseEntity<ApiResponse<List<ManifestResponse>>> listManifests(@PathVariable String venueId) {
+    public ResponseEntity<ApiResponse<List<ManifestResponse>>> listManifests(@PathVariable UUID venueId) {
         return ResponseEntity.ok(ApiResponse.success(venueService.listManifests(venueId), "OK"));
     }
 

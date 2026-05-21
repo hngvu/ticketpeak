@@ -7,8 +7,10 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
+import java.util.UUID;
+
 public record VenueResponse(
-        String id,
+        UUID id,
         String name,
         String address,
         String city,

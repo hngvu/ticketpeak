@@ -147,7 +147,6 @@ class EventControllerIT {
                 .build());
 
         venue = venueRepository.saveAndFlush(Venue.builder()
-                .id("0190a1b2-c3d4-7e5f-a6b7-c8d9e0f1a2b3")
                 .name("My Dinh Stadium")
                 .address("Le Duc Tho St")
                 .city("Hanoi")
@@ -169,7 +168,7 @@ class EventControllerIT {
     void organizer_can_create_and_update_event() throws Exception {
         CreateEventRequest createReq = new CreateEventRequest(
                 org.getId(),
-                UUID.fromString(venue.getId()),
+                venue.getId(),
                 "Sơn Tùng M-TP Concert",
                 "son-tung-mtp-concert",
                 "Live performance",
@@ -202,7 +201,7 @@ class EventControllerIT {
 
         // 2. Update Event
         UpdateEventRequest updateReq = new UpdateEventRequest(
-                UUID.fromString(venue.getId()),
+                venue.getId(),
                 "Sơn Tùng M-TP Concert Live",
                 "Updated live performance description",
                 Instant.now().plusSeconds(172800),
@@ -230,7 +229,7 @@ class EventControllerIT {
     void non_member_organizer_cannot_create_event() throws Exception {
         CreateEventRequest createReq = new CreateEventRequest(
                 org.getId(),
-                UUID.fromString(venue.getId()),
+                venue.getId(),
                 "Unauthorised Concert",
                 "unauthorised-concert",
                 "Desc",
@@ -332,7 +331,7 @@ class EventControllerIT {
 
         Event event = eventRepository.saveAndFlush(Event.builder()
                 .organizationId(org.getId())
-                .venueId(UUID.fromString(venue.getId()))
+                .venueId(venue.getId())
                 .title("Coldplay Rock Show")
                 .slug("coldplay-rock-show")
                 .status(EventStatus.DRAFT)
@@ -409,7 +408,7 @@ class EventControllerIT {
 
         Event event1 = eventRepository.saveAndFlush(Event.builder()
                 .organizationId(org.getId())
-                .venueId(UUID.fromString(venue.getId()))
+                .venueId(venue.getId())
                 .title("Adele Live Hanoi")
                 .slug("adele-live-hanoi")
                 .status(EventStatus.PUBLISHED)
@@ -459,7 +458,7 @@ class EventControllerIT {
 
         Event event = eventRepository.saveAndFlush(Event.builder()
                 .organizationId(org.getId())
-                .venueId(UUID.fromString(venue.getId()))
+                .venueId(venue.getId())
                 .title("Blackpink Born Pink")
                 .slug("blackpink-born-pink")
                 .status(EventStatus.PUBLISHED)
@@ -494,7 +493,7 @@ class EventControllerIT {
 
         Event event = eventRepository.saveAndFlush(Event.builder()
                 .organizationId(org.getId())
-                .venueId(UUID.fromString(venue.getId())) // Venue is "My Dinh Stadium" in "Hanoi", "Vietnam"
+                .venueId(venue.getId()) // Venue is "My Dinh Stadium" in "Hanoi", "Vietnam"
                 .title("Sky Tour Live")
                 .slug("sky-tour-live")
                 .status(EventStatus.PUBLISHED)
@@ -530,7 +529,7 @@ class EventControllerIT {
     void test_draft_event_isolation() throws Exception {
         Event draftEvent = eventRepository.saveAndFlush(Event.builder()
                 .organizationId(org.getId())
-                .venueId(UUID.fromString(venue.getId()))
+                .venueId(venue.getId())
                 .title("Secret Draft Show")
                 .slug("secret-draft-show")
                 .status(EventStatus.DRAFT)

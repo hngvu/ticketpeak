@@ -7,7 +7,6 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public record CreateVenueRequest(
-        @NotBlank String id,
         @NotBlank String name,
         @NotBlank String address,
         @NotBlank String city,
