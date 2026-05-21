@@ -1,5 +1,6 @@
 package io.qzz.hoangvu.ticketpeak.api.security;
 
+import io.qzz.hoangvu.ticketpeak.api.event.repository.EventRepository;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.Organization;
 import io.qzz.hoangvu.ticketpeak.api.organization.repository.OrganizationMemberRepository;
 import io.qzz.hoangvu.ticketpeak.api.organization.repository.OrganizationRepository;
@@ -15,10 +16,14 @@ public class OrgSecurity {
 
     private final OrganizationRepository organizationRepository;
     private final OrganizationMemberRepository organizationMemberRepository;
+    private final EventRepository eventRepository;
 
-    public OrgSecurity(OrganizationRepository organizationRepository, OrganizationMemberRepository organizationMemberRepository) {
+    public OrgSecurity(OrganizationRepository organizationRepository,
+                       OrganizationMemberRepository organizationMemberRepository,
+                       EventRepository eventRepository) {
         this.organizationRepository = organizationRepository;
         this.organizationMemberRepository = organizationMemberRepository;
+        this.eventRepository = eventRepository;
     }
 
     public boolean isOwner(UUID organizationId) {
@@ -29,7 +34,7 @@ public class OrgSecurity {
         if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
             return false;
         }
-        
+
         if (!(auth.getPrincipal() instanceof AuthenticatedAccount acc)) {
             return false;
         }
@@ -66,5 +71,37 @@ public class OrgSecurity {
 
     public boolean isOwnerOrMember(UUID organizationId) {
         return isOwner(organizationId) || isMember(organizationId);
+    }
+
+    public boolean isEventOwnerOrMember(UUID eventId) {
+        if (eventId == null) {
+            return false;
+        }
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            return false;
+        }
+
+        if (!(auth.getPrincipal() instanceof AuthenticatedAccount acc)) {
+            return false;
+        }
+
+        try {
+            return eventRepository.findById(eventId)
+                    .map(event -> {
+                        Organization org = organizationRepository.findById(event.getOrganizationId()).orElse(null);
+                        if (org == null) {
+                            return false;
+                        }
+                        if (org.getOwnerAccountId().equals(acc.accountId())) {
+                            return true;
+                        }
+                        return organizationMemberRepository.existsByOrganizationIdAndAccountIdAndStatus(
+                                event.getOrganizationId(), acc.accountId(), OrganizationMemberStatus.ACTIVE);
+                    })
+                    .orElse(false);
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 }

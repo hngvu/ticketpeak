@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -30,11 +31,9 @@ public class PartnerEventController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<EventResponse>> createEvent(
-            @Valid @RequestBody CreateEventRequest request,
-            Authentication authentication
+            @Valid @RequestBody CreateEventRequest request
     ) {
-        AuthenticatedAccount principal = getVerifiedOrganizer(authentication);
-        EventResponse response = eventService.createEvent(request, principal);
+        EventResponse response = eventService.createEvent(request);
         return ResponseEntity.ok(ApiResponse.success(response, "Event created successfully"));
     }
 
@@ -52,13 +51,13 @@ public class PartnerEventController {
             @RequestParam(required = false) Instant startBefore,
             @RequestParam(required = false) Instant endAfter,
             @RequestParam(required = false) Instant endBefore,
-            Pageable pageable,
-            Authentication authentication
+            Pageable pageable
     ) {
-        AuthenticatedAccount principal = getVerifiedOrganizer(authentication);
-
-        if (principal.role() != Role.ADMIN && organizationId == null) {
-            throw new AccessDeniedException("Organization ID must be specified for non-admin search");
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof AuthenticatedAccount acc) {
+            if (acc.role() != Role.ADMIN && organizationId == null) {
+                throw new AccessDeniedException("Organization ID must be specified for non-admin search");
+            }
         }
 
         List<EventStatus> statuses = null;
@@ -76,83 +75,53 @@ public class PartnerEventController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<EventResponse>> getEvent(
-            @PathVariable UUID id,
-            Authentication authentication
-    ) {
-        AuthenticatedAccount principal = getVerifiedOrganizer(authentication);
-        EventResponse response = eventService.getEventForPartner(id, principal);
+    public ResponseEntity<ApiResponse<EventResponse>> getEvent(@PathVariable UUID id) {
+        EventResponse response = eventService.getEventForPartner(id);
         return ResponseEntity.ok(ApiResponse.success(response, "OK"));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<EventResponse>> updateEvent(
             @PathVariable UUID id,
-            @Valid @RequestBody UpdateEventRequest request,
-            Authentication authentication
+            @Valid @RequestBody UpdateEventRequest request
     ) {
-        AuthenticatedAccount principal = getVerifiedOrganizer(authentication);
-        EventResponse response = eventService.updateEvent(id, request, principal);
+        EventResponse response = eventService.updateEvent(id, request);
         return ResponseEntity.ok(ApiResponse.success(response, "Event updated successfully"));
     }
 
     @PostMapping("/{id}/publish")
-    public ResponseEntity<ApiResponse<EventResponse>> publishEvent(
-            @PathVariable UUID id,
-            Authentication authentication
-    ) {
-        AuthenticatedAccount principal = getVerifiedOrganizer(authentication);
-        EventResponse response = eventService.publishEvent(id, principal);
+    public ResponseEntity<ApiResponse<EventResponse>> publishEvent(@PathVariable UUID id) {
+        EventResponse response = eventService.publishEvent(id);
         return ResponseEntity.ok(ApiResponse.success(response, "Event published successfully"));
     }
 
     @PostMapping("/{id}/postpone")
     public ResponseEntity<ApiResponse<EventResponse>> postponeEvent(
             @PathVariable UUID id,
-            @Valid @RequestBody PostponeEventRequest request,
-            Authentication authentication
+            @Valid @RequestBody PostponeEventRequest request
     ) {
-        AuthenticatedAccount principal = getVerifiedOrganizer(authentication);
-        EventResponse response = eventService.postponeEvent(id, request, principal);
+        EventResponse response = eventService.postponeEvent(id, request);
         return ResponseEntity.ok(ApiResponse.success(response, "Event postponed successfully"));
     }
 
     @PostMapping("/{id}/cancel")
-    public ResponseEntity<ApiResponse<EventResponse>> cancelEvent(
-            @PathVariable UUID id,
-            Authentication authentication
-    ) {
-        AuthenticatedAccount principal = getVerifiedOrganizer(authentication);
-        EventResponse response = eventService.cancelEvent(id, principal);
+    public ResponseEntity<ApiResponse<EventResponse>> cancelEvent(@PathVariable UUID id) {
+        EventResponse response = eventService.cancelEvent(id);
         return ResponseEntity.ok(ApiResponse.success(response, "Event cancelled successfully"));
     }
 
     @PostMapping("/{id}/clone")
     public ResponseEntity<ApiResponse<EventResponse>> cloneEvent(
             @PathVariable UUID id,
-            @Valid @RequestBody CloneEventRequest request,
-            Authentication authentication
+            @Valid @RequestBody CloneEventRequest request
     ) {
-        AuthenticatedAccount principal = getVerifiedOrganizer(authentication);
-        EventResponse response = eventService.cloneEvent(id, request, principal);
+        EventResponse response = eventService.cloneEvent(id, request);
         return ResponseEntity.ok(ApiResponse.success(response, "Event cloned successfully"));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteEvent(
-            @PathVariable UUID id,
-            Authentication authentication
-    ) {
-        AuthenticatedAccount principal = getVerifiedOrganizer(authentication);
-        eventService.deleteEvent(id, principal);
+    public ResponseEntity<ApiResponse<Void>> deleteEvent(@PathVariable UUID id) {
+        eventService.deleteEvent(id);
         return ResponseEntity.ok(ApiResponse.success(null, "Event deleted successfully"));
-    }
-
-    private AuthenticatedAccount getVerifiedOrganizer(Authentication authentication) {
-        AuthenticatedAccount principal = (AuthenticatedAccount) authentication.getPrincipal();
-        if (principal.role() != Role.ORGANIZER && principal.role() != Role.ADMIN) {
-            throw new AccessDeniedException("Only organizers and admins can access partner endpoints");
-        }
-        return principal;
     }
 }

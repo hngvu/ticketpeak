@@ -4,19 +4,13 @@ import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
 import io.qzz.hoangvu.ticketpeak.api.event.dto.*;
 import io.qzz.hoangvu.ticketpeak.api.event.model.*;
 import io.qzz.hoangvu.ticketpeak.api.event.repository.*;
-import io.qzz.hoangvu.ticketpeak.api.iam.model.Role;
-import io.qzz.hoangvu.ticketpeak.api.organization.model.Organization;
-import io.qzz.hoangvu.ticketpeak.api.organization.model.OrganizationMemberStatus;
-import io.qzz.hoangvu.ticketpeak.api.organization.repository.OrganizationMemberRepository;
-import io.qzz.hoangvu.ticketpeak.api.organization.repository.OrganizationRepository;
-import io.qzz.hoangvu.ticketpeak.api.security.AuthenticatedAccount;
 import io.qzz.hoangvu.ticketpeak.api.venue.repository.VenueRepository;
 import io.qzz.hoangvu.ticketpeak.api.venue.service.VenueService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,8 +30,6 @@ public class EventService {
     private final EventManifestRepository eventManifestRepository;
     private final VenueService venueService;
     private final VenueRepository venueRepository;
-    private final OrganizationRepository organizationRepository;
-    private final OrganizationMemberRepository organizationMemberRepository;
 
     public EventService(
             EventRepository eventRepository,
@@ -47,9 +39,7 @@ public class EventService {
             EventAttractionRepository eventAttractionRepository,
             EventManifestRepository eventManifestRepository,
             VenueService venueService,
-            VenueRepository venueRepository,
-            OrganizationRepository organizationRepository,
-            OrganizationMemberRepository organizationMemberRepository
+            VenueRepository venueRepository
     ) {
         this.eventRepository = eventRepository;
         this.attractionRepository = attractionRepository;
@@ -59,15 +49,11 @@ public class EventService {
         this.eventManifestRepository = eventManifestRepository;
         this.venueService = venueService;
         this.venueRepository = venueRepository;
-        this.organizationRepository = organizationRepository;
-        this.organizationMemberRepository = organizationMemberRepository;
     }
 
     @Transactional
-    public EventResponse createEvent(CreateEventRequest req, AuthenticatedAccount principal) {
-        verifyOrgAccess(req.organizationId(), principal);
-
-        // Validate venue exists
+    @PreAuthorize("(hasRole('ORGANIZER') or hasRole('ADMIN')) and @orgSecurity.isOwner(#req.organizationId())")
+    public EventResponse createEvent(CreateEventRequest req) {
         try {
             venueService.getVenue(req.venueId());
         } catch (Exception ex) {
@@ -103,7 +89,6 @@ public class EventService {
 
         Event savedEvent = eventRepository.save(event);
 
-        // Save attractions
         if (req.attractionIds() != null) {
             for (UUID attrId : req.attractionIds()) {
                 if (attractionRepository.existsById(attrId)) {
@@ -112,7 +97,6 @@ public class EventService {
             }
         }
 
-        // Save classifications
         if (req.classificationIds() != null) {
             for (UUID classId : req.classificationIds()) {
                 if (classificationRepository.existsById(classId)) {
@@ -125,17 +109,15 @@ public class EventService {
     }
 
     @Transactional
-    public EventResponse updateEvent(UUID id, UpdateEventRequest req, AuthenticatedAccount principal) {
+    @PreAuthorize("(hasRole('ORGANIZER') or hasRole('ADMIN')) and @orgSecurity.isEventOwnerOrMember(#id)")
+    public EventResponse updateEvent(UUID id, UpdateEventRequest req) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
-
-        verifyOrgAccess(event.getOrganizationId(), principal);
 
         if (event.getStatus() == EventStatus.COMPLETED || event.getStatus() == EventStatus.CANCELED) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Cannot update ended or cancelled event");
         }
 
-        // Validate venue exists
         try {
             venueService.getVenue(req.venueId());
         } catch (Exception ex) {
@@ -156,7 +138,6 @@ public class EventService {
 
         Event savedEvent = eventRepository.save(event);
 
-        // Update attractions
         eventAttractionRepository.deleteByEventId(id);
         if (req.attractionIds() != null) {
             for (UUID attrId : req.attractionIds()) {
@@ -166,7 +147,6 @@ public class EventService {
             }
         }
 
-        // Update classifications
         eventClassificationRepository.deleteByEventId(id);
         if (req.classificationIds() != null) {
             for (UUID classId : req.classificationIds()) {
@@ -190,14 +170,15 @@ public class EventService {
     }
 
     @Transactional(readOnly = true)
-    public EventResponse getEventForPartner(UUID id, AuthenticatedAccount principal) {
+    @PreAuthorize("(hasRole('ORGANIZER') or hasRole('ADMIN')) and @orgSecurity.isEventOwnerOrMember(#id)")
+    public EventResponse getEventForPartner(UUID id) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
-        verifyOrgAccess(event.getOrganizationId(), principal);
         return convertToResponse(event);
     }
 
     @Transactional(readOnly = true)
+    @PreAuthorize("hasRole('ORGANIZER') or hasRole('ADMIN')")
     public Page<EventResponse> searchEvents(
             String query,
             List<EventStatus> statuses,
@@ -274,29 +255,25 @@ public class EventService {
     }
 
     @Transactional
-    public EventResponse publishEvent(UUID id, AuthenticatedAccount principal) {
+    @PreAuthorize("(hasRole('ORGANIZER') or hasRole('ADMIN')) and @orgSecurity.isEventOwnerOrMember(#id)")
+    public EventResponse publishEvent(UUID id) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
-
-        verifyOrgAccess(event.getOrganizationId(), principal);
 
         if (event.getStatus() != EventStatus.DRAFT) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Only DRAFT events can be published");
         }
 
-        // Must have venue assigned
         if (event.getVenueId() == null) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "MISSING_VENUE", "Event must have an assigned venue to be published");
         }
 
-        // Get active manifest of the venue
         var manifests = venueService.listManifests(event.getVenueId());
         var activeManifest = manifests.stream()
                 .filter(m -> m.status() == io.qzz.hoangvu.ticketpeak.api.venue.model.ManifestStatus.PUBLISHED)
                 .findFirst()
                 .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "NO_PUBLISHED_MANIFEST", "The assigned venue does not have a published manifest"));
 
-        // Snapshot layout manifest
         String snapshotManifestId = "evt-" + event.getId() + "-snap";
         var cloneRequest = new io.qzz.hoangvu.ticketpeak.api.venue.dto.CloneManifestRequest(
                 snapshotManifestId,
@@ -319,11 +296,10 @@ public class EventService {
     }
 
     @Transactional
-    public EventResponse postponeEvent(UUID id, PostponeEventRequest req, AuthenticatedAccount principal) {
+    @PreAuthorize("(hasRole('ORGANIZER') or hasRole('ADMIN')) and @orgSecurity.isEventOwnerOrMember(#id)")
+    public EventResponse postponeEvent(UUID id, PostponeEventRequest req) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
-
-        verifyOrgAccess(event.getOrganizationId(), principal);
 
         if (event.getStatus() != EventStatus.PUBLISHED && event.getStatus() != EventStatus.ONSALE) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Only published or on-sale events can be postponed");
@@ -344,11 +320,10 @@ public class EventService {
     }
 
     @Transactional
-    public EventResponse cancelEvent(UUID id, AuthenticatedAccount principal) {
+    @PreAuthorize("(hasRole('ORGANIZER') or hasRole('ADMIN')) and @orgSecurity.isEventOwnerOrMember(#id)")
+    public EventResponse cancelEvent(UUID id) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
-
-        verifyOrgAccess(event.getOrganizationId(), principal);
 
         if (event.getStatus() == EventStatus.CANCELED || event.getStatus() == EventStatus.COMPLETED) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Event is already in ended or cancelled state");
@@ -360,11 +335,10 @@ public class EventService {
     }
 
     @Transactional
-    public EventResponse cloneEvent(UUID id, CloneEventRequest req, AuthenticatedAccount principal) {
+    @PreAuthorize("(hasRole('ORGANIZER') or hasRole('ADMIN')) and @orgSecurity.isEventOwnerOrMember(#id)")
+    public EventResponse cloneEvent(UUID id, CloneEventRequest req) {
         Event sourceEvent = eventRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
-
-        verifyOrgAccess(sourceEvent.getOrganizationId(), principal);
 
         String slug = req.slug();
         if (slug == null || slug.isBlank()) {
@@ -395,12 +369,10 @@ public class EventService {
 
         Event savedClone = eventRepository.save(clone);
 
-        // Copy attractions
         eventAttractionRepository.findByEventId(id).forEach(ea ->
                 eventAttractionRepository.save(new EventAttraction(savedClone.getId(), ea.getAttractionId()))
         );
 
-        // Copy classifications
         eventClassificationRepository.findByEventId(id).forEach(ec ->
                 eventClassificationRepository.save(new EventClassification(savedClone.getId(), ec.getClassificationId()))
         );
@@ -409,37 +381,16 @@ public class EventService {
     }
 
     @Transactional
-    public void deleteEvent(UUID id, AuthenticatedAccount principal) {
+    @PreAuthorize("(hasRole('ORGANIZER') or hasRole('ADMIN')) and @orgSecurity.isEventOwnerOrMember(#id)")
+    public void deleteEvent(UUID id) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
-
-        verifyOrgAccess(event.getOrganizationId(), principal);
 
         if (event.getStatus() != EventStatus.DRAFT) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Only DRAFT events can be deleted");
         }
 
         eventRepository.delete(event);
-    }
-
-    private void verifyOrgAccess(UUID organizationId, AuthenticatedAccount principal) {
-        if (principal.role() == Role.ADMIN) {
-            return;
-        }
-
-        Organization org = organizationRepository.findById(organizationId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "Organization not found"));
-
-        if (org.getOwnerAccountId().equals(principal.accountId())) {
-            return;
-        }
-
-        boolean isMember = organizationMemberRepository.existsByOrganizationIdAndAccountIdAndStatus(
-                organizationId, principal.accountId(), OrganizationMemberStatus.ACTIVE);
-
-        if (!isMember) {
-            throw new AccessDeniedException("You are not an active member of this organization");
-        }
     }
 
     private EventResponse convertToResponse(Event e) {
