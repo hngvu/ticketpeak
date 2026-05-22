@@ -164,33 +164,91 @@ public class VenueService {
                 .build();
         manifestRepository.save(clone);
 
-        // Clone lookup tables
-        levelRepository.findByManifestId(sourceManifestId).forEach(l ->
-                levelRepository.save(Level.builder().id(l.getId()).manifest(clone).description(l.getDescription()).build()));
-        sectionRepository.findByManifestId(sourceManifestId).forEach(s ->
-                sectionRepository.save(Section.builder().id(s.getId()).manifest(clone).description(s.getDescription()).build()));
-        priceLevelRepository.findByManifestId(sourceManifestId).forEach(p ->
-                priceLevelRepository.save(PriceLevel.builder().id(p.getId()).manifest(clone).description(p.getDescription()).build()));
+        // Clone lookup tables in batch
+        List<Level> levels = levelRepository.findByManifestId(sourceManifestId).stream()
+                .map(l -> Level.builder().id(l.getId()).manifest(clone).description(l.getDescription()).build())
+                .toList();
+        levelRepository.saveAll(levels);
 
-        // Clone areas
-        gaAreaRepository.findByManifestId(sourceManifestId).forEach(g ->
-                gaAreaRepository.save(GAArea.builder().id(newId + "-" + g.getId()).manifestId(clone.getId())
-                        .levelId(g.getLevelId()).sectionId(g.getSectionId()).priceLevelId(g.getPriceLevelId())
-                        .capacity(g.getCapacity()).build()));
+        List<Section> sections = sectionRepository.findByManifestId(sourceManifestId).stream()
+                .map(s -> Section.builder().id(s.getId()).manifest(clone).description(s.getDescription()).build())
+                .toList();
+        sectionRepository.saveAll(sections);
 
-        rsAreaRepository.findByManifestId(sourceManifestId).forEach(r -> {
-            RSArea newArea = rsAreaRepository.save(RSArea.builder().id(newId + "-" + r.getId()).manifestId(clone.getId())
-                    .levelId(r.getLevelId()).sectionId(r.getSectionId()).priceLevelId(r.getPriceLevelId()).build());
-            seatRowRepository.findByRsAreaId(r.getId()).forEach(row -> {
-                SeatRow newRow = seatRowRepository.save(SeatRow.builder().id(newId + "-" + row.getId())
-                        .rsArea(newArea).name(row.getName()).positionY(row.getPositionY()).build());
-                seatRepository.findBySeatRowId(row.getId()).forEach(seat ->
-                        seatRepository.save(Seat.builder().id(newId + "-" + seat.getId())
-                                .seatRow(newRow).name(seat.getName()).positionX(seat.getPositionX())
-                                .status(SeatStatus.AVAILABLE).accessibility(seat.getAccessibility())
-                                .obstructedView(seat.getObstructedView()).aisle(seat.getAisle()).build()));
-            });
-        });
+        List<PriceLevel> priceLevels = priceLevelRepository.findByManifestId(sourceManifestId).stream()
+                .map(p -> PriceLevel.builder().id(p.getId()).manifest(clone).description(p.getDescription()).build())
+                .toList();
+        priceLevelRepository.saveAll(priceLevels);
+
+        // Clone areas in batch
+        List<GAArea> gaAreas = gaAreaRepository.findByManifestId(sourceManifestId).stream()
+                .map(g -> GAArea.builder()
+                        .id(newId + "-" + g.getId())
+                        .manifestId(clone.getId())
+                        .levelId(g.getLevelId())
+                        .sectionId(g.getSectionId())
+                        .priceLevelId(g.getPriceLevelId())
+                        .capacity(g.getCapacity())
+                        .build())
+                .toList();
+        gaAreaRepository.saveAll(gaAreas);
+
+        List<RSArea> rsAreas = rsAreaRepository.findByManifestId(sourceManifestId).stream()
+                .map(r -> RSArea.builder()
+                        .id(newId + "-" + r.getId())
+                        .manifestId(clone.getId())
+                        .levelId(r.getLevelId())
+                        .sectionId(r.getSectionId())
+                        .priceLevelId(r.getPriceLevelId())
+                        .build())
+                .toList();
+        rsAreas = rsAreaRepository.saveAll(rsAreas);
+
+        // Clone rows and seats in batch
+        java.util.Map<String, RSArea> rsAreaMap = rsAreas.stream()
+                .collect(java.util.stream.Collectors.toMap(RSArea::getId, java.util.function.Function.identity()));
+
+        List<SeatRow> seatRows = new java.util.ArrayList<>();
+        List<Seat> seats = new java.util.ArrayList<>();
+
+        List<RSArea> sourceRsAreas = rsAreaRepository.findByManifestId(sourceManifestId);
+        for (RSArea r : sourceRsAreas) {
+            String newAreaId = newId + "-" + r.getId();
+            RSArea newArea = rsAreaMap.get(newAreaId);
+            if (newArea == null) {
+                continue;
+            }
+
+            List<SeatRow> rowsInArea = seatRowRepository.findByRsAreaId(r.getId());
+            for (SeatRow row : rowsInArea) {
+                String newRowId = newId + "-" + row.getId();
+                SeatRow newRow = SeatRow.builder()
+                        .id(newRowId)
+                        .rsArea(newArea)
+                        .name(row.getName())
+                        .positionY(row.getPositionY())
+                        .build();
+                seatRows.add(newRow);
+
+                List<Seat> seatsInRow = seatRepository.findBySeatRowId(row.getId());
+                for (Seat seat : seatsInRow) {
+                    Seat newSeat = Seat.builder()
+                            .id(newId + "-" + seat.getId())
+                            .seatRow(newRow)
+                            .name(seat.getName())
+                            .positionX(seat.getPositionX())
+                            .status(SeatStatus.AVAILABLE)
+                            .accessibility(seat.getAccessibility())
+                            .obstructedView(seat.getObstructedView())
+                            .aisle(seat.getAisle())
+                            .build();
+                    seats.add(newSeat);
+                }
+            }
+        }
+
+        seatRowRepository.saveAll(seatRows);
+        seatRepository.saveAll(seats);
 
         return ManifestResponse.from(clone);
     }
@@ -281,6 +339,9 @@ public class VenueService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "RS_AREA_NOT_FOUND", "RS area not found"));
         if (seatRowRepository.existsById(req.id())) {
             throw new ApiException(HttpStatus.CONFLICT, "SEAT_ROW_ID_EXISTS", "Seat row with id '" + req.id() + "' already exists");
+        }
+        if (seatRowRepository.existsByRsAreaIdAndName(rsAreaId, req.name())) {
+            throw new ApiException(HttpStatus.CONFLICT, "SEAT_ROW_NAME_DUPLICATE", "Seat row name '" + req.name() + "' already exists in this area");
         }
         SeatRow row = SeatRow.builder().id(req.id()).rsArea(rsArea).name(req.name()).positionY(req.positionY()).build();
         return SeatRowResponse.from(seatRowRepository.save(row));

@@ -7,14 +7,15 @@ import io.qzz.hoangvu.ticketpeak.api.account.repository.AccountRepository;
 import io.qzz.hoangvu.ticketpeak.api.iam.model.Role;
 import io.qzz.hoangvu.ticketpeak.api.venue.dto.*;
 import io.qzz.hoangvu.ticketpeak.api.venue.repository.ManifestRepository;
+import io.qzz.hoangvu.ticketpeak.api.TestcontainersConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import com.jayway.jsonpath.JsonPath;
@@ -23,9 +24,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@Import(TestcontainersConfiguration.class)
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
 @Transactional
 class VenueControllerIT {
 
@@ -44,10 +45,20 @@ class VenueControllerIT {
     @Autowired
     private ManifestRepository manifestRepository;
 
+    @Autowired
+    private io.qzz.hoangvu.ticketpeak.api.venue.repository.VenueRepository venueRepository;
+
     private String adminToken;
 
     @BeforeEach
     void setup() throws Exception {
+        manifestRepository.deleteAll();
+        venueRepository.deleteAll();
+        accountRepository.deleteAll();
+        accountRepository.flush();
+        venueRepository.flush();
+        manifestRepository.flush();
+
         String rawPassword = "password123";
         Account adminAccount = accountRepository.saveAndFlush(Account.builder()
                 .email("admin@tp.com")
@@ -236,6 +247,37 @@ class VenueControllerIT {
     }
 
     @Test
+    void seat_row_uniqueness_enforced() throws Exception {
+        String responseStr = mockMvc.perform(post("/api/internal/venues").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new CreateVenueRequest("V-Row", "A", "C", "VN", null, null, null, null, null, null, null, null))))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String venueId = JsonPath.read(responseStr, "$.data.id");
+
+        mockMvc.perform(post("/api/internal/venues/" + venueId + "/manifests").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CreateManifestRequest("M005-Row", "L", 100))))
+                .andExpect(status().isCreated());
+        mockMvc.perform(post("/api/internal/venues/manifests/M005-Row/rs-areas").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CreateRSAreaRequest("RA001-Row", "L1", "S1", "P1"))))
+                .andExpect(status().isCreated());
+        
+        mockMvc.perform(post("/api/internal/venues/rs-areas/RA001-Row/rows").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CreateSeatRowRequest("ROW001-Row", "Row-A", null))))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/internal/venues/rs-areas/RA001-Row/rows").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CreateSeatRowRequest("ROW002-Row", "Row-A", null))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("SEAT_ROW_NAME_DUPLICATE"));
+    }
+
+    @Test
     void manifest_clone_copies_hierarchy() throws Exception {
         String responseStr = mockMvc.perform(post("/api/internal/venues").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -264,6 +306,30 @@ class VenueControllerIT {
         mockMvc.perform(get("/api/internal/venues/manifests/M006-CLONE/levels").header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(1));
+    }
+
+    @Test
+    void non_admin_cannot_access_internal_venues() throws Exception {
+        Account organizerAccount = accountRepository.saveAndFlush(Account.builder()
+                .email("organizer@tp.com")
+                .password(passwordEncoder.encode("password123"))
+                .firstName("Organizer")
+                .lastName("User")
+                .role(Role.ORGANIZER)
+                .status(AccountStatus.ACTIVE)
+                .build());
+
+        String organizerToken = login("organizer@tp.com", "password123");
+
+        CreateVenueRequest req = new CreateVenueRequest(
+                "Saigon Hall", "1 Le Duan", "Ho Chi Minh City", "VN",
+                null, null, null, null, null, null, null, null);
+
+        mockMvc.perform(post("/api/internal/venues")
+                        .header("Authorization", "Bearer " + organizerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isForbidden());
     }
 
     private String login(String email, String password) throws Exception {

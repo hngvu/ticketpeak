@@ -106,14 +106,14 @@ class OrganizationMemberControllerIT {
 
     @Test
     void list_members_success_for_owner_and_member() throws Exception {
-        mockMvc.perform(get("/api/organizations/" + org.getId() + "/members")
+        mockMvc.perform(get("/api/partner/organizations/" + org.getId() + "/members")
                         .header("Authorization", "Bearer " + ownerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(3))
                 .andExpect(jsonPath("$.data[0].status").value("ACTIVE"))
                 .andExpect(jsonPath("$.data[0].account.email").isNotEmpty());
 
-        mockMvc.perform(get("/api/organizations/" + org.getId() + "/members")
+        mockMvc.perform(get("/api/partner/organizations/" + org.getId() + "/members")
                         .header("Authorization", "Bearer " + memberToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(3));
@@ -121,14 +121,14 @@ class OrganizationMemberControllerIT {
 
     @Test
     void list_members_forbidden_for_non_member() throws Exception {
-        mockMvc.perform(get("/api/organizations/" + org.getId() + "/members")
+        mockMvc.perform(get("/api/partner/organizations/" + org.getId() + "/members")
                         .header("Authorization", "Bearer " + otherToken))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     void get_member_status_success() throws Exception {
-        mockMvc.perform(get("/api/organizations/" + org.getId() + "/members/" + memberAccount.getId())
+        mockMvc.perform(get("/api/partner/organizations/" + org.getId() + "/members/" + memberAccount.getId())
                         .header("Authorization", "Bearer " + ownerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.accountId").value(memberAccount.getId().toString()))
@@ -137,7 +137,7 @@ class OrganizationMemberControllerIT {
 
     @Test
     void owner_can_remove_member() throws Exception {
-        mockMvc.perform(delete("/api/organizations/" + org.getId() + "/members/" + memberAccount.getId())
+        mockMvc.perform(delete("/api/partner/organizations/" + org.getId() + "/members/" + memberAccount.getId())
                         .header("Authorization", "Bearer " + ownerToken))
                 .andExpect(status().isOk());
 
@@ -147,10 +147,8 @@ class OrganizationMemberControllerIT {
 
     @Test
     void authorized_member_can_remove_member() throws Exception {
-        mockMvc.perform(post("/api/organizations/" + org.getId() + "/members/remove")
-                        .header("Authorization", "Bearer " + authorizedToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new MemberRequest(memberAccount.getId()))))
+        mockMvc.perform(delete("/api/partner/organizations/" + org.getId() + "/members/" + memberAccount.getId())
+                        .header("Authorization", "Bearer " + authorizedToken))
                 .andExpect(status().isOk());
 
         OrganizationMember m = memberRepository.findByOrganizationIdAndAccountId(org.getId(), memberAccount.getId()).orElseThrow();
@@ -159,14 +157,14 @@ class OrganizationMemberControllerIT {
 
     @Test
     void unauthorized_member_cannot_remove() throws Exception {
-        mockMvc.perform(delete("/api/organizations/" + org.getId() + "/members/" + authorizedAccount.getId())
+        mockMvc.perform(delete("/api/partner/organizations/" + org.getId() + "/members/" + authorizedAccount.getId())
                         .header("Authorization", "Bearer " + memberToken))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     void cannot_remove_owner() throws Exception {
-        mockMvc.perform(delete("/api/organizations/" + org.getId() + "/members/" + ownerAccount.getId())
+        mockMvc.perform(delete("/api/partner/organizations/" + org.getId() + "/members/" + ownerAccount.getId())
                         .header("Authorization", "Bearer " + ownerToken))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("CANNOT_REMOVE_OWNER"));
@@ -174,7 +172,7 @@ class OrganizationMemberControllerIT {
 
     @Test
     void member_can_leave() throws Exception {
-        mockMvc.perform(post("/api/organizations/" + org.getId() + "/members/leave")
+        mockMvc.perform(post("/api/partner/organizations/" + org.getId() + "/leave")
                         .header("Authorization", "Bearer " + memberToken))
                 .andExpect(status().isOk());
 
@@ -184,7 +182,7 @@ class OrganizationMemberControllerIT {
 
     @Test
     void owner_cannot_leave() throws Exception {
-        mockMvc.perform(post("/api/organizations/" + org.getId() + "/members/leave")
+        mockMvc.perform(post("/api/partner/organizations/" + org.getId() + "/leave")
                         .header("Authorization", "Bearer " + ownerToken))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("CANNOT_LEAVE_AS_OWNER"));
@@ -196,7 +194,7 @@ class OrganizationMemberControllerIT {
         m.setStatus(OrganizationMemberStatus.REMOVED);
         memberRepository.saveAndFlush(m);
 
-        mockMvc.perform(post("/api/organizations/" + org.getId() + "/members/" + memberAccount.getId() + "/restore")
+        mockMvc.perform(post("/api/partner/organizations/" + org.getId() + "/members/" + memberAccount.getId() + "/restore")
                         .header("Authorization", "Bearer " + ownerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("ACTIVE"));
@@ -208,13 +206,13 @@ class OrganizationMemberControllerIT {
 
     @Test
     void validation_failure_returns_validation_failed_shape() throws Exception {
-        mockMvc.perform(post("/api/organizations/" + org.getId() + "/members/remove")
+        mockMvc.perform(post("/api/partner/organizations/" + org.getId() + "/invitations")
                         .header("Authorization", "Bearer " + ownerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("VALIDATION_FAILED"))
-                .andExpect(jsonPath("$.errors.accountId").exists());
+                .andExpect(jsonPath("$.errors.inviteeAccountId").exists());
     }
 
     private String login(String email, String password) throws Exception {

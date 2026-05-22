@@ -133,6 +133,21 @@ public class PartnerEventController {
         return ResponseEntity.ok(ApiResponse.success(response, "Event cancelled successfully"));
     }
 
+    @PostMapping("/{id}/reschedule")
+    public ResponseEntity<ApiResponse<EventResponse>> rescheduleEvent(
+            @PathVariable UUID id,
+            @Valid @RequestBody RescheduleEventRequest request
+    ) {
+        EventResponse response = eventService.rescheduleEvent(id, request);
+        return ResponseEntity.ok(ApiResponse.success(response, "Event rescheduled successfully"));
+    }
+
+    @PostMapping("/{id}/resume")
+    public ResponseEntity<ApiResponse<EventResponse>> resumeEvent(@PathVariable UUID id) {
+        EventResponse response = eventService.resumeEvent(id);
+        return ResponseEntity.ok(ApiResponse.success(response, "Event resumed successfully"));
+    }
+
     @PostMapping("/{id}/clone")
     public ResponseEntity<ApiResponse<EventResponse>> cloneEvent(
             @PathVariable UUID id,

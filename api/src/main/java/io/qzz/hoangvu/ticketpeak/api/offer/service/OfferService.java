@@ -7,6 +7,7 @@ import io.qzz.hoangvu.ticketpeak.api.event.service.EventService;
 import io.qzz.hoangvu.ticketpeak.api.offer.dto.*;
 import io.qzz.hoangvu.ticketpeak.api.offer.model.*;
 import io.qzz.hoangvu.ticketpeak.api.offer.repository.OfferRepository;
+import io.qzz.hoangvu.ticketpeak.api.venue.service.VenueService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -23,18 +24,20 @@ public class OfferService {
 
     private final OfferRepository offerRepository;
     private final EventService eventService;
+    private final VenueService venueService;
 
     private static final Set<String> ISO_4217_CURRENCIES = Currency.getAvailableCurrencies().stream()
             .map(Currency::getCurrencyCode)
             .collect(Collectors.toUnmodifiableSet());
 
-    public OfferService(OfferRepository offerRepository, EventService eventService) {
+    public OfferService(OfferRepository offerRepository, EventService eventService, VenueService venueService) {
         this.offerRepository = offerRepository;
         this.eventService = eventService;
+        this.venueService = venueService;
     }
 
     @Transactional
-    @PreAuthorize("(hasRole('ORGANIZER') or hasRole('ADMIN')) and @orgSecurity.isEventOwnerOrMember(#eventId)")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#eventId))")
     public OfferResponse createOffer(UUID eventId, CreateOfferRequest request) {
         EventResponse event = eventService.getEventForPartner(eventId);
 
@@ -50,9 +53,10 @@ public class OfferService {
         }
 
         validateCurrency(request.currency());
+        validateFaceValueAndMinimum(request.faceValue(), request.eventTicketMinimum());
         validateSaleWindows(request.saleWindows(), event);
         validateQuantity(request.eventTicketMinimum(), request.sellableQuantities());
-        validateSeatingMode(request.seatingMode(), request.sectionId(), request.priceLevelId());
+        validateSeatingMode(request.seatingMode(), request.sectionId(), request.priceLevelId(), event);
 
         Offer offer = Offer.builder()
                 .eventId(eventId)
@@ -88,7 +92,7 @@ public class OfferService {
     }
 
     @Transactional
-    @PreAuthorize("(hasRole('ORGANIZER') or hasRole('ADMIN')) and @orgSecurity.isEventOwnerOrMember(#eventId)")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#eventId))")
     public OfferResponse updateOffer(UUID eventId, String ticketTypeId, UpdateOfferRequest request) {
         EventResponse event = eventService.getEventForPartner(eventId);
 
@@ -107,9 +111,10 @@ public class OfferService {
         }
 
         validateCurrency(request.currency());
+        validateFaceValueAndMinimum(request.faceValue(), request.eventTicketMinimum());
         validateSaleWindowsForUpdate(request.saleWindows(), event);
         validateQuantity(request.eventTicketMinimum(), request.sellableQuantities());
-        validateSeatingMode(request.seatingMode(), request.sectionId(), request.priceLevelId());
+        validateSeatingMode(request.seatingMode(), request.sectionId(), request.priceLevelId(), event);
 
         offer.setName(trimToNull(request.name()));
         offer.setDescription(trimToNull(request.description()));
@@ -141,7 +146,7 @@ public class OfferService {
     }
 
     @Transactional
-    @PreAuthorize("(hasRole('ORGANIZER') or hasRole('ADMIN')) and @orgSecurity.isEventOwnerOrMember(#eventId)")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#eventId))")
     public void deleteOffer(UUID eventId, String ticketTypeId) {
         EventResponse event = eventService.getEventForPartner(eventId);
 
@@ -150,10 +155,19 @@ public class OfferService {
                     "Cannot delete offer for canceled or completed event");
         }
 
-        offerRepository.deleteByEventIdAndTicketTypeId(eventId, normalizeTicketTypeId(ticketTypeId));
+        Offer offer = offerRepository.findByEventIdAndTicketTypeId(eventId, normalizeTicketTypeId(ticketTypeId))
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "OFFER_NOT_FOUND",
+                        "Offer does not exist for this event"));
+
+        if (offer.getQuantitySold() > 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "OFFER_HAS_SALES",
+                    "Cannot delete offer with existing ticket sales");
+        }
+
+        offerRepository.delete(offer);
     }
 
-    @PreAuthorize("(hasRole('ORGANIZER') or hasRole('ADMIN')) and @orgSecurity.isEventOwnerOrMember(#eventId)")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#eventId))")
     public List<OfferResponse> listEventOffers(UUID eventId) {
         eventService.getEventForPartner(eventId);
         return offerRepository.findByEventIdOrderByCreatedAtAsc(eventId)
@@ -184,7 +198,7 @@ public class OfferService {
         return OfferResponse.from(offer);
     }
 
-    @PreAuthorize("(hasRole('ORGANIZER') or hasRole('ADMIN')) and @orgSecurity.isEventOwnerOrMember(#eventId)")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#eventId))")
     public OfferResponse getEventOfferForPartner(UUID eventId, String ticketTypeId) {
         eventService.getEventForPartner(eventId);
         Offer offer = offerRepository.findByEventIdAndTicketTypeId(eventId, normalizeTicketTypeId(ticketTypeId))
@@ -201,12 +215,25 @@ public class OfferService {
         }
     }
 
-    private void validateSaleWindows(List<CreateSaleWindowRequest> windows, EventResponse event) {
+    private record SaleWindow(String type, Instant startAt, Instant endAt) {}
+
+    private void validateFaceValueAndMinimum(BigDecimal faceValue, Integer eventTicketMinimum) {
+        if (faceValue == null || faceValue.compareTo(BigDecimal.ZERO) < 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_PRICE",
+                    "Face value must be greater than or equal to 0");
+        }
+        if (eventTicketMinimum == null || eventTicketMinimum < 1) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_LIMITS",
+                    "Event ticket minimum must be greater than or equal to 1");
+        }
+    }
+
+    private void validateSaleWindowsCommon(List<SaleWindow> windows, EventResponse event) {
         if (windows == null || windows.isEmpty()) {
             return;
         }
 
-        for (CreateSaleWindowRequest window : windows) {
+        for (SaleWindow window : windows) {
             if (window.endAt().isBefore(window.startAt())) {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
                         window.type() + " end must not be before start");
@@ -222,13 +249,13 @@ public class OfferService {
             }
         }
 
-        CreateSaleWindowRequest generalSale = windows.stream()
+        SaleWindow generalSale = windows.stream()
                 .filter(w -> isGeneralSale(w.type()))
                 .findFirst()
                 .orElse(null);
 
         if (generalSale != null) {
-            for (CreateSaleWindowRequest window : windows) {
+            for (SaleWindow window : windows) {
                 if (isPresale(window.type())) {
                     if (window.endAt().isAfter(generalSale.startAt())) {
                         throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
@@ -239,42 +266,24 @@ public class OfferService {
         }
     }
 
+    private void validateSaleWindows(List<CreateSaleWindowRequest> windows, EventResponse event) {
+        if (windows == null || windows.isEmpty()) {
+            return;
+        }
+        List<SaleWindow> mapped = windows.stream()
+                .map(w -> new SaleWindow(w.type(), w.startAt(), w.endAt()))
+                .toList();
+        validateSaleWindowsCommon(mapped, event);
+    }
+
     private void validateSaleWindowsForUpdate(List<UpdateSaleWindowRequest> windows, EventResponse event) {
         if (windows == null || windows.isEmpty()) {
             return;
         }
-
-        for (UpdateSaleWindowRequest window : windows) {
-            if (window.endAt().isBefore(window.startAt())) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
-                        window.type() + " end must not be before start");
-            }
-
-            if (event.saleStartAt() != null && window.startAt().isBefore(event.saleStartAt())) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
-                        "Offer sale start must not be before event sale start");
-            }
-            if (event.saleEndAt() != null && window.endAt().isAfter(event.saleEndAt())) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
-                        "Offer sale end must not be after event sale end");
-            }
-        }
-
-        UpdateSaleWindowRequest generalSale = windows.stream()
-                .filter(w -> isGeneralSale(w.type()))
-                .findFirst()
-                .orElse(null);
-
-        if (generalSale != null) {
-            for (UpdateSaleWindowRequest window : windows) {
-                if (isPresale(window.type())) {
-                    if (window.endAt().isAfter(generalSale.startAt())) {
-                        throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
-                                "Presale must end before general sale starts");
-                    }
-                }
-            }
-        }
+        List<SaleWindow> mapped = windows.stream()
+                .map(w -> new SaleWindow(w.type(), w.startAt(), w.endAt()))
+                .toList();
+        validateSaleWindowsCommon(mapped, event);
     }
 
     private boolean isGeneralSale(SaleWindowType type) {
@@ -299,12 +308,42 @@ public class OfferService {
         }
     }
 
-    private void validateSeatingMode(SeatingMode seatingMode, String sectionId, String priceLevelId) {
+    private void validateSeatingMode(SeatingMode seatingMode, String sectionId, String priceLevelId, EventResponse event) {
         if (seatingMode == SeatingMode.RESERVED_SEATING) {
             if (isBlank(sectionId) || isBlank(priceLevelId)) {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_SEATING",
                         "Reserved seating offers require sectionId and priceLevelId");
             }
+
+            // Resolve manifest ID
+            String manifestId;
+            if (event.status() == EventStatus.DRAFT) {
+                var manifests = venueService.listManifests(event.venueId());
+                var activeManifest = manifests.stream()
+                        .filter(m -> m.status() == io.qzz.hoangvu.ticketpeak.api.venue.model.ManifestStatus.PUBLISHED)
+                        .findFirst()
+                        .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "NO_PUBLISHED_MANIFEST",
+                                "The assigned venue does not have a published manifest"));
+                manifestId = activeManifest.id();
+            } else {
+                manifestId = event.manifestId() != null ? event.manifestId() : "evt-" + event.id() + "-snap";
+            }
+
+            // Validate section and price level exist in manifest lookup tables
+            var sections = venueService.listSections(manifestId);
+            boolean sectionExists = sections.stream().anyMatch(s -> s.id().equals(sectionId));
+            if (!sectionExists) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "SECTION_NOT_FOUND",
+                        "Section with id '" + sectionId + "' does not exist in manifest '" + manifestId + "'");
+            }
+
+            var priceLevels = venueService.listPriceLevels(manifestId);
+            boolean priceLevelExists = priceLevels.stream().anyMatch(p -> p.id().equals(priceLevelId));
+            if (!priceLevelExists) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "PRICE_LEVEL_NOT_FOUND",
+                        "Price level with id '" + priceLevelId + "' does not exist in manifest '" + manifestId + "'");
+            }
+
         } else if (seatingMode == SeatingMode.GENERAL_ADMISSION) {
             if (!isBlank(sectionId) || !isBlank(priceLevelId)) {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_SEATING",

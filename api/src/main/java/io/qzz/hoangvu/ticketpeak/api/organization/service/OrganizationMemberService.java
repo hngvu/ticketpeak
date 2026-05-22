@@ -73,7 +73,7 @@ public class OrganizationMemberService {
     }
 
     @Transactional
-    @PreAuthorize("hasRole('ADMIN') or @orgSecurity.isOwner(#orgId)")
+    @PreAuthorize("hasRole('ADMIN') or @orgSecurity.isOwner(#orgId) or @orgSecurity.hasPermission(#orgId, 'ORG_MEMBER:REMOVE')")
     public void removeMember(UUID orgId, UUID accountId) {
         Organization org = organizationRepository.findById(orgId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "Organization not found"));

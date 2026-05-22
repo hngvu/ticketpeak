@@ -17,13 +17,16 @@ public class OrgSecurity {
     private final OrganizationRepository organizationRepository;
     private final OrganizationMemberRepository organizationMemberRepository;
     private final EventRepository eventRepository;
+    private final io.qzz.hoangvu.ticketpeak.api.iam.repository.AccountPermissionRepository accountPermissionRepository;
 
     public OrgSecurity(OrganizationRepository organizationRepository,
                        OrganizationMemberRepository organizationMemberRepository,
-                       EventRepository eventRepository) {
+                       EventRepository eventRepository,
+                       io.qzz.hoangvu.ticketpeak.api.iam.repository.AccountPermissionRepository accountPermissionRepository) {
         this.organizationRepository = organizationRepository;
         this.organizationMemberRepository = organizationMemberRepository;
         this.eventRepository = eventRepository;
+        this.accountPermissionRepository = accountPermissionRepository;
     }
 
     public boolean isOwner(UUID organizationId) {
@@ -100,6 +103,35 @@ public class OrgSecurity {
                                 event.getOrganizationId(), acc.accountId(), OrganizationMemberStatus.ACTIVE);
                     })
                     .orElse(false);
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    public boolean hasPermission(UUID organizationId, String permissionCode) {
+        if (organizationId == null || permissionCode == null) {
+            return false;
+        }
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            return false;
+        }
+
+        if (!(auth.getPrincipal() instanceof AuthenticatedAccount acc)) {
+            return false;
+        }
+
+        if (acc.role() == io.qzz.hoangvu.ticketpeak.api.iam.model.Role.ADMIN) {
+            return true;
+        }
+
+        if (isOwner(organizationId)) {
+            return true;
+        }
+
+        try {
+            return accountPermissionRepository.existsByAccountIdAndPermissionCodeAndOrganizationIdAndIsActiveTrue(
+                    acc.accountId(), permissionCode, organizationId);
         } catch (IllegalArgumentException e) {
             return false;
         }
