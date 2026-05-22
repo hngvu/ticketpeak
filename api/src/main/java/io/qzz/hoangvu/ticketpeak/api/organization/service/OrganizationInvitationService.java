@@ -50,7 +50,7 @@ public class OrganizationInvitationService {
     }
 
     @Transactional
-    @PreAuthorize("hasRole('ADMIN') or @orgSecurity.isOwner(#orgId)")
+    @PreAuthorize("hasRole('ADMIN') or @orgSecurity.isOwner(#orgId) or @orgSecurity.hasPermission(#orgId, 'ORG_MEMBER:INVITE')")
     public InvitationResponse createInvitation(UUID orgId, CreateInvitationRequest request) {
         Organization org = organizationRepository.findById(orgId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "Organization not found"));

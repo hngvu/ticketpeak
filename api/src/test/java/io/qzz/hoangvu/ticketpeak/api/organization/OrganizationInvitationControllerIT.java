@@ -118,7 +118,7 @@ class OrganizationInvitationControllerIT {
     void owner_can_create_invitation() throws Exception {
         CreateInvitationRequest req = new CreateInvitationRequest(inviteeAccount.getId());
 
-        mockMvc.perform(post("/api/organizations/" + org.getId() + "/invitations")
+        mockMvc.perform(post("/api/partner/organizations/" + org.getId() + "/invitations")
                         .header("Authorization", "Bearer " + ownerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
@@ -131,7 +131,7 @@ class OrganizationInvitationControllerIT {
     void authorized_member_can_create_invitation() throws Exception {
         CreateInvitationRequest req = new CreateInvitationRequest(inviteeAccount.getId());
 
-        mockMvc.perform(post("/api/organizations/" + org.getId() + "/invitations")
+        mockMvc.perform(post("/api/partner/organizations/" + org.getId() + "/invitations")
                         .header("Authorization", "Bearer " + authorizedMemberToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
@@ -143,7 +143,7 @@ class OrganizationInvitationControllerIT {
         Account buyer = accountRepository.saveAndFlush(Account.builder().email("buyer@tp.com").password(passwordEncoder.encode("Password123!")).role(Role.BUYER).status(AccountStatus.ACTIVE).build());
         CreateInvitationRequest req = new CreateInvitationRequest(buyer.getId());
 
-        mockMvc.perform(post("/api/organizations/" + org.getId() + "/invitations")
+        mockMvc.perform(post("/api/partner/organizations/" + org.getId() + "/invitations")
                         .header("Authorization", "Bearer " + ownerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
@@ -157,7 +157,7 @@ class OrganizationInvitationControllerIT {
                 .organization(org).inviteeAccountId(inviteeAccount.getId()).invitedBy(ownerAccount.getId())
                 .token("test-token").status(OrganizationInvitationStatus.PENDING).expiresAt(Instant.now().plus(1, ChronoUnit.DAYS)).build());
 
-        mockMvc.perform(get("/api/organizations/invitations/validate?token=test-token")
+        mockMvc.perform(get("/api/partner/organizations/invitations/validate?token=test-token")
                         .header("Authorization", "Bearer " + inviteeToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.orgName").value("Test Org"));
@@ -169,10 +169,8 @@ class OrganizationInvitationControllerIT {
                 .organization(org).inviteeAccountId(inviteeAccount.getId()).invitedBy(ownerAccount.getId())
                 .token("test-token").status(OrganizationInvitationStatus.PENDING).expiresAt(Instant.now().plus(1, ChronoUnit.DAYS)).build());
 
-        mockMvc.perform(post("/api/organizations/invitations/accept")
-                        .header("Authorization", "Bearer " + inviteeToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new TokenRequest("test-token"))))
+        mockMvc.perform(post("/api/partner/organizations/invitations/accept?token=test-token")
+                        .header("Authorization", "Bearer " + inviteeToken))
                 .andExpect(status().isOk());
 
         OrganizationInvitation updatedInvite = invitationRepository.findById(invite.getId()).orElseThrow();
@@ -188,10 +186,8 @@ class OrganizationInvitationControllerIT {
                 .organization(org).inviteeAccountId(inviteeAccount.getId()).invitedBy(ownerAccount.getId())
                 .token("test-token").status(OrganizationInvitationStatus.PENDING).expiresAt(Instant.now().plus(1, ChronoUnit.DAYS)).build());
 
-        mockMvc.perform(post("/api/organizations/invitations/reject")
-                        .header("Authorization", "Bearer " + inviteeToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new TokenRequest("test-token"))))
+        mockMvc.perform(post("/api/partner/organizations/invitations/reject?token=test-token")
+                        .header("Authorization", "Bearer " + inviteeToken))
                 .andExpect(status().isOk());
 
         OrganizationInvitation updatedInvite = invitationRepository.findById(invite.getId()).orElseThrow();
@@ -204,12 +200,12 @@ class OrganizationInvitationControllerIT {
                 .organization(org).inviteeAccountId(inviteeAccount.getId()).invitedBy(ownerAccount.getId())
                 .token("token1").status(OrganizationInvitationStatus.PENDING).expiresAt(Instant.now().plus(1, ChronoUnit.DAYS)).build());
 
-        mockMvc.perform(get("/api/organizations/" + org.getId() + "/invitations")
+        mockMvc.perform(get("/api/partner/organizations/" + org.getId() + "/invitations")
                         .header("Authorization", "Bearer " + ownerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(1));
 
-        mockMvc.perform(get("/api/organizations/invitations/me")
+        mockMvc.perform(get("/api/partner/organizations/invitations/my")
                         .header("Authorization", "Bearer " + inviteeToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(1));

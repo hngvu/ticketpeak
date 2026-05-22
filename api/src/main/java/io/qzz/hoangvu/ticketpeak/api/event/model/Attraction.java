@@ -6,12 +6,14 @@ import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.Generated;
 import org.hibernate.annotations.GenerationTime;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
 @Getter @Setter @Builder
 @NoArgsConstructor @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
+@EntityListeners(org.springframework.data.jpa.domain.support.AuditingEntityListener.class)
 @Table(name = "attraction")
 public class Attraction {
 
@@ -35,4 +37,13 @@ public class Attraction {
 
     @Column(name = "description", columnDefinition = "TEXT")
     String description;
+
+    @org.springframework.data.annotation.CreatedDate
+    @Column(name = "created_at", updatable = false, nullable = false)
+    Instant createdAt;
+
+    @org.springframework.data.annotation.LastModifiedDate
+    @Column(name = "updated_at", nullable = false)
+    Instant updatedAt;
 }
+

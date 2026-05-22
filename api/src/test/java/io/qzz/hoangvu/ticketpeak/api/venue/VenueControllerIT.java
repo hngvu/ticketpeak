@@ -7,14 +7,15 @@ import io.qzz.hoangvu.ticketpeak.api.account.repository.AccountRepository;
 import io.qzz.hoangvu.ticketpeak.api.iam.model.Role;
 import io.qzz.hoangvu.ticketpeak.api.venue.dto.*;
 import io.qzz.hoangvu.ticketpeak.api.venue.repository.ManifestRepository;
+import io.qzz.hoangvu.ticketpeak.api.TestcontainersConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import com.jayway.jsonpath.JsonPath;
@@ -23,9 +24,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@Import(TestcontainersConfiguration.class)
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
 @Transactional
 class VenueControllerIT {
 
@@ -44,10 +45,20 @@ class VenueControllerIT {
     @Autowired
     private ManifestRepository manifestRepository;
 
+    @Autowired
+    private io.qzz.hoangvu.ticketpeak.api.venue.repository.VenueRepository venueRepository;
+
     private String adminToken;
 
     @BeforeEach
     void setup() throws Exception {
+        manifestRepository.deleteAll();
+        venueRepository.deleteAll();
+        accountRepository.deleteAll();
+        accountRepository.flush();
+        venueRepository.flush();
+        manifestRepository.flush();
+
         String rawPassword = "password123";
         Account adminAccount = accountRepository.saveAndFlush(Account.builder()
                 .email("admin@tp.com")
@@ -264,6 +275,30 @@ class VenueControllerIT {
         mockMvc.perform(get("/api/internal/venues/manifests/M006-CLONE/levels").header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(1));
+    }
+
+    @Test
+    void non_admin_cannot_access_internal_venues() throws Exception {
+        Account organizerAccount = accountRepository.saveAndFlush(Account.builder()
+                .email("organizer@tp.com")
+                .password(passwordEncoder.encode("password123"))
+                .firstName("Organizer")
+                .lastName("User")
+                .role(Role.ORGANIZER)
+                .status(AccountStatus.ACTIVE)
+                .build());
+
+        String organizerToken = login("organizer@tp.com", "password123");
+
+        CreateVenueRequest req = new CreateVenueRequest(
+                "Saigon Hall", "1 Le Duan", "Ho Chi Minh City", "VN",
+                null, null, null, null, null, null, null, null);
+
+        mockMvc.perform(post("/api/internal/venues")
+                        .header("Authorization", "Bearer " + organizerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isForbidden());
     }
 
     private String login(String email, String password) throws Exception {

@@ -52,8 +52,9 @@ public class EventService {
     }
 
     @Transactional
-    @PreAuthorize("(hasRole('ORGANIZER') or hasRole('ADMIN')) and @orgSecurity.isOwner(#req.organizationId())")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isOwner(#req.organizationId()))")
     public EventResponse createEvent(CreateEventRequest req) {
+        validateEventDates(req.startAt(), req.endAt(), req.saleStartAt(), req.saleEndAt());
         try {
             venueService.getVenue(req.venueId());
         } catch (Exception ex) {
@@ -126,7 +127,7 @@ public class EventService {
     }
 
     @Transactional
-    @PreAuthorize("(hasRole('ORGANIZER') or hasRole('ADMIN')) and @orgSecurity.isEventOwnerOrMember(#id)")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#id))")
     public EventResponse updateEvent(UUID id, UpdateEventRequest req) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
@@ -134,6 +135,8 @@ public class EventService {
         if (event.getStatus() == EventStatus.COMPLETED || event.getStatus() == EventStatus.CANCELED) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Cannot update ended or cancelled event");
         }
+
+        validateEventDates(req.startAt(), req.endAt(), req.saleStartAt(), req.saleEndAt());
 
         try {
             venueService.getVenue(req.venueId());
@@ -205,7 +208,7 @@ public class EventService {
     }
 
     @Transactional(readOnly = true)
-    @PreAuthorize("(hasRole('ORGANIZER') or hasRole('ADMIN')) and @orgSecurity.isEventOwnerOrMember(#id)")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#id))")
     public EventResponse getEventForPartner(UUID id) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
@@ -289,7 +292,7 @@ public class EventService {
     }
 
     @Transactional
-    @PreAuthorize("(hasRole('ORGANIZER') or hasRole('ADMIN')) and @orgSecurity.isEventOwnerOrMember(#id)")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#id))")
     public EventResponse publishEvent(UUID id) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
@@ -330,14 +333,21 @@ public class EventService {
     }
 
     @Transactional
-    @PreAuthorize("(hasRole('ORGANIZER') or hasRole('ADMIN')) and @orgSecurity.isEventOwnerOrMember(#id)")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#id))")
     public EventResponse postponeEvent(UUID id, PostponeEventRequest req) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
 
-        if (event.getStatus() != EventStatus.PUBLISHED && event.getStatus() != EventStatus.ONSALE) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Only published or on-sale events can be postponed");
+        if (event.getStatus() != EventStatus.PUBLISHED && event.getStatus() != EventStatus.ONSALE && event.getStatus() != EventStatus.POSTPONED) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Only published, on-sale, or postponed events can be postponed");
         }
+
+        Instant startAt = req.newStartAt();
+        Instant endAt = req.newEndAt() != null ? req.newEndAt() : event.getEndAt();
+        Instant saleStartAt = req.newSaleStartAt() != null ? req.newSaleStartAt() : event.getSaleStartAt();
+        Instant saleEndAt = req.newSaleEndAt() != null ? req.newSaleEndAt() : event.getSaleEndAt();
+
+        validateEventDates(startAt, endAt, saleStartAt, saleEndAt);
 
         event.setStatus(EventStatus.POSTPONED);
         event.setStartAt(req.newStartAt());
@@ -354,7 +364,7 @@ public class EventService {
     }
 
     @Transactional
-    @PreAuthorize("(hasRole('ORGANIZER') or hasRole('ADMIN')) and @orgSecurity.isEventOwnerOrMember(#id)")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#id))")
     public EventResponse cancelEvent(UUID id) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
@@ -369,10 +379,34 @@ public class EventService {
     }
 
     @Transactional
-    @PreAuthorize("(hasRole('ORGANIZER') or hasRole('ADMIN')) and @orgSecurity.isEventOwnerOrMember(#id)")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#id))")
     public EventResponse cloneEvent(UUID id, CloneEventRequest req) {
         Event sourceEvent = eventRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
+
+        Instant startAt = req.startAt() != null ? req.startAt() : sourceEvent.getStartAt();
+        Instant endAt = req.endAt();
+        Instant saleStartAt = req.saleStartAt();
+        Instant saleEndAt = req.saleEndAt();
+
+        if (req.startAt() != null && sourceEvent.getStartAt() != null) {
+            java.time.Duration offset = java.time.Duration.between(sourceEvent.getStartAt(), req.startAt());
+            if (endAt == null && sourceEvent.getEndAt() != null) {
+                endAt = sourceEvent.getEndAt().plus(offset);
+            }
+            if (saleStartAt == null && sourceEvent.getSaleStartAt() != null) {
+                saleStartAt = sourceEvent.getSaleStartAt().plus(offset);
+            }
+            if (saleEndAt == null && sourceEvent.getSaleEndAt() != null) {
+                saleEndAt = sourceEvent.getSaleEndAt().plus(offset);
+            }
+        } else {
+            if (endAt == null) endAt = sourceEvent.getEndAt();
+            if (saleStartAt == null) saleStartAt = sourceEvent.getSaleStartAt();
+            if (saleEndAt == null) saleEndAt = sourceEvent.getSaleEndAt();
+        }
+
+        validateEventDates(startAt, endAt, saleStartAt, saleEndAt);
 
         String slug = req.slug();
         if (slug == null || slug.isBlank()) {
@@ -391,11 +425,11 @@ public class EventService {
                 .slug(slug)
                 .description(sourceEvent.getDescription())
                 .status(EventStatus.DRAFT)
-                .startAt(req.startAt() != null ? req.startAt() : sourceEvent.getStartAt())
-                .endAt(req.endAt() != null ? req.endAt() : sourceEvent.getEndAt())
+                .startAt(startAt)
+                .endAt(endAt)
                 .timezone(sourceEvent.getTimezone())
-                .saleStartAt(req.saleStartAt() != null ? req.saleStartAt() : sourceEvent.getSaleStartAt())
-                .saleEndAt(req.saleEndAt() != null ? req.saleEndAt() : sourceEvent.getSaleEndAt())
+                .saleStartAt(saleStartAt)
+                .saleEndAt(saleEndAt)
                 .restrictSingleSeat(sourceEvent.isRestrictSingleSeat())
                 .safeTixEnabled(sourceEvent.isSafeTixEnabled())
                 .transferEnabled(sourceEvent.isTransferEnabled())
@@ -438,5 +472,33 @@ public class EventService {
         return name.toLowerCase()
                 .replaceAll("[^a-z0-9\\s]", "")
                 .replaceAll("\\s+", "-");
+    }
+
+    private void validateEventDates(Instant startAt, Instant endAt, Instant saleStartAt, Instant saleEndAt) {
+        if (startAt == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EVENT_DATES", "Event start date is required");
+        }
+        if (endAt != null && !startAt.isBefore(endAt)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EVENT_DATES", "Event start date must be before end date");
+        }
+        if (saleStartAt != null && saleEndAt != null) {
+            if (!saleStartAt.isBefore(saleEndAt)) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EVENT_DATES", "Sale start date must be before sale end date");
+            }
+        }
+        if (saleStartAt != null) {
+            if (endAt != null && saleStartAt.isAfter(endAt)) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EVENT_DATES", "Sale start date must be before or equal to event end date");
+            } else if (endAt == null && saleStartAt.isAfter(startAt)) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EVENT_DATES", "Sale start date must be before or equal to event start date");
+            }
+        }
+        if (saleEndAt != null) {
+            if (endAt != null && saleEndAt.isAfter(endAt)) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EVENT_DATES", "Sale end date must be before or equal to event end date");
+            } else if (endAt == null && saleEndAt.isAfter(startAt)) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EVENT_DATES", "Sale end date must be before or equal to event start date");
+            }
+        }
     }
 }
