@@ -76,7 +76,7 @@ public class OfferService {
             for (CreateSaleWindowRequest sw : request.saleWindows()) {
                 OfferSaleWindow window = OfferSaleWindow.builder()
                         .offer(offer)
-                        .type(sw.type().trim())
+                        .type(sw.type())
                         .startAt(sw.startAt())
                         .endAt(sw.endAt())
                         .build();
@@ -129,7 +129,7 @@ public class OfferService {
             for (UpdateSaleWindowRequest sw : request.saleWindows()) {
                 OfferSaleWindow window = OfferSaleWindow.builder()
                         .offer(offer)
-                        .type(sw.type().trim())
+                        .type(sw.type())
                         .startAt(sw.startAt())
                         .endAt(sw.endAt())
                         .build();
@@ -277,12 +277,12 @@ public class OfferService {
         }
     }
 
-    private boolean isGeneralSale(String type) {
-        return type.trim().toUpperCase(Locale.ROOT).contains("GENERAL");
+    private boolean isGeneralSale(SaleWindowType type) {
+        return type == SaleWindowType.GENERAL_SALE;
     }
 
-    private boolean isPresale(String type) {
-        return type.trim().toUpperCase(Locale.ROOT).contains("PRESALE");
+    private boolean isPresale(SaleWindowType type) {
+        return type == SaleWindowType.PRESALE;
     }
 
     private void validateQuantity(Integer minimum, List<Integer> quantities) {
