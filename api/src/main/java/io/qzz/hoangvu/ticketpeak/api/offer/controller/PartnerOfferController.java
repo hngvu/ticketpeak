@@ -48,6 +48,15 @@ public class PartnerOfferController {
                 offerService.updateOffer(eventId, ticketTypeId, request), "Offer updated"));
     }
 
+    @GetMapping("/{ticketTypeId}")
+    public ResponseEntity<ApiResponse<OfferResponse>> getEventOfferForPartner(
+            @PathVariable UUID eventId,
+            @PathVariable String ticketTypeId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                offerService.getEventOfferForPartner(eventId, ticketTypeId), "OK"));
+    }
+
     @DeleteMapping("/{ticketTypeId}")
     public ResponseEntity<ApiResponse<Void>> deleteOffer(
             @PathVariable UUID eventId,

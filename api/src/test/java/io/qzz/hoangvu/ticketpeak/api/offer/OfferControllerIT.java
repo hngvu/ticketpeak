@@ -366,6 +366,36 @@ class OfferControllerIT {
     }
 
     @Test
+    void cannot_delete_offer_for_canceled_or_completed_event() throws Exception {
+        CreateOfferRequest createRequest = createOfferRequest("del-state", "Delete State Test");
+
+        mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
+                        .header("Authorization", "Bearer " + organizerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createRequest)))
+                .andExpect(status().isCreated());
+
+        // Change event to CANCELED
+        publishedEvent.setStatus(EventStatus.CANCELED);
+        eventRepository.saveAndFlush(publishedEvent);
+
+        mockMvc.perform(delete("/api/partner/events/" + publishedEvent.getId() + "/offers/del-state")
+                        .header("Authorization", "Bearer " + organizerToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("INVALID_EVENT_STATE"));
+
+        // Change event to COMPLETED
+        publishedEvent.setStatus(EventStatus.COMPLETED);
+        eventRepository.saveAndFlush(publishedEvent);
+
+        mockMvc.perform(delete("/api/partner/events/" + publishedEvent.getId() + "/offers/del-state")
+                        .header("Authorization", "Bearer " + organizerToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("INVALID_EVENT_STATE"));
+    }
+
+
+    @Test
     void invalid_currency_is_rejected() throws Exception {
         CreateOfferRequest request = new CreateOfferRequest(
                 "bad-cur", "Bad Currency", null,
@@ -533,6 +563,31 @@ class OfferControllerIT {
                 .andExpect(jsonPath("$.data[0].ticketTypeId").value("tier-one"))
                 .andExpect(jsonPath("$.data[1].ticketTypeId").value("tier-two"));
     }
+
+    @Test
+    void partner_can_get_single_offer_even_if_draft() throws Exception {
+        CreateOfferRequest request = createOfferRequest("draft-single", "Draft Single");
+
+        mockMvc.perform(post("/api/partner/events/" + draftEvent.getId() + "/offers")
+                        .header("Authorization", "Bearer " + organizerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+
+        // Partner can view it
+        mockMvc.perform(get("/api/partner/events/" + draftEvent.getId() + "/offers/draft-single")
+                        .header("Authorization", "Bearer " + organizerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.ticketTypeId").value("draft-single"))
+                .andExpect(jsonPath("$.data.name").value("Draft Single"));
+
+        // Public cannot view it
+        mockMvc.perform(get("/api/events/" + draftEvent.getId() + "/offers/draft-single"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("EVENT_NOT_FOUND"));
+    }
+
 
     private Event saveEvent(String slug, String title, EventStatus status) {
         return eventRepository.saveAndFlush(Event.builder()

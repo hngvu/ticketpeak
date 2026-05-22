@@ -184,6 +184,15 @@ public class OfferService {
         return OfferResponse.from(offer);
     }
 
+    @PreAuthorize("(hasRole('ORGANIZER') or hasRole('ADMIN')) and @orgSecurity.isEventOwnerOrMember(#eventId)")
+    public OfferResponse getEventOfferForPartner(UUID eventId, String ticketTypeId) {
+        eventService.getEventForPartner(eventId);
+        Offer offer = offerRepository.findByEventIdAndTicketTypeId(eventId, normalizeTicketTypeId(ticketTypeId))
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "OFFER_NOT_FOUND",
+                        "Offer does not exist for this event"));
+        return OfferResponse.from(offer);
+    }
+
     private void validateCurrency(String currency) {
         String normalized = currency.trim().toUpperCase(Locale.ROOT);
         if (!ISO_4217_CURRENCIES.contains(normalized)) {
