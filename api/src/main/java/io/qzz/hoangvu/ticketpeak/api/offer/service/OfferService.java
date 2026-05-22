@@ -53,6 +53,7 @@ public class OfferService {
         }
 
         validateCurrency(request.currency());
+        validateFaceValueAndMinimum(request.faceValue(), request.eventTicketMinimum());
         validateSaleWindows(request.saleWindows(), event);
         validateQuantity(request.eventTicketMinimum(), request.sellableQuantities());
         validateSeatingMode(request.seatingMode(), request.sectionId(), request.priceLevelId(), event);
@@ -110,6 +111,7 @@ public class OfferService {
         }
 
         validateCurrency(request.currency());
+        validateFaceValueAndMinimum(request.faceValue(), request.eventTicketMinimum());
         validateSaleWindowsForUpdate(request.saleWindows(), event);
         validateQuantity(request.eventTicketMinimum(), request.sellableQuantities());
         validateSeatingMode(request.seatingMode(), request.sectionId(), request.priceLevelId(), event);
@@ -213,12 +215,25 @@ public class OfferService {
         }
     }
 
-    private void validateSaleWindows(List<CreateSaleWindowRequest> windows, EventResponse event) {
+    private record SaleWindow(String type, Instant startAt, Instant endAt) {}
+
+    private void validateFaceValueAndMinimum(BigDecimal faceValue, Integer eventTicketMinimum) {
+        if (faceValue == null || faceValue.compareTo(BigDecimal.ZERO) < 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_PRICE",
+                    "Face value must be greater than or equal to 0");
+        }
+        if (eventTicketMinimum == null || eventTicketMinimum < 1) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_LIMITS",
+                    "Event ticket minimum must be greater than or equal to 1");
+        }
+    }
+
+    private void validateSaleWindowsCommon(List<SaleWindow> windows, EventResponse event) {
         if (windows == null || windows.isEmpty()) {
             return;
         }
 
-        for (CreateSaleWindowRequest window : windows) {
+        for (SaleWindow window : windows) {
             if (window.endAt().isBefore(window.startAt())) {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
                         window.type() + " end must not be before start");
@@ -234,13 +249,13 @@ public class OfferService {
             }
         }
 
-        CreateSaleWindowRequest generalSale = windows.stream()
+        SaleWindow generalSale = windows.stream()
                 .filter(w -> isGeneralSale(w.type()))
                 .findFirst()
                 .orElse(null);
 
         if (generalSale != null) {
-            for (CreateSaleWindowRequest window : windows) {
+            for (SaleWindow window : windows) {
                 if (isPresale(window.type())) {
                     if (window.endAt().isAfter(generalSale.startAt())) {
                         throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
@@ -251,42 +266,24 @@ public class OfferService {
         }
     }
 
+    private void validateSaleWindows(List<CreateSaleWindowRequest> windows, EventResponse event) {
+        if (windows == null || windows.isEmpty()) {
+            return;
+        }
+        List<SaleWindow> mapped = windows.stream()
+                .map(w -> new SaleWindow(w.type(), w.startAt(), w.endAt()))
+                .toList();
+        validateSaleWindowsCommon(mapped, event);
+    }
+
     private void validateSaleWindowsForUpdate(List<UpdateSaleWindowRequest> windows, EventResponse event) {
         if (windows == null || windows.isEmpty()) {
             return;
         }
-
-        for (UpdateSaleWindowRequest window : windows) {
-            if (window.endAt().isBefore(window.startAt())) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
-                        window.type() + " end must not be before start");
-            }
-
-            if (event.saleStartAt() != null && window.startAt().isBefore(event.saleStartAt())) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
-                        "Offer sale start must not be before event sale start");
-            }
-            if (event.saleEndAt() != null && window.endAt().isAfter(event.saleEndAt())) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
-                        "Offer sale end must not be after event sale end");
-            }
-        }
-
-        UpdateSaleWindowRequest generalSale = windows.stream()
-                .filter(w -> isGeneralSale(w.type()))
-                .findFirst()
-                .orElse(null);
-
-        if (generalSale != null) {
-            for (UpdateSaleWindowRequest window : windows) {
-                if (isPresale(window.type())) {
-                    if (window.endAt().isAfter(generalSale.startAt())) {
-                        throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
-                                "Presale must end before general sale starts");
-                    }
-                }
-            }
-        }
+        List<SaleWindow> mapped = windows.stream()
+                .map(w -> new SaleWindow(w.type(), w.startAt(), w.endAt()))
+                .toList();
+        validateSaleWindowsCommon(mapped, event);
     }
 
     private boolean isGeneralSale(String type) {

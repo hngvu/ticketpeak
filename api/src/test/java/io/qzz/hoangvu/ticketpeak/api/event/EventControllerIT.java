@@ -392,6 +392,40 @@ class EventControllerIT {
     }
 
     @Test
+    void event_reschedule_and_resume() throws Exception {
+        Event event = eventRepository.saveAndFlush(Event.builder()
+                .organizationId(org.getId())
+                .venueId(venue.getId())
+                .title("Postponed Show")
+                .slug("postponed-show")
+                .status(EventStatus.POSTPONED)
+                .startAt(Instant.now().plusSeconds(100000))
+                .timezone("Asia/Ho_Chi_Minh")
+                .build());
+
+        // 1. Reschedule event
+        RescheduleEventRequest rescheduleReq = new RescheduleEventRequest(
+                Instant.now().plusSeconds(300000),
+                Instant.now().plusSeconds(310000),
+                null,
+                null
+        );
+
+        mockMvc.perform(post("/api/partner/events/" + event.getId() + "/reschedule")
+                        .header("Authorization", "Bearer " + ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(rescheduleReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("RESCHEDULED"));
+
+        // 2. Resume event back to ONSALE
+        mockMvc.perform(post("/api/partner/events/" + event.getId() + "/resume")
+                        .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("ONSALE"));
+    }
+
+    @Test
     void search_events_full_criteria() throws Exception {
         Attraction artist = attractionRepository.saveAndFlush(Attraction.builder()
                 .name("Adele")

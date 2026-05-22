@@ -29,30 +29,4 @@ public class GAArea {
     @Column(nullable = false)
     Integer capacity;
 
-    // --- Relationships (Read-Only to avoid duplicate column mappings) ---
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "manifest_id", insertable = false, updatable = false)
-    Manifest manifest;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumns({
-        @JoinColumn(name = "manifest_id", referencedColumnName = "manifest_id", insertable = false, updatable = false),
-        @JoinColumn(name = "level_id", referencedColumnName = "id", insertable = false, updatable = false)
-    })
-    Level level;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumns({
-        @JoinColumn(name = "manifest_id", referencedColumnName = "manifest_id", insertable = false, updatable = false),
-        @JoinColumn(name = "section_id", referencedColumnName = "id", insertable = false, updatable = false)
-    })
-    Section section;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumns({
-        @JoinColumn(name = "manifest_id", referencedColumnName = "manifest_id", insertable = false, updatable = false),
-        @JoinColumn(name = "price_level_id", referencedColumnName = "id", insertable = false, updatable = false)
-    })
-    PriceLevel priceLevel;
 }

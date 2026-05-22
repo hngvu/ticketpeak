@@ -247,6 +247,37 @@ class VenueControllerIT {
     }
 
     @Test
+    void seat_row_uniqueness_enforced() throws Exception {
+        String responseStr = mockMvc.perform(post("/api/internal/venues").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new CreateVenueRequest("V-Row", "A", "C", "VN", null, null, null, null, null, null, null, null))))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String venueId = JsonPath.read(responseStr, "$.data.id");
+
+        mockMvc.perform(post("/api/internal/venues/" + venueId + "/manifests").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CreateManifestRequest("M005-Row", "L", 100))))
+                .andExpect(status().isCreated());
+        mockMvc.perform(post("/api/internal/venues/manifests/M005-Row/rs-areas").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CreateRSAreaRequest("RA001-Row", "L1", "S1", "P1"))))
+                .andExpect(status().isCreated());
+        
+        mockMvc.perform(post("/api/internal/venues/rs-areas/RA001-Row/rows").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CreateSeatRowRequest("ROW001-Row", "Row-A", null))))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/internal/venues/rs-areas/RA001-Row/rows").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CreateSeatRowRequest("ROW002-Row", "Row-A", null))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("SEAT_ROW_NAME_DUPLICATE"));
+    }
+
+    @Test
     void manifest_clone_copies_hierarchy() throws Exception {
         String responseStr = mockMvc.perform(post("/api/internal/venues").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)

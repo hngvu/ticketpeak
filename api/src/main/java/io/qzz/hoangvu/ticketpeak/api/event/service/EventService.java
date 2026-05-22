@@ -263,8 +263,9 @@ public class EventService {
 
         List<UUID> explicitEventIdsForClassifications = null;
         if (classificationId != null) {
+            List<Classification> allClassifications = classificationRepository.findAll();
             List<UUID> classificationIds = new java.util.ArrayList<>();
-            findDescendantClassifications(classificationId, classificationIds);
+            findDescendantClassificationsInMemory(classificationId, allClassifications, classificationIds);
             explicitEventIdsForClassifications = eventClassificationRepository.findEventIdsByClassificationIds(classificationIds);
         }
 
@@ -283,11 +284,13 @@ public class EventService {
         return eventRepository.findAll(spec, pageable).map(this::convertToResponse);
     }
 
-    private void findDescendantClassifications(UUID parentId, List<UUID> accumulator) {
+    private void findDescendantClassificationsInMemory(UUID parentId, List<Classification> allClassifications, List<UUID> accumulator) {
         accumulator.add(parentId);
-        List<Classification> children = classificationRepository.findByParentId(parentId);
+        List<Classification> children = allClassifications.stream()
+                .filter(c -> parentId.equals(c.getParentId()))
+                .toList();
         for (Classification child : children) {
-            findDescendantClassifications(child.getId(), accumulator);
+            findDescendantClassificationsInMemory(child.getId(), allClassifications, accumulator);
         }
     }
 
@@ -380,6 +383,54 @@ public class EventService {
 
     @Transactional
     @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#id))")
+    public EventResponse rescheduleEvent(UUID id, RescheduleEventRequest req) {
+        Event event = eventRepository.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
+
+        if (event.getStatus() != EventStatus.POSTPONED && event.getStatus() != EventStatus.RESCHEDULED) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Only postponed or rescheduled events can be rescheduled");
+        }
+
+        Instant startAt = req.newStartAt();
+        Instant endAt = req.newEndAt() != null ? req.newEndAt() : event.getEndAt();
+        Instant saleStartAt = req.newSaleStartAt() != null ? req.newSaleStartAt() : event.getSaleStartAt();
+        Instant saleEndAt = req.newSaleEndAt() != null ? req.newSaleEndAt() : event.getSaleEndAt();
+
+        validateEventDates(startAt, endAt, saleStartAt, saleEndAt);
+
+        event.setStatus(EventStatus.RESCHEDULED);
+        event.setStartAt(req.newStartAt());
+        event.setEndAt(req.newEndAt());
+        if (req.newSaleStartAt() != null) {
+            event.setSaleStartAt(req.newSaleStartAt());
+        }
+        if (req.newSaleEndAt() != null) {
+            event.setSaleEndAt(req.newSaleEndAt());
+        }
+
+        Event savedEvent = eventRepository.save(event);
+        return convertToResponse(savedEvent);
+    }
+
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#id))")
+    public EventResponse resumeEvent(UUID id) {
+        Event event = eventRepository.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
+
+        if (event.getStatus() != EventStatus.POSTPONED && event.getStatus() != EventStatus.RESCHEDULED) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Only postponed or rescheduled events can be resumed");
+        }
+
+        validateEventDates(event.getStartAt(), event.getEndAt(), event.getSaleStartAt(), event.getSaleEndAt());
+
+        event.setStatus(EventStatus.ONSALE);
+        Event savedEvent = eventRepository.save(event);
+        return convertToResponse(savedEvent);
+    }
+
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#id))")
     public EventResponse cloneEvent(UUID id, CloneEventRequest req) {
         Event sourceEvent = eventRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
@@ -449,17 +500,31 @@ public class EventService {
     }
 
     private EventResponse convertToResponse(Event e) {
-        List<AttractionResponse> attractions = eventAttractionRepository.findByEventId(e.getId()).stream()
-                .map(ea -> attractionRepository.findById(ea.getAttractionId()).orElse(null))
-                .filter(Objects::nonNull)
-                .map(AttractionResponse::from)
-                .toList();
+        List<EventAttraction> eventAttractions = eventAttractionRepository.findByEventId(e.getId());
+        List<UUID> attractionIds = eventAttractions.stream().map(EventAttraction::getAttractionId).toList();
+        List<AttractionResponse> attractions = List.of();
+        if (!attractionIds.isEmpty()) {
+            java.util.Map<UUID, Attraction> attractionMap = attractionRepository.findAllById(attractionIds).stream()
+                    .collect(java.util.stream.Collectors.toMap(Attraction::getId, java.util.function.Function.identity()));
+            attractions = attractionIds.stream()
+                    .map(attractionMap::get)
+                    .filter(Objects::nonNull)
+                    .map(AttractionResponse::from)
+                    .toList();
+        }
 
-        List<ClassificationResponse> classifications = eventClassificationRepository.findByEventId(e.getId()).stream()
-                .map(ec -> classificationRepository.findById(ec.getClassificationId()).orElse(null))
-                .filter(Objects::nonNull)
-                .map(ClassificationResponse::from)
-                .toList();
+        List<EventClassification> eventClassifications = eventClassificationRepository.findByEventId(e.getId());
+        List<UUID> classificationIds = eventClassifications.stream().map(EventClassification::getClassificationId).toList();
+        List<ClassificationResponse> classifications = List.of();
+        if (!classificationIds.isEmpty()) {
+            java.util.Map<UUID, Classification> classificationMap = classificationRepository.findAllById(classificationIds).stream()
+                    .collect(java.util.stream.Collectors.toMap(Classification::getId, java.util.function.Function.identity()));
+            classifications = classificationIds.stream()
+                    .map(classificationMap::get)
+                    .filter(Objects::nonNull)
+                    .map(ClassificationResponse::from)
+                    .toList();
+        }
 
         String manifestId = eventManifestRepository.findById(e.getId())
                 .map(EventManifest::getManifestId)

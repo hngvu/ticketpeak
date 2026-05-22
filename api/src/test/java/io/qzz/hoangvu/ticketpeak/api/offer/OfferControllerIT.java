@@ -42,6 +42,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import io.qzz.hoangvu.ticketpeak.api.offer.service.OfferService;
+import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -83,6 +86,9 @@ class OfferControllerIT {
 
     @Autowired
     PriceLevelRepository priceLevelRepository;
+
+    @Autowired
+    OfferService offerService;
 
     Account organizerAccount;
     Account buyerAccount;
@@ -714,6 +720,37 @@ class OfferControllerIT {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("OFFER_HAS_SALES"))
                 .andExpect(jsonPath("$.message").value("Cannot delete offer with existing ticket sales"));
+    }
+
+    @Test
+    void service_layer_programmatic_validations_enforced() {
+        // 1. Check faceValue < 0
+        CreateOfferRequest negativePriceReq = new CreateOfferRequest(
+                "NEG-SVC", "Invalid Price Service", null,
+                "VND", new BigDecimal("-50.00"), false, 1,
+                List.of(1, 2), null,
+                SeatingMode.GENERAL_ADMISSION, null, null, List.of()
+        );
+        assertThatExceptionOfType(ApiException.class)
+                .isThrownBy(() -> offerService.createOffer(publishedEvent.getId(), negativePriceReq))
+                .satisfies(ex -> {
+                    assertThat(ex.getStatus()).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST);
+                    assertThat(ex.getErrorCode()).isEqualTo("INVALID_OFFER_PRICE");
+                });
+
+        // 2. Check eventTicketMinimum < 1
+        CreateOfferRequest badMinLimitReq = new CreateOfferRequest(
+                "MIN-SVC", "Invalid Min Service", null,
+                "VND", new BigDecimal("1000.00"), false, 0,
+                List.of(1, 2), null,
+                SeatingMode.GENERAL_ADMISSION, null, null, List.of()
+        );
+        assertThatExceptionOfType(ApiException.class)
+                .isThrownBy(() -> offerService.createOffer(publishedEvent.getId(), badMinLimitReq))
+                .satisfies(ex -> {
+                    assertThat(ex.getStatus()).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST);
+                    assertThat(ex.getErrorCode()).isEqualTo("INVALID_OFFER_LIMITS");
+                });
     }
 
 

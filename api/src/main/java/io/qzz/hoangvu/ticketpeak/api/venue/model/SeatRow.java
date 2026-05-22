@@ -8,7 +8,9 @@ import lombok.experimental.FieldDefaults;
 @Getter @Setter @Builder
 @NoArgsConstructor @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@Table(name = "seat_row")
+@Table(name = "seat_row", uniqueConstraints = {
+    @UniqueConstraint(name = "uq_seat_row_area_name", columnNames = {"rs_area_id", "name"})
+})
 public class SeatRow {
 
     @Id
