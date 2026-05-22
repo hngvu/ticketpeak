@@ -167,6 +167,9 @@ npm run preview
 - REST endpoints use plural nouns and base path `/api/...` with no versioning.
 - Controllers return `ResponseEntity<ApiResponse<T>>`.
 - Handle exceptions globally in `@RestControllerAdvice`; do not catch and swallow them in services.
+- **Conflict Handling**: Programmatically check for unique constraints (e.g. duplicate names, codes) in the service layer using `existsBy...` or similar queries. Throw a specific `ApiException` (which returns a structured 409 Conflict status) rather than letting lower-level database constraints bubble up to unhandled 500 errors.
+- **Date Range Validation**: Enforce chronological rules (e.g., `endAt > startAt`, `saleEndAt > saleStartAt`) at both the request DTO level (using custom validation/constraints) and the service layer.
+- **Active Sales Safeguard**: Never allow deletion or destructive modification of entities (e.g., offers, seating charts) that have active bookings, orders, or sales (e.g., block offer deletion when `quantitySold > 0`).
 
 ---
 
@@ -267,30 +270,12 @@ Rules:
 
 ---
 
-## Git and PR Conventions
+## Git and Commit Conventions
 
-### Branch flow
+### Direct Main Workflow
 
-```text
-feat/<scope> -> main
-fix/<scope>  -> main
-```
-
-- All work branches are cut from `main`.
-- PRs merge into `main` directly.
-- Do not push directly to `main`.
-
-### Branch naming
-
-```text
-feat/<module>/<short-description>
-fix/<module>/<short-description>
-chore/<short-description>
-docs/<short-description>
-```
-
-Examples:
-`feat/ticket/totp-rotation`, `fix/order/seat-expiry`
+- All changes are committed and pushed directly to the `main` branch.
+- No separate feature branches or Pull Requests are strictly required. Developers can work and commit directly on `main` to simplify the workflow.
 
 ### Commit format
 
@@ -335,7 +320,7 @@ cd web && npm run check && npm run lint
 cd api && ./mvnw compile -q && ./mvnw spring-boot:process-aot
 ```
 
-### Before opening a PR
+### Before pushing to `main`
 
 Run the full test suite for the changed layer.
 
@@ -351,7 +336,7 @@ cd web && npm run check && npm run lint && npm test
 cd api && ./mvnw verify
 ```
 
-PRs require passing GitHub Actions CI before merge.
+All code pushed to `main` must pass local compilation, lints, and integration tests.
 
 ---
 
@@ -367,6 +352,9 @@ PRs require passing GitHub Actions CI before merge.
 - Ensure Docker daemon is running before running integration tests (Testcontainers needs it).
 - Use GraalVM JDK 21 as default JDK to ensure native-image compatibility.
 - Avoid reflection-heavy patterns that break GraalVM native-image (register them in `reflect-config.json` if unavoidable).
+- **Cloning & Bulk Operations**: Always bulk-save entities (such as Levels, Sections, PriceLevels, Areas, Rows, and Seats) using `.saveAll(entities)` to minimize database roundtrips. Avoid calling `.save()` inside nested loops to prevent severe performance overhead.
+- **Offer Deletion Guard**: Do not allow deletion of offers/ticket types once sales or bookings are active (`quantitySold > 0`). Prevent it with programmatic checks in the service layer.
+- **Date Validity Checks**: Always check that date parameters are chronologically logical (e.g. `saleEndAt > saleStartAt` and `endAt > startAt`) to prevent inconsistent or broken scheduling states.
 
 ---
 
