@@ -70,17 +70,9 @@ public class Offer {
     @Column(name = "sellable_quantities", columnDefinition = "jsonb", nullable = false)
     List<Integer> sellableQuantities;
 
-    @Column(name = "presale_start_at")
-    Instant presaleStartAt;
-
-    @Column(name = "presale_end_at")
-    Instant presaleEndAt;
-
-    @Column(name = "sale_start_at")
-    Instant saleStartAt;
-
-    @Column(name = "sale_end_at")
-    Instant saleEndAt;
+    @Builder.Default
+    @OneToMany(mappedBy = "offer", cascade = CascadeType.ALL, orphanRemoval = true)
+    List<OfferSaleWindow> saleWindows = new java.util.ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     @Column(name = "seating_mode", nullable = false)

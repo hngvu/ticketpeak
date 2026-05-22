@@ -4,25 +4,18 @@ import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
 import io.qzz.hoangvu.ticketpeak.api.event.dto.EventResponse;
 import io.qzz.hoangvu.ticketpeak.api.event.model.EventStatus;
 import io.qzz.hoangvu.ticketpeak.api.event.service.EventService;
-import io.qzz.hoangvu.ticketpeak.api.offer.dto.ChargeRequest;
-import io.qzz.hoangvu.ticketpeak.api.offer.dto.CreateOfferRequest;
-import io.qzz.hoangvu.ticketpeak.api.offer.dto.OfferResponse;
-import io.qzz.hoangvu.ticketpeak.api.offer.dto.UpdateOfferRequest;
-import io.qzz.hoangvu.ticketpeak.api.offer.model.Offer;
-import io.qzz.hoangvu.ticketpeak.api.offer.model.OfferCharge;
-import io.qzz.hoangvu.ticketpeak.api.offer.model.SeatingMode;
+import io.qzz.hoangvu.ticketpeak.api.offer.dto.*;
+import io.qzz.hoangvu.ticketpeak.api.offer.model.*;
 import io.qzz.hoangvu.ticketpeak.api.offer.repository.OfferRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -31,26 +24,9 @@ public class OfferService {
     private final OfferRepository offerRepository;
     private final EventService eventService;
 
-    private static final Set<String> ISO_4217_CURRENCIES = Set.of(
-            "AED", "AFN", "ALL", "AMD", "ANG", "AOA", "ARS", "AUD", "AWG", "AZN",
-            "BAM", "BBD", "BDT", "BGN", "BHD", "BIF", "BMD", "BND", "BOB", "BOV",
-            "BRL", "BSD", "BTN", "BWP", "BYN", "BZD", "CAD", "CDF", "CHE", "CHF",
-            "CHW", "CLF", "CLP", "CNY", "COP", "COU", "CRC", "CUC", "CUP", "CVE",
-            "CZK", "DJF", "DKK", "DOP", "DZD", "EGP", "ERN", "ETB", "EUR", "FJD",
-            "FKP", "GBP", "GEL", "GHS", "GIP", "GMD", "GNF", "GTQ", "GYD", "HKD",
-            "HNL", "HTG", "HUF", "IDR", "ILS", "INR", "IQD", "IRR", "ISK", "JMD",
-            "JOD", "JPY", "KES", "KGS", "KHR", "KMF", "KPW", "KRW", "KWD", "KYD",
-            "KZT", "LAK", "LBP", "LKR", "LRD", "LSL", "LYD", "MAD", "MDL", "MGA",
-            "MKD", "MMK", "MNT", "MOP", "MRU", "MUR", "MVR", "MWK", "MXN", "MXV",
-            "MYR", "MZN", "NAD", "NGN", "NIO", "NOK", "NPR", "NZD", "OMR", "PAB",
-            "PEN", "PGK", "PHP", "PKR", "PLN", "PYG", "QAR", "RON", "RSD", "RUB",
-            "RWF", "SAR", "SBD", "SCR", "SDG", "SEK", "SGD", "SHP", "SLE", "SLL",
-            "SOS", "SRD", "SSP", "STN", "SVC", "SYP", "SZL", "THB", "TJS", "TMT",
-            "TND", "TOP", "TRY", "TTD", "TWD", "TZS", "UAH", "UGX", "USD", "USN",
-            "UYI", "UYU", "UYW", "UZS", "VED", "VES", "VND", "VUV", "WST", "XAF",
-            "XAG", "XAU", "XBA", "XBB", "XBC", "XBD", "XCD", "XDR", "XOF", "XPD",
-            "XPF", "XPT", "XSU", "XTS", "XUA", "XXX", "YER", "ZAR", "ZMW", "ZWG"
-    );
+    private static final Set<String> ISO_4217_CURRENCIES = Currency.getAvailableCurrencies().stream()
+            .map(Currency::getCurrencyCode)
+            .collect(Collectors.toUnmodifiableSet());
 
     public OfferService(OfferRepository offerRepository, EventService eventService) {
         this.offerRepository = offerRepository;
@@ -74,7 +50,7 @@ public class OfferService {
         }
 
         validateCurrency(request.currency());
-        validateSaleWindows(request, event);
+        validateSaleWindows(request.saleWindows(), event);
         validateQuantity(request.eventTicketMinimum(), request.sellableQuantities());
         validateSeatingMode(request.seatingMode(), request.sectionId(), request.priceLevelId());
 
@@ -90,15 +66,23 @@ public class OfferService {
                 .quantityAvailable(0)
                 .quantitySold(0)
                 .sellableQuantities(normalizeQuantities(request.sellableQuantities()))
-                .presaleStartAt(request.presaleStartAt())
-                .presaleEndAt(request.presaleEndAt())
-                .saleStartAt(request.saleStartAt())
-                .saleEndAt(request.saleEndAt())
                 .seatingMode(request.seatingMode())
                 .sectionId(trimToNull(request.sectionId()))
                 .priceLevelId(trimToNull(request.priceLevelId()))
                 .charges(normalizeCharges(request.charges()))
                 .build();
+
+        if (request.saleWindows() != null) {
+            for (CreateSaleWindowRequest sw : request.saleWindows()) {
+                OfferSaleWindow window = OfferSaleWindow.builder()
+                        .offer(offer)
+                        .type(sw.type().trim())
+                        .startAt(sw.startAt())
+                        .endAt(sw.endAt())
+                        .build();
+                offer.getSaleWindows().add(window);
+            }
+        }
 
         return OfferResponse.from(offerRepository.save(offer));
     }
@@ -118,7 +102,7 @@ public class OfferService {
                         "Offer does not exist for this event"));
 
         validateCurrency(request.currency());
-        validateSaleWindows(request, event);
+        validateSaleWindowsForUpdate(request.saleWindows(), event);
         validateQuantity(request.eventTicketMinimum(), request.sellableQuantities());
         validateSeatingMode(request.seatingMode(), request.sectionId(), request.priceLevelId());
 
@@ -130,14 +114,23 @@ public class OfferService {
         offer.setEventTicketMinimum(request.eventTicketMinimum());
         offer.setQuantityAvailable(request.quantityAvailable());
         offer.setSellableQuantities(normalizeQuantities(request.sellableQuantities()));
-        offer.setPresaleStartAt(request.presaleStartAt());
-        offer.setPresaleEndAt(request.presaleEndAt());
-        offer.setSaleStartAt(request.saleStartAt());
-        offer.setSaleEndAt(request.saleEndAt());
         offer.setSeatingMode(request.seatingMode());
         offer.setSectionId(trimToNull(request.sectionId()));
         offer.setPriceLevelId(trimToNull(request.priceLevelId()));
         offer.setCharges(normalizeCharges(request.charges()));
+
+        offer.getSaleWindows().clear();
+        if (request.saleWindows() != null) {
+            for (UpdateSaleWindowRequest sw : request.saleWindows()) {
+                OfferSaleWindow window = OfferSaleWindow.builder()
+                        .offer(offer)
+                        .type(sw.type().trim())
+                        .startAt(sw.startAt())
+                        .endAt(sw.endAt())
+                        .build();
+                offer.getSaleWindows().add(window);
+            }
+        }
 
         return OfferResponse.from(offerRepository.save(offer));
     }
@@ -156,7 +149,7 @@ public class OfferService {
     }
 
     public List<OfferResponse> listEventOffers(UUID eventId) {
-        eventService.getEvent(eventId);
+        eventService.getEventForPartner(eventId);
         return offerRepository.findByEventIdOrderByCreatedAtAsc(eventId)
                 .stream()
                 .map(OfferResponse::from)
@@ -164,7 +157,10 @@ public class OfferService {
     }
 
     public List<OfferResponse> listPublishedEventOffers(UUID eventId) {
-        eventService.getEvent(eventId);
+        EventResponse event = eventService.getEvent(eventId);
+        if (event.status() == EventStatus.DRAFT) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found");
+        }
         return offerRepository.findByEventIdOrderByCreatedAtAsc(eventId)
                 .stream()
                 .map(OfferResponse::from)
@@ -172,7 +168,10 @@ public class OfferService {
     }
 
     public OfferResponse getEventOffer(UUID eventId, String ticketTypeId) {
-        eventService.getEvent(eventId);
+        EventResponse event = eventService.getEvent(eventId);
+        if (event.status() == EventStatus.DRAFT) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found");
+        }
         Offer offer = offerRepository.findByEventIdAndTicketTypeId(eventId, normalizeTicketTypeId(ticketTypeId))
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "OFFER_NOT_FOUND",
                         "Offer does not exist for this event"));
@@ -187,79 +186,88 @@ public class OfferService {
         }
     }
 
-    private void validateSaleWindows(CreateOfferRequest request, EventResponse event) {
-        validateWindowPair("presale", request.presaleStartAt(), request.presaleEndAt());
-        validateWindowPair("sale", request.saleStartAt(), request.saleEndAt());
-
-        Instant presaleStart = request.presaleStartAt();
-        Instant presaleEnd = request.presaleEndAt();
-        Instant saleStart = request.saleStartAt();
-        Instant saleEnd = request.saleEndAt();
-
-        if (presaleStart != null && saleStart != null && saleStart.isBefore(presaleStart)) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
-                    "General sale must not start before presale starts");
-        }
-        if (presaleEnd != null && saleStart != null && presaleEnd.isAfter(saleStart)) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
-                    "Presale must end before general sale starts");
-        }
-        if (presaleEnd != null && saleEnd != null && saleEnd.isBefore(presaleEnd)) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
-                    "General sale must not end before presale ends");
+    private void validateSaleWindows(List<CreateSaleWindowRequest> windows, EventResponse event) {
+        if (windows == null || windows.isEmpty()) {
+            return;
         }
 
-        if (event.saleStartAt() != null && saleStart != null && saleStart.isBefore(event.saleStartAt())) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
-                    "Offer sale start must not be before event sale start");
+        for (CreateSaleWindowRequest window : windows) {
+            if (window.endAt().isBefore(window.startAt())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
+                        window.type() + " end must not be before start");
+            }
+
+            if (event.saleStartAt() != null && window.startAt().isBefore(event.saleStartAt())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
+                        "Offer sale start must not be before event sale start");
+            }
+            if (event.saleEndAt() != null && window.endAt().isAfter(event.saleEndAt())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
+                        "Offer sale end must not be after event sale end");
+            }
         }
-        if (event.saleEndAt() != null && saleEnd != null && saleEnd.isAfter(event.saleEndAt())) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
-                    "Offer sale end must not be after event sale end");
+
+        CreateSaleWindowRequest generalSale = windows.stream()
+                .filter(w -> isGeneralSale(w.type()))
+                .findFirst()
+                .orElse(null);
+
+        if (generalSale != null) {
+            for (CreateSaleWindowRequest window : windows) {
+                if (isPresale(window.type())) {
+                    if (window.endAt().isAfter(generalSale.startAt())) {
+                        throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
+                                "Presale must end before general sale starts");
+                    }
+                }
+            }
         }
     }
 
-    private void validateSaleWindows(UpdateOfferRequest request, EventResponse event) {
-        validateWindowPair("presale", request.presaleStartAt(), request.presaleEndAt());
-        validateWindowPair("sale", request.saleStartAt(), request.saleEndAt());
-
-        Instant presaleStart = request.presaleStartAt();
-        Instant presaleEnd = request.presaleEndAt();
-        Instant saleStart = request.saleStartAt();
-        Instant saleEnd = request.saleEndAt();
-
-        if (presaleStart != null && saleStart != null && saleStart.isBefore(presaleStart)) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
-                    "General sale must not start before presale starts");
-        }
-        if (presaleEnd != null && saleStart != null && presaleEnd.isAfter(saleStart)) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
-                    "Presale must end before general sale starts");
-        }
-        if (presaleEnd != null && saleEnd != null && saleEnd.isBefore(presaleEnd)) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
-                    "General sale must not end before presale ends");
+    private void validateSaleWindowsForUpdate(List<UpdateSaleWindowRequest> windows, EventResponse event) {
+        if (windows == null || windows.isEmpty()) {
+            return;
         }
 
-        if (event.saleStartAt() != null && saleStart != null && saleStart.isBefore(event.saleStartAt())) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
-                    "Offer sale start must not be before event sale start");
+        for (UpdateSaleWindowRequest window : windows) {
+            if (window.endAt().isBefore(window.startAt())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
+                        window.type() + " end must not be before start");
+            }
+
+            if (event.saleStartAt() != null && window.startAt().isBefore(event.saleStartAt())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
+                        "Offer sale start must not be before event sale start");
+            }
+            if (event.saleEndAt() != null && window.endAt().isAfter(event.saleEndAt())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
+                        "Offer sale end must not be after event sale end");
+            }
         }
-        if (event.saleEndAt() != null && saleEnd != null && saleEnd.isAfter(event.saleEndAt())) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
-                    "Offer sale end must not be after event sale end");
+
+        UpdateSaleWindowRequest generalSale = windows.stream()
+                .filter(w -> isGeneralSale(w.type()))
+                .findFirst()
+                .orElse(null);
+
+        if (generalSale != null) {
+            for (UpdateSaleWindowRequest window : windows) {
+                if (isPresale(window.type())) {
+                    if (window.endAt().isAfter(generalSale.startAt())) {
+                        throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
+                                "Presale must end before general sale starts");
+                    }
+                }
+            }
         }
     }
 
-    private void validateWindowPair(String name, Instant start, Instant end) {
-        if ((start == null) != (end == null)) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
-                    name + " start and end must both be provided");
-        }
-        if (start != null && end != null && end.isBefore(start)) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
-                    name + " end must not be before start");
-        }
+    private boolean isGeneralSale(String type) {
+        return type.trim().toUpperCase(Locale.ROOT).contains("GENERAL");
+    }
+
+    private boolean isPresale(String type) {
+        return type.trim().toUpperCase(Locale.ROOT).contains("PRESALE");
     }
 
     private void validateQuantity(Integer minimum, List<Integer> quantities) {

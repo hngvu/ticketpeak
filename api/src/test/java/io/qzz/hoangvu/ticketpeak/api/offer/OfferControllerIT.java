@@ -10,9 +10,7 @@ import io.qzz.hoangvu.ticketpeak.api.event.model.Event;
 import io.qzz.hoangvu.ticketpeak.api.event.model.EventStatus;
 import io.qzz.hoangvu.ticketpeak.api.event.repository.EventRepository;
 import io.qzz.hoangvu.ticketpeak.api.iam.model.Role;
-import io.qzz.hoangvu.ticketpeak.api.offer.dto.ChargeRequest;
-import io.qzz.hoangvu.ticketpeak.api.offer.dto.CreateOfferRequest;
-import io.qzz.hoangvu.ticketpeak.api.offer.dto.UpdateOfferRequest;
+import io.qzz.hoangvu.ticketpeak.api.offer.dto.*;
 import io.qzz.hoangvu.ticketpeak.api.offer.model.ChargeType;
 import io.qzz.hoangvu.ticketpeak.api.offer.model.Offer;
 import io.qzz.hoangvu.ticketpeak.api.offer.model.SeatingMode;
@@ -135,14 +133,37 @@ class OfferControllerIT {
         completedEvent = saveEvent("offer-show-completed", "Completed Show", EventStatus.COMPLETED);
     }
 
+    private CreateSaleWindowRequest createSaleWindowRequest(String type, int startOffsetSeconds, int endOffsetSeconds) {
+        return new CreateSaleWindowRequest(type, Instant.now().plusSeconds(startOffsetSeconds), Instant.now().plusSeconds(endOffsetSeconds));
+    }
+
+    private UpdateSaleWindowRequest updateSaleWindowRequest(String type, int startOffsetSeconds, int endOffsetSeconds) {
+        return new UpdateSaleWindowRequest(type, Instant.now().plusSeconds(startOffsetSeconds), Instant.now().plusSeconds(endOffsetSeconds));
+    }
+
+    private CreateOfferRequest createOfferRequest(String ticketTypeId, String name) {
+        return createOfferRequest(ticketTypeId, name, new BigDecimal("100000.00"), SeatingMode.GENERAL_ADMISSION, List.of());
+    }
+
+    private CreateOfferRequest createOfferRequest(String ticketTypeId, String name, BigDecimal faceValue, SeatingMode seatingMode, List<CreateSaleWindowRequest> windows) {
+        return new CreateOfferRequest(
+                ticketTypeId, name, null,
+                "VND", faceValue, false, 1,
+                List.of(1, 2, 4), windows,
+                seatingMode, null, null, List.of()
+        );
+    }
+
     @Test
     void create_offer_persists_and_is_returned_by_event_lookup() throws Exception {
         CreateOfferRequest request = new CreateOfferRequest(
                 "VIP-001", "VIP Package", "Front row package",
                 "VND", new BigDecimal("1250000.00"), false, 1,
                 List.of(1, 2, 4),
-                Instant.now().plusSeconds(3600), Instant.now().plusSeconds(7200),
-                Instant.now().plusSeconds(10800), Instant.now().plusSeconds(14400),
+                List.of(
+                        createSaleWindowRequest("presale", 3600, 7200),
+                        createSaleWindowRequest("general-sale", 10800, 14400)
+                ),
                 SeatingMode.GENERAL_ADMISSION, null, null,
                 List.of(
                         new ChargeRequest("Service fee", ChargeType.FEE, new BigDecimal("50000.00"), false),
@@ -161,6 +182,7 @@ class OfferControllerIT {
                 .andExpect(jsonPath("$.data.quantityAvailable").value(0))
                 .andExpect(jsonPath("$.data.quantitySold").value(0))
                 .andExpect(jsonPath("$.data.charges.length()").value(2))
+                .andExpect(jsonPath("$.data.saleWindows.length()").value(2))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
@@ -173,6 +195,7 @@ class OfferControllerIT {
         assertThat(persisted.getTicketTypeId()).isEqualTo("vip-001");
         assertThat(persisted.getSellableQuantities()).containsExactly(1, 2, 4);
         assertThat(persisted.getCharges()).hasSize(2);
+        assertThat(persisted.getSaleWindows()).hasSize(2);
 
         mockMvc.perform(get("/api/events/" + publishedEvent.getId() + "/offers"))
                 .andExpect(status().isOk())
@@ -190,8 +213,8 @@ class OfferControllerIT {
         CreateOfferRequest request = new CreateOfferRequest(
                 "vip-dup", "Standard Ticket", null,
                 "VND", new BigDecimal("250000.00"), false, 1,
-                List.of(1, 2, 4), null, null,
-                Instant.now().plusSeconds(3600), Instant.now().plusSeconds(7200),
+                List.of(1, 2, 4),
+                List.of(createSaleWindowRequest("general", 3600, 7200)),
                 SeatingMode.GENERAL_ADMISSION, null, null, List.of()
         );
 
@@ -211,13 +234,7 @@ class OfferControllerIT {
 
     @Test
     void same_ticket_type_id_allowed_across_different_events() throws Exception {
-        CreateOfferRequest request = new CreateOfferRequest(
-                "vip-cross", "VIP Cross", null,
-                "VND", new BigDecimal("250000.00"), false, 1,
-                List.of(1, 2, 4), null, null,
-                Instant.now().plusSeconds(3600), Instant.now().plusSeconds(7200),
-                SeatingMode.GENERAL_ADMISSION, null, null, List.of()
-        );
+        CreateOfferRequest request = createOfferRequest("vip-cross", "VIP Cross");
 
         mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
                         .header("Authorization", "Bearer " + organizerToken)
@@ -234,13 +251,7 @@ class OfferControllerIT {
 
     @Test
     void unauthorized_requests_are_rejected() throws Exception {
-        CreateOfferRequest request = new CreateOfferRequest(
-                "unauth", "No Auth", null,
-                "VND", new BigDecimal("100000.00"), false, 1,
-                List.of(1), null, null,
-                Instant.now().plusSeconds(3600), Instant.now().plusSeconds(7200),
-                SeatingMode.GENERAL_ADMISSION, null, null, List.of()
-        );
+        CreateOfferRequest request = createOfferRequest("unauth", "No Auth");
 
         mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -250,13 +261,7 @@ class OfferControllerIT {
 
     @Test
     void buyer_cannot_create_offer() throws Exception {
-        CreateOfferRequest request = new CreateOfferRequest(
-                "buyer-no", "Buyer Try", null,
-                "VND", new BigDecimal("100000.00"), false, 1,
-                List.of(1), null, null,
-                Instant.now().plusSeconds(3600), Instant.now().plusSeconds(7200),
-                SeatingMode.GENERAL_ADMISSION, null, null, List.of()
-        );
+        CreateOfferRequest request = createOfferRequest("buyer-no", "Buyer Try");
 
         mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
                         .header("Authorization", "Bearer " + buyerToken)
@@ -267,13 +272,7 @@ class OfferControllerIT {
 
     @Test
     void cannot_create_offer_for_canceled_event() throws Exception {
-        CreateOfferRequest request = new CreateOfferRequest(
-                "canceled-no", "Canceled", null,
-                "VND", new BigDecimal("100000.00"), false, 1,
-                List.of(1), null, null,
-                Instant.now().plusSeconds(3600), Instant.now().plusSeconds(7200),
-                SeatingMode.GENERAL_ADMISSION, null, null, List.of()
-        );
+        CreateOfferRequest request = createOfferRequest("canceled-no", "Canceled");
 
         mockMvc.perform(post("/api/partner/events/" + canceledEvent.getId() + "/offers")
                         .header("Authorization", "Bearer " + organizerToken)
@@ -285,13 +284,7 @@ class OfferControllerIT {
 
     @Test
     void cannot_create_offer_for_completed_event() throws Exception {
-        CreateOfferRequest request = new CreateOfferRequest(
-                "completed-no", "Completed", null,
-                "VND", new BigDecimal("100000.00"), false, 1,
-                List.of(1), null, null,
-                Instant.now().plusSeconds(3600), Instant.now().plusSeconds(7200),
-                SeatingMode.GENERAL_ADMISSION, null, null, List.of()
-        );
+        CreateOfferRequest request = createOfferRequest("completed-no", "Completed");
 
         mockMvc.perform(post("/api/partner/events/" + completedEvent.getId() + "/offers")
                         .header("Authorization", "Bearer " + organizerToken)
@@ -303,13 +296,7 @@ class OfferControllerIT {
 
     @Test
     void public_api_returns_404_for_draft_event_offers() throws Exception {
-        CreateOfferRequest request = new CreateOfferRequest(
-                "draft-offer", "Draft Offer", null,
-                "VND", new BigDecimal("100000.00"), false, 1,
-                List.of(1), null, null,
-                Instant.now().plusSeconds(3600), Instant.now().plusSeconds(7200),
-                SeatingMode.GENERAL_ADMISSION, null, null, List.of()
-        );
+        CreateOfferRequest request = createOfferRequest("draft-offer", "Draft Offer");
 
         mockMvc.perform(post("/api/partner/events/" + draftEvent.getId() + "/offers")
                         .header("Authorization", "Bearer " + organizerToken)
@@ -324,13 +311,7 @@ class OfferControllerIT {
 
     @Test
     void update_offer_modifies_fields() throws Exception {
-        CreateOfferRequest createRequest = new CreateOfferRequest(
-                "update-me", "Original Name", null,
-                "VND", new BigDecimal("100000.00"), false, 1,
-                List.of(1, 2), null, null,
-                Instant.now().plusSeconds(3600), Instant.now().plusSeconds(7200),
-                SeatingMode.GENERAL_ADMISSION, null, null, List.of()
-        );
+        CreateOfferRequest createRequest = createOfferRequest("update-me", "Original Name");
 
         mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
                         .header("Authorization", "Bearer " + organizerToken)
@@ -342,7 +323,7 @@ class OfferControllerIT {
                 "Updated Name", "Updated description",
                 "USD", new BigDecimal("200000.00"), true, 2, 100,
                 List.of(2, 4),
-                null, null, Instant.now().plusSeconds(3600), Instant.now().plusSeconds(7200),
+                List.of(updateSaleWindowRequest("general", 3600, 7200)),
                 SeatingMode.GENERAL_ADMISSION, null, null, List.of()
         );
 
@@ -357,18 +338,13 @@ class OfferControllerIT {
                 .andExpect(jsonPath("$.data.restrictedPayment").value(true))
                 .andExpect(jsonPath("$.data.eventTicketMinimum").value(2))
                 .andExpect(jsonPath("$.data.quantityAvailable").value(100))
-                .andExpect(jsonPath("$.data.sellableQuantities.length()").value(2));
+                .andExpect(jsonPath("$.data.sellableQuantities.length()").value(2))
+                .andExpect(jsonPath("$.data.saleWindows.length()").value(1));
     }
 
     @Test
     void delete_offer_removes_it() throws Exception {
-        CreateOfferRequest createRequest = new CreateOfferRequest(
-                "delete-me", "To Delete", null,
-                "VND", new BigDecimal("100000.00"), false, 1,
-                List.of(1), null, null,
-                Instant.now().plusSeconds(3600), Instant.now().plusSeconds(7200),
-                SeatingMode.GENERAL_ADMISSION, null, null, List.of()
-        );
+        CreateOfferRequest createRequest = createOfferRequest("delete-me", "To Delete");
 
         mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
                         .header("Authorization", "Bearer " + organizerToken)
@@ -394,8 +370,7 @@ class OfferControllerIT {
         CreateOfferRequest request = new CreateOfferRequest(
                 "bad-cur", "Bad Currency", null,
                 "XYZ", new BigDecimal("100000.00"), false, 1,
-                List.of(1), null, null,
-                Instant.now().plusSeconds(3600), Instant.now().plusSeconds(7200),
+                List.of(1), List.of(),
                 SeatingMode.GENERAL_ADMISSION, null, null, List.of()
         );
 
@@ -424,8 +399,8 @@ class OfferControllerIT {
         CreateOfferRequest request = new CreateOfferRequest(
                 "bad-window", "Bad Window", null,
                 "VND", new BigDecimal("100000.00"), false, 1,
-                List.of(1), null, null,
-                Instant.now().plusSeconds(500), Instant.now().plusSeconds(8000),
+                List.of(1),
+                List.of(createSaleWindowRequest("general", 500, 8000)),
                 SeatingMode.GENERAL_ADMISSION, null, null, List.of()
         );
 
@@ -441,13 +416,7 @@ class OfferControllerIT {
     void event_scoping_keeps_offers_isolated() throws Exception {
         Event secondPublished = saveEvent("scope-two", "Scope Two", EventStatus.PUBLISHED);
 
-        CreateOfferRequest request = new CreateOfferRequest(
-                "scope-001", "Scoped", null,
-                "VND", new BigDecimal("250000.00"), false, 1,
-                List.of(1, 2, 4), null, null,
-                Instant.now().plusSeconds(3600), Instant.now().plusSeconds(7200),
-                SeatingMode.GENERAL_ADMISSION, null, null, List.of()
-        );
+        CreateOfferRequest request = createOfferRequest("scope-001", "Scoped");
 
         mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
                         .header("Authorization", "Bearer " + organizerToken)
@@ -466,13 +435,7 @@ class OfferControllerIT {
 
     @Test
     void negative_price_is_rejected_by_validation() throws Exception {
-        CreateOfferRequest request = new CreateOfferRequest(
-                "NEG-001", "Invalid Price", null,
-                "VND", new BigDecimal("-1.00"), false, 1,
-                List.of(1), null, null,
-                Instant.now().plusSeconds(3600), Instant.now().plusSeconds(7200),
-                SeatingMode.GENERAL_ADMISSION, null, null, List.of()
-        );
+        CreateOfferRequest request = createOfferRequest("NEG-001", "Invalid Price", new BigDecimal("-1.00"), SeatingMode.GENERAL_ADMISSION, List.of());
 
         mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
                         .header("Authorization", "Bearer " + organizerToken)
@@ -489,8 +452,10 @@ class OfferControllerIT {
                 "WIN-001", "Bad Window", null,
                 "VND", new BigDecimal("100000.00"), false, 1,
                 List.of(1, 2),
-                Instant.now().plusSeconds(7200), Instant.now().plusSeconds(10800),
-                Instant.now().plusSeconds(3600), Instant.now().plusSeconds(14400),
+                List.of(
+                        createSaleWindowRequest("presale", 7200, 10800),
+                        createSaleWindowRequest("general", 3600, 14400)
+                ),
                 SeatingMode.GENERAL_ADMISSION, null, null, List.of()
         );
 
@@ -504,13 +469,7 @@ class OfferControllerIT {
 
     @Test
     void reserved_seating_requires_section_and_price_level() throws Exception {
-        CreateOfferRequest request = new CreateOfferRequest(
-                "RS-001", "Reserved Seat", null,
-                "VND", new BigDecimal("750000.00"), true, 1,
-                List.of(1), null, null,
-                Instant.now().plusSeconds(3600), Instant.now().plusSeconds(7200),
-                SeatingMode.RESERVED_SEATING, null, null, List.of()
-        );
+        CreateOfferRequest request = createOfferRequest("RS-001", "Reserved Seat", new BigDecimal("750000.00"), SeatingMode.RESERVED_SEATING, List.of());
 
         mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
                         .header("Authorization", "Bearer " + organizerToken)
