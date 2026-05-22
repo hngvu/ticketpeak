@@ -31,6 +31,13 @@ public class PartnerOfferController {
                 .body(ApiResponse.success(offerService.createOffer(eventId, request), "Offer created"));
     }
 
+    @GetMapping
+    public ResponseEntity<ApiResponse<java.util.List<OfferResponse>>> listEventOffers(
+            @PathVariable UUID eventId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(offerService.listEventOffers(eventId), "OK"));
+    }
+
     @PutMapping("/{ticketTypeId}")
     public ResponseEntity<ApiResponse<OfferResponse>> updateOffer(
             @PathVariable UUID eventId,

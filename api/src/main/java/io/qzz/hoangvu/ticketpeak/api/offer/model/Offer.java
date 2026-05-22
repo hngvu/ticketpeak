@@ -71,7 +71,7 @@ public class Offer {
     List<Integer> sellableQuantities;
 
     @Builder.Default
-    @OneToMany(mappedBy = "offer", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "offer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     List<OfferSaleWindow> saleWindows = new java.util.ArrayList<>();
 
     @Enumerated(EnumType.STRING)

@@ -479,6 +479,61 @@ class OfferControllerIT {
                 .andExpect(jsonPath("$.error").value("INVALID_OFFER_SEATING"));
     }
 
+    @Test
+    void update_offer_quantity_available_less_than_sold_is_rejected() throws Exception {
+        CreateOfferRequest createRequest = createOfferRequest("sold-check", "Check Sold Limits");
+        mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
+                        .header("Authorization", "Bearer " + organizerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createRequest)))
+                .andExpect(status().isCreated());
+
+        Offer persisted = offerRepository.findByEventIdAndTicketTypeId(publishedEvent.getId(), "sold-check").orElseThrow();
+        persisted.setQuantitySold(10);
+        offerRepository.saveAndFlush(persisted);
+
+        UpdateOfferRequest updateRequest = new UpdateOfferRequest(
+                "Updated Name", "Updated description",
+                "VND", new BigDecimal("100000.00"), false, 1, 5,
+                List.of(1, 2, 4), List.of(),
+                SeatingMode.GENERAL_ADMISSION, null, null, List.of()
+        );
+
+        mockMvc.perform(put("/api/partner/events/" + publishedEvent.getId() + "/offers/sold-check")
+                        .header("Authorization", "Bearer " + organizerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("INVALID_OFFER_QUANTITY"))
+                .andExpect(jsonPath("$.message").value("Quantity available must be greater than or equal to quantity sold"));
+    }
+
+    @Test
+    void partner_can_list_all_offers_for_event() throws Exception {
+        CreateOfferRequest firstOffer = createOfferRequest("tier-one", "Tier One");
+        CreateOfferRequest secondOffer = createOfferRequest("tier-two", "Tier Two");
+
+        mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
+                        .header("Authorization", "Bearer " + organizerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(firstOffer)))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
+                        .header("Authorization", "Bearer " + organizerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(secondOffer)))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/partner/events/" + publishedEvent.getId() + "/offers")
+                        .header("Authorization", "Bearer " + organizerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].ticketTypeId").value("tier-one"))
+                .andExpect(jsonPath("$.data[1].ticketTypeId").value("tier-two"));
+    }
+
     private Event saveEvent(String slug, String title, EventStatus status) {
         return eventRepository.saveAndFlush(Event.builder()
                 .organizationId(organization.getId())

@@ -101,6 +101,11 @@ public class OfferService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "OFFER_NOT_FOUND",
                         "Offer does not exist for this event"));
 
+        if (request.quantityAvailable() < offer.getQuantitySold()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_QUANTITY",
+                    "Quantity available must be greater than or equal to quantity sold");
+        }
+
         validateCurrency(request.currency());
         validateSaleWindowsForUpdate(request.saleWindows(), event);
         validateQuantity(request.eventTicketMinimum(), request.sellableQuantities());
@@ -148,6 +153,7 @@ public class OfferService {
         offerRepository.deleteByEventIdAndTicketTypeId(eventId, normalizeTicketTypeId(ticketTypeId));
     }
 
+    @PreAuthorize("(hasRole('ORGANIZER') or hasRole('ADMIN')) and @orgSecurity.isEventOwnerOrMember(#eventId)")
     public List<OfferResponse> listEventOffers(UUID eventId) {
         eventService.getEventForPartner(eventId);
         return offerRepository.findByEventIdOrderByCreatedAtAsc(eventId)
