@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/inventory")
+@RequestMapping("/api/events")
 public class InventoryController {
 
     private final InventoryService inventoryService;
@@ -18,7 +18,7 @@ public class InventoryController {
         this.inventoryService = inventoryService;
     }
 
-    @GetMapping("/event/{eventId}")
+    @GetMapping("/{eventId}/availability")
     public ResponseEntity<ApiResponse<EventInventoryStatusResponse>> getAvailability(
             @PathVariable UUID eventId
     ) {

@@ -1,10 +1,9 @@
 package io.qzz.hoangvu.ticketpeak.api.inventory.service;
 
 import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
-import io.qzz.hoangvu.ticketpeak.api.event.model.Event;
 import io.qzz.hoangvu.ticketpeak.api.event.repository.EventRepository;
 import io.qzz.hoangvu.ticketpeak.api.inventory.dto.EventInventoryStatusResponse;
-import io.qzz.hoangvu.ticketpeak.api.inventory.model.GAInventory;
+import io.qzz.hoangvu.ticketpeak.api.inventory.model.InventoryGa;
 import io.qzz.hoangvu.ticketpeak.api.inventory.model.InventorySeat;
 import io.qzz.hoangvu.ticketpeak.api.inventory.repository.GAInventoryRepository;
 import io.qzz.hoangvu.ticketpeak.api.inventory.repository.InventorySeatRepository;
@@ -39,17 +38,15 @@ public class InventoryService {
         }
 
         // GA inventory read path
-        List<GAInventory> gaInventories = gaInventoryRepository.findByEventId(eventId);
+        List<InventoryGa> gaInventories = gaInventoryRepository.findByEventId(eventId);
         List<EventInventoryStatusResponse.GAInventoryStatus> gaStatuses = gaInventories.stream()
-                .map(ga -> {
-                    int available = Math.max(0, ga.getCapacity() - ga.getSold());
-                    return new EventInventoryStatusResponse.GAInventoryStatus(
-                            ga.getAreaId(),
-                            ga.getCapacity(),
-                            ga.getSold(),
-                            available
-                    );
-                })
+                .map(ga -> new EventInventoryStatusResponse.GAInventoryStatus(
+                        ga.getAreaId(),
+                        ga.getTotal(),
+                        ga.getSold(),
+                        ga.getHeld(),
+                        ga.getAvailable()
+                ))
                 .toList();
 
         // Reserved Seating read path
@@ -57,7 +54,7 @@ public class InventoryService {
         List<EventInventoryStatusResponse.ReservedSeatStatus> reservedSeatStatuses = inventorySeats.stream()
                 .map(seat -> new EventInventoryStatusResponse.ReservedSeatStatus(
                         seat.getSeatId(),
-                        seat.getStatus()
+                        seat.getStatus().name()
                 ))
                 .toList();
 
@@ -65,18 +62,50 @@ public class InventoryService {
     }
 
     @Transactional
-    public void sellGAInventory(UUID eventId, String areaId, int qty) {
-        int updated = gaInventoryRepository.sellGAInventory(eventId, areaId, qty);
+    public void holdGAInventory(UUID eventId, String areaId, UUID offerId, int qty) {
+        int updated = gaInventoryRepository.holdGa(eventId, areaId, offerId, qty);
+        if (updated == 0) {
+            throw new ApiException(HttpStatus.CONFLICT, "INSUFFICIENT_GA_CAPACITY", "Insufficient available capacity in GA area " + areaId);
+        }
+    }
+
+    @Transactional
+    public void releaseGAInventory(UUID eventId, String areaId, UUID offerId, int qty) {
+        int updated = gaInventoryRepository.releaseGa(eventId, areaId, offerId, qty);
+        if (updated == 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_RELEASE", "Cannot release held capacity in GA area " + areaId);
+        }
+    }
+
+    @Transactional
+    public void sellGAInventory(UUID eventId, String areaId, UUID offerId, int qty) {
+        int updated = gaInventoryRepository.sellGAInventory(eventId, areaId, offerId, qty);
         if (updated == 0) {
             throw new ApiException(HttpStatus.CONFLICT, "INSUFFICIENT_GA_CAPACITY", "Insufficient capacity in General Admission area " + areaId);
         }
     }
 
     @Transactional
-    public void refundGAInventory(UUID eventId, String areaId, int qty) {
-        int updated = gaInventoryRepository.refundGAInventory(eventId, areaId, qty);
+    public void refundGAInventory(UUID eventId, String areaId, UUID offerId, int qty) {
+        int updated = gaInventoryRepository.refundGAInventory(eventId, areaId, offerId, qty);
         if (updated == 0) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REFUND", "Cannot refund quantity " + qty + " for General Admission area " + areaId);
+        }
+    }
+
+    @Transactional
+    public void holdSeat(UUID eventId, String seatId) {
+        int updated = inventorySeatRepository.holdSeat(eventId, seatId);
+        if (updated == 0) {
+            throw new ApiException(HttpStatus.CONFLICT, "SEAT_NOT_AVAILABLE", "Seat " + seatId + " is not available for hold");
+        }
+    }
+
+    @Transactional
+    public void releaseSeat(UUID eventId, String seatId) {
+        int updated = inventorySeatRepository.releaseSeat(eventId, seatId);
+        if (updated == 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_RELEASE", "Seat " + seatId + " cannot be released");
         }
     }
 

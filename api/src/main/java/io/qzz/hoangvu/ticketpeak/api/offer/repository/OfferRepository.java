@@ -9,6 +9,7 @@ import java.util.UUID;
 
 public interface OfferRepository extends JpaRepository<Offer, UUID> {
     List<Offer> findByEventIdOrderByCreatedAtAsc(UUID eventId);
+    List<Offer> findByEventId(UUID eventId);
 
     Optional<Offer> findByEventIdAndTicketTypeId(UUID eventId, String ticketTypeId);
 

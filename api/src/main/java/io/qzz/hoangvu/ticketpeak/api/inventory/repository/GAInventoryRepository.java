@@ -1,6 +1,7 @@
 package io.qzz.hoangvu.ticketpeak.api.inventory.repository;
 
-import io.qzz.hoangvu.ticketpeak.api.inventory.model.GAInventory;
+import io.qzz.hoangvu.ticketpeak.api.inventory.model.InventoryGa;
+import io.qzz.hoangvu.ticketpeak.api.inventory.model.InventoryGaId;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -10,21 +11,31 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface GAInventoryRepository extends JpaRepository<GAInventory, UUID> {
+public interface GAInventoryRepository extends JpaRepository<InventoryGa, InventoryGaId> {
 
-    Optional<GAInventory> findByEventIdAndAreaId(UUID eventId, String areaId);
+    List<InventoryGa> findByEventId(UUID eventId);
 
-    List<GAInventory> findByEventId(UUID eventId);
+    Optional<InventoryGa> findByEventIdAndAreaIdAndOfferId(UUID eventId, String areaId, UUID offerId);
 
     boolean existsByEventId(UUID eventId);
 
     @Modifying(clearAutomatically = true)
-    @Query("UPDATE GAInventory g SET g.sold = g.sold + :qty " +
-           "WHERE g.eventId = :eventId AND g.areaId = :areaId AND (g.capacity - g.sold) >= :qty")
-    int sellGAInventory(@Param("eventId") UUID eventId, @Param("areaId") String areaId, @Param("qty") int qty);
+    @Query("UPDATE InventoryGa g SET g.held = g.held + :qty, g.available = g.available - :qty " +
+           "WHERE g.eventId = :eventId AND g.areaId = :areaId AND g.offerId = :offerId AND g.available >= :qty")
+    int holdGa(@Param("eventId") UUID eventId, @Param("areaId") String areaId, @Param("offerId") UUID offerId, @Param("qty") int qty);
 
     @Modifying(clearAutomatically = true)
-    @Query("UPDATE GAInventory g SET g.sold = g.sold - :qty " +
-           "WHERE g.eventId = :eventId AND g.areaId = :areaId AND g.sold >= :qty")
-    int refundGAInventory(@Param("eventId") UUID eventId, @Param("areaId") String areaId, @Param("qty") int qty);
+    @Query("UPDATE InventoryGa g SET g.held = g.held - :qty, g.available = g.available + :qty " +
+           "WHERE g.eventId = :eventId AND g.areaId = :areaId AND g.offerId = :offerId AND g.held >= :qty")
+    int releaseGa(@Param("eventId") UUID eventId, @Param("areaId") String areaId, @Param("offerId") UUID offerId, @Param("qty") int qty);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE InventoryGa g SET g.sold = g.sold + :qty, g.available = g.available - :qty " +
+           "WHERE g.eventId = :eventId AND g.areaId = :areaId AND g.offerId = :offerId AND g.available >= :qty")
+    int sellGAInventory(@Param("eventId") UUID eventId, @Param("areaId") String areaId, @Param("offerId") UUID offerId, @Param("qty") int qty);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE InventoryGa g SET g.sold = g.sold - :qty, g.available = g.available + :qty " +
+           "WHERE g.eventId = :eventId AND g.areaId = :areaId AND g.offerId = :offerId AND g.sold >= :qty")
+    int refundGAInventory(@Param("eventId") UUID eventId, @Param("areaId") String areaId, @Param("offerId") UUID offerId, @Param("qty") int qty);
 }

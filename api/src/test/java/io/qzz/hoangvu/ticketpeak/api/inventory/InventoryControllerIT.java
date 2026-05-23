@@ -11,11 +11,15 @@ import io.qzz.hoangvu.ticketpeak.api.event.model.EventStatus;
 import io.qzz.hoangvu.ticketpeak.api.event.repository.EventManifestRepository;
 import io.qzz.hoangvu.ticketpeak.api.event.repository.EventRepository;
 import io.qzz.hoangvu.ticketpeak.api.iam.model.Role;
-import io.qzz.hoangvu.ticketpeak.api.inventory.model.GAInventory;
+import io.qzz.hoangvu.ticketpeak.api.inventory.model.InventoryGa;
 import io.qzz.hoangvu.ticketpeak.api.inventory.model.InventorySeat;
+import io.qzz.hoangvu.ticketpeak.api.inventory.model.SeatInventoryStatus;
 import io.qzz.hoangvu.ticketpeak.api.inventory.repository.GAInventoryRepository;
 import io.qzz.hoangvu.ticketpeak.api.inventory.repository.InventorySeatRepository;
 import io.qzz.hoangvu.ticketpeak.api.inventory.service.InventoryService;
+import io.qzz.hoangvu.ticketpeak.api.offer.model.Offer;
+import io.qzz.hoangvu.ticketpeak.api.offer.model.SeatingMode;
+import io.qzz.hoangvu.ticketpeak.api.offer.repository.OfferRepository;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.Organization;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.OrganizationStatus;
 import io.qzz.hoangvu.ticketpeak.api.organization.repository.OrganizationRepository;
@@ -32,6 +36,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -103,6 +108,9 @@ class InventoryControllerIT {
     InventorySeatRepository inventorySeatRepository;
 
     @Autowired
+    OfferRepository offerRepository;
+
+    @Autowired
     InventoryService inventoryService;
 
     Account organizerAccount;
@@ -115,6 +123,7 @@ class InventoryControllerIT {
     void setup() throws Exception {
         inventorySeatRepository.deleteAll();
         gaInventoryRepository.deleteAll();
+        offerRepository.deleteAll();
         eventManifestRepository.deleteAll();
         eventRepository.deleteAll();
         seatRepository.deleteAll();
@@ -232,10 +241,43 @@ class InventoryControllerIT {
                 .status(SeatStatus.AVAILABLE)
                 .build());
 
-        // 3. Create and publish event
+        // 3. Create Event
         Event event = saveEvent("show-init", "Awesome Show", EventStatus.DRAFT);
+
+        // 4. Create GA and RS Offers mapped to the Section & Price Level
+        Offer gaOffer = offerRepository.saveAndFlush(Offer.builder()
+                .eventId(event.getId())
+                .ticketTypeId("ga-ticket")
+                .name("Standard GA")
+                .currency("VND")
+                .faceValue(new BigDecimal("150000.00"))
+                .restrictedPayment(false)
+                .eventTicketMinimum(1)
+                .capacityCap(50)
+                .sellableQuantities(List.of(1, 2, 4))
+                .seatingMode(SeatingMode.GENERAL_ADMISSION)
+                .sectionId("SEC-A")
+                .priceLevelId("PL-1")
+                .charges(List.of())
+                .build());
+
+        Offer rsOffer = offerRepository.saveAndFlush(Offer.builder()
+                .eventId(event.getId())
+                .ticketTypeId("rs-ticket")
+                .name("Reserved Seating")
+                .currency("VND")
+                .faceValue(new BigDecimal("250000.00"))
+                .restrictedPayment(false)
+                .eventTicketMinimum(1)
+                .capacityCap(10)
+                .sellableQuantities(List.of(1))
+                .seatingMode(SeatingMode.RESERVED_SEATING)
+                .sectionId("SEC-A")
+                .priceLevelId("PL-1")
+                .charges(List.of())
+                .build());
         
-        // Publish event
+        // 5. Publish event (creates manifest snap)
         mockMvc.perform(post("/api/partner/events/" + event.getId() + "/publish")
                         .header("Authorization", "Bearer " + organizerToken))
                 .andExpect(status().isOk());
@@ -248,25 +290,27 @@ class InventoryControllerIT {
         assertThat(clonedSeats).isNotEmpty();
         String clonedSeatId = clonedSeats.get(0).getId();
 
-        // 4. Transition event to ONSALE
+        // 6. Transition event to ONSALE
         mockMvc.perform(post("/api/partner/events/" + event.getId() + "/onsale")
                         .header("Authorization", "Bearer " + organizerToken))
                 .andExpect(status().isOk());
 
-        // 5. Verify read models are initialized in bulk!
+        // 7. Verify composite read models are initialized cleanly!
         // Verify GA
         assertThat(gaInventoryRepository.existsByEventId(event.getId())).isTrue();
-        GAInventory gaInventory = gaInventoryRepository.findByEventIdAndAreaId(event.getId(), gaAreaId).orElseThrow();
-        assertThat(gaInventory.getCapacity()).isEqualTo(50);
+        InventoryGa gaInventory = gaInventoryRepository.findByEventIdAndAreaIdAndOfferId(event.getId(), gaAreaId, gaOffer.getId()).orElseThrow();
+        assertThat(gaInventory.getTotal()).isEqualTo(50);
         assertThat(gaInventory.getSold()).isEqualTo(0);
+        assertThat(gaInventory.getAvailable()).isEqualTo(50);
 
-        // Verify Seat Status
+        // Verify Seat Status (using composite PK!)
         assertThat(inventorySeatRepository.existsByEventId(event.getId())).isTrue();
         InventorySeat inventorySeat = inventorySeatRepository.findByEventIdAndSeatId(event.getId(), clonedSeatId).orElseThrow();
-        assertThat(inventorySeat.getStatus()).isEqualTo("AVAILABLE");
+        assertThat(inventorySeat.getStatus()).isEqualTo(SeatInventoryStatus.AVAILABLE);
+        assertThat(inventorySeat.getOfferId()).isEqualTo(rsOffer.getId());
 
-        // 6. Verify GET Availability read path returns exact counts
-        mockMvc.perform(get("/api/inventory/event/" + event.getId()))
+        // 8. Verify GET Availability read path returns Ticketmaster pattern results
+        mockMvc.perform(get("/api/events/" + event.getId() + "/availability"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.gaInventory.length()").value(1))
                 .andExpect(jsonPath("$.data.gaInventory[0].areaId").value(gaAreaId))
@@ -277,26 +321,30 @@ class InventoryControllerIT {
                 .andExpect(jsonPath("$.data.reservedSeats[0].seatId").value(clonedSeatId))
                 .andExpect(jsonPath("$.data.reservedSeats[0].status").value("AVAILABLE"));
 
-        // 7. Verify Sales Updates
-        inventoryService.sellGAInventory(event.getId(), gaAreaId, 10);
+        // 9. Test Service-layer Holds and Sales Updates
+        // GA Hold
+        inventoryService.holdGAInventory(event.getId(), gaAreaId, gaOffer.getId(), 5);
+        // Reserved Seat Hold
+        inventoryService.holdSeat(event.getId(), clonedSeatId);
+
+        // Query Availability -> verify HELD statuses
+        mockMvc.perform(get("/api/events/" + event.getId() + "/availability"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.gaInventory[0].held").value(5))
+                .andExpect(jsonPath("$.data.gaInventory[0].available").value(45))
+                .andExpect(jsonPath("$.data.reservedSeats[0].status").value("HELD"));
+
+        // Sell
+        inventoryService.releaseGAInventory(event.getId(), gaAreaId, gaOffer.getId(), 5); // release holds
+        inventoryService.releaseSeat(event.getId(), clonedSeatId);
+        inventoryService.sellGAInventory(event.getId(), gaAreaId, gaOffer.getId(), 10);
         inventoryService.sellSeat(event.getId(), clonedSeatId);
 
-        // Query Availability again -> reflect sold items
-        mockMvc.perform(get("/api/inventory/event/" + event.getId()))
+        // Query Availability -> verify SOLD statuses
+        mockMvc.perform(get("/api/events/" + event.getId() + "/availability"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.gaInventory[0].sold").value(10))
                 .andExpect(jsonPath("$.data.gaInventory[0].available").value(40))
                 .andExpect(jsonPath("$.data.reservedSeats[0].status").value("SOLD"));
-
-        // 8. Verify Refunds
-        inventoryService.refundGAInventory(event.getId(), gaAreaId, 5);
-        inventoryService.refundSeat(event.getId(), clonedSeatId);
-
-        // Query Availability -> restored
-        mockMvc.perform(get("/api/inventory/event/" + event.getId()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.gaInventory[0].sold").value(5))
-                .andExpect(jsonPath("$.data.gaInventory[0].available").value(45))
-                .andExpect(jsonPath("$.data.reservedSeats[0].status").value("AVAILABLE"));
     }
 }

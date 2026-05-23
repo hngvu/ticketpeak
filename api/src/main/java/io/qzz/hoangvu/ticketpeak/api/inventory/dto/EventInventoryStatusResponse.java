@@ -12,6 +12,7 @@ public record EventInventoryStatusResponse(
         String areaId,
         int capacity,
         int sold,
+        int held,
         int available
     ) {}
 
