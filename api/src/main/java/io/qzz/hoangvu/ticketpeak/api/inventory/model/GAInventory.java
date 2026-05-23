@@ -30,11 +30,5 @@ public class GAInventory {
     Integer capacity;
 
     @Column(nullable = false)
-    Integer held;
-
-    @Column(nullable = false)
-    Integer purchased;
-
-    @Version
-    Long version;
+    Integer sold;
 }

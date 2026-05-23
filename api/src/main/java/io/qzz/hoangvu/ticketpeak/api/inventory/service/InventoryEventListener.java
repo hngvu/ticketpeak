@@ -4,9 +4,13 @@ import io.qzz.hoangvu.ticketpeak.api.event.model.EventStatus;
 import io.qzz.hoangvu.ticketpeak.api.event.model.EventStatusTransitionEvent;
 import io.qzz.hoangvu.ticketpeak.api.event.repository.EventManifestRepository;
 import io.qzz.hoangvu.ticketpeak.api.inventory.model.GAInventory;
+import io.qzz.hoangvu.ticketpeak.api.inventory.model.InventorySeat;
 import io.qzz.hoangvu.ticketpeak.api.inventory.repository.GAInventoryRepository;
+import io.qzz.hoangvu.ticketpeak.api.inventory.repository.InventorySeatRepository;
 import io.qzz.hoangvu.ticketpeak.api.venue.model.GAArea;
+import io.qzz.hoangvu.ticketpeak.api.venue.model.Seat;
 import io.qzz.hoangvu.ticketpeak.api.venue.repository.GAAreaRepository;
+import io.qzz.hoangvu.ticketpeak.api.venue.repository.SeatRepository;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,17 +22,23 @@ import java.util.UUID;
 public class InventoryEventListener {
 
     private final GAInventoryRepository gaInventoryRepository;
+    private final InventorySeatRepository inventorySeatRepository;
     private final EventManifestRepository eventManifestRepository;
     private final GAAreaRepository gaAreaRepository;
+    private final SeatRepository seatRepository;
 
     public InventoryEventListener(
             GAInventoryRepository gaInventoryRepository,
+            InventorySeatRepository inventorySeatRepository,
             EventManifestRepository eventManifestRepository,
-            GAAreaRepository gaAreaRepository
+            GAAreaRepository gaAreaRepository,
+            SeatRepository seatRepository
     ) {
         this.gaInventoryRepository = gaInventoryRepository;
+        this.inventorySeatRepository = inventorySeatRepository;
         this.eventManifestRepository = eventManifestRepository;
         this.gaAreaRepository = gaAreaRepository;
+        this.seatRepository = seatRepository;
     }
 
     @EventListener
@@ -41,7 +51,7 @@ public class InventoryEventListener {
         UUID eventId = event.getEventId();
 
         // Ensure idempotency: check if inventory already exists for this event
-        if (gaInventoryRepository.existsByEventId(eventId)) {
+        if (gaInventoryRepository.existsByEventId(eventId) || inventorySeatRepository.existsByEventId(eventId)) {
             return;
         }
 
@@ -49,21 +59,28 @@ public class InventoryEventListener {
         eventManifestRepository.findById(eventId).ifPresent(eventManifest -> {
             String manifestId = eventManifest.getManifestId();
 
-            // Fetch General Admission areas for the venue manifest
+            // 1. Populate General Admission Areas Inventory in bulk
             List<GAArea> gaAreas = gaAreaRepository.findByManifestId(manifestId);
-
-            // Populate GA inventories using bulk operations
             List<GAInventory> gaInventories = gaAreas.stream()
                     .map(area -> GAInventory.builder()
                             .eventId(eventId)
                             .areaId(area.getId())
                             .capacity(area.getCapacity())
-                            .held(0)
-                            .purchased(0)
+                            .sold(0)
                             .build())
                     .toList();
-
             gaInventoryRepository.saveAll(gaInventories);
+
+            // 2. Populate Reserved Seating Inventory in bulk
+            List<Seat> seats = seatRepository.findByManifestId(manifestId);
+            List<InventorySeat> inventorySeats = seats.stream()
+                    .map(seat -> InventorySeat.builder()
+                            .eventId(eventId)
+                            .seatId(seat.getId())
+                            .status("AVAILABLE")
+                            .build())
+                    .toList();
+            inventorySeatRepository.saveAll(inventorySeats);
         });
     }
 }

@@ -18,18 +18,13 @@ public interface GAInventoryRepository extends JpaRepository<GAInventory, UUID> 
 
     boolean existsByEventId(UUID eventId);
 
-    @Modifying
-    @Query("UPDATE GAInventory g SET g.held = g.held + :qty " +
-           "WHERE g.eventId = :eventId AND g.areaId = :areaId AND (g.capacity - g.held - g.purchased) >= :qty")
-    int holdGAInventory(@Param("eventId") UUID eventId, @Param("areaId") String areaId, @Param("qty") int qty);
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE GAInventory g SET g.sold = g.sold + :qty " +
+           "WHERE g.eventId = :eventId AND g.areaId = :areaId AND (g.capacity - g.sold) >= :qty")
+    int sellGAInventory(@Param("eventId") UUID eventId, @Param("areaId") String areaId, @Param("qty") int qty);
 
-    @Modifying
-    @Query("UPDATE GAInventory g SET g.held = g.held - :qty " +
-           "WHERE g.eventId = :eventId AND g.areaId = :areaId AND g.held >= :qty")
-    int releaseGAInventory(@Param("eventId") UUID eventId, @Param("areaId") String areaId, @Param("qty") int qty);
-
-    @Modifying
-    @Query("UPDATE GAInventory g SET g.held = g.held - :qty, g.purchased = g.purchased + :qty " +
-           "WHERE g.eventId = :eventId AND g.areaId = :areaId AND g.held >= :qty")
-    int purchaseGAInventory(@Param("eventId") UUID eventId, @Param("areaId") String areaId, @Param("qty") int qty);
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE GAInventory g SET g.sold = g.sold - :qty " +
+           "WHERE g.eventId = :eventId AND g.areaId = :areaId AND g.sold >= :qty")
+    int refundGAInventory(@Param("eventId") UUID eventId, @Param("areaId") String areaId, @Param("qty") int qty);
 }

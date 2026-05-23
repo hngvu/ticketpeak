@@ -2,11 +2,7 @@ package io.qzz.hoangvu.ticketpeak.api.inventory.controller;
 
 import io.qzz.hoangvu.ticketpeak.api.common.api.ApiResponse;
 import io.qzz.hoangvu.ticketpeak.api.inventory.dto.EventInventoryStatusResponse;
-import io.qzz.hoangvu.ticketpeak.api.inventory.dto.HoldInventoryRequest;
-import io.qzz.hoangvu.ticketpeak.api.inventory.dto.HoldInventoryResponse;
 import io.qzz.hoangvu.ticketpeak.api.inventory.service.InventoryService;
-import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,15 +16,6 @@ public class InventoryController {
 
     public InventoryController(InventoryService inventoryService) {
         this.inventoryService = inventoryService;
-    }
-
-    @PostMapping("/hold")
-    public ResponseEntity<ApiResponse<HoldInventoryResponse>> requestHolds(
-            @Valid @RequestBody HoldInventoryRequest request
-    ) {
-        HoldInventoryResponse response = inventoryService.requestHolds(request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(response, "Holds requested successfully"));
     }
 
     @GetMapping("/event/{eventId}")
