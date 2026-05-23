@@ -154,12 +154,8 @@ public class OfferService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "OFFER_NOT_FOUND",
                         "Offer does not exist for this event"));
 
-        // TODO: Update this to query TicketRepository / OrderRepository once implemented.
-        // For now, we temporarily stub the deletion guard for testing.
-        if ("has-sales".equals(offer.getTicketTypeId())) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "OFFER_HAS_SALES",
-                    "Cannot delete offer with existing ticket sales");
-        }
+        // TODO: Enforce the active-sales guard: block offer deletion once ticket sales or orders exist.
+        // This will be programmatically checked once OrderRepository and TicketRepository are implemented.
 
         offerRepository.delete(offer);
     }
@@ -323,7 +319,7 @@ public class OfferService {
                                 "The assigned venue does not have a published manifest"));
                 manifestId = activeManifest.id();
             } else {
-                manifestId = event.manifestId() != null ? event.manifestId() : "evt-" + event.id() + "-snap";
+                manifestId = event.manifestId() != null ? event.manifestId() : EventService.getSnapshotManifestId(event.id());
             }
 
             // Validate section and price level exist in manifest lookup tables

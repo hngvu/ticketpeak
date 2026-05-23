@@ -684,22 +684,7 @@ class OfferControllerIT {
                 .andExpect(jsonPath("$.error").value("PRICE_LEVEL_NOT_FOUND"));
     }
 
-    @Test
-    void cannot_delete_offer_with_existing_ticket_sales() throws Exception {
-        CreateOfferRequest createRequest = createOfferRequest("has-sales", "Has Sales Offer");
 
-        mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
-                        .header("Authorization", "Bearer " + organizerToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(createRequest)))
-                .andExpect(status().isCreated());
-
-        mockMvc.perform(delete("/api/partner/events/" + publishedEvent.getId() + "/offers/has-sales")
-                        .header("Authorization", "Bearer " + organizerToken))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("OFFER_HAS_SALES"))
-                .andExpect(jsonPath("$.message").value("Cannot delete offer with existing ticket sales"));
-    }
 
     @Test
     void service_layer_programmatic_validations_enforced() {

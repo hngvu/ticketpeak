@@ -319,7 +319,7 @@ public class EventService {
                 .findFirst()
                 .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "NO_PUBLISHED_MANIFEST", "The assigned venue does not have a published manifest"));
 
-        String snapshotManifestId = "evt-" + event.getId() + "-snap";
+        String snapshotManifestId = getSnapshotManifestId(event.getId());
         var cloneRequest = new io.qzz.hoangvu.ticketpeak.api.venue.dto.CloneManifestRequest(
                 snapshotManifestId,
                 "Snapshot for event " + event.getTitle()
@@ -589,5 +589,9 @@ public class EventService {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EVENT_DATES", "Sale end date must be before or equal to event start date");
             }
         }
+    }
+
+    public static String getSnapshotManifestId(UUID eventId) {
+        return "evt-" + eventId + "-snap";
     }
 }
