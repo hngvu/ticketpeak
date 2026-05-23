@@ -5,6 +5,7 @@ import io.qzz.hoangvu.ticketpeak.api.TestcontainersConfiguration;
 import io.qzz.hoangvu.ticketpeak.api.account.model.Account;
 import io.qzz.hoangvu.ticketpeak.api.account.model.AccountStatus;
 import io.qzz.hoangvu.ticketpeak.api.account.repository.AccountRepository;
+import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
 import io.qzz.hoangvu.ticketpeak.api.event.model.Event;
 import io.qzz.hoangvu.ticketpeak.api.event.model.EventManifest;
 import io.qzz.hoangvu.ticketpeak.api.event.model.EventStatus;
@@ -14,7 +15,7 @@ import io.qzz.hoangvu.ticketpeak.api.iam.model.Role;
 import io.qzz.hoangvu.ticketpeak.api.inventory.model.InventoryGa;
 import io.qzz.hoangvu.ticketpeak.api.inventory.model.InventorySeat;
 import io.qzz.hoangvu.ticketpeak.api.inventory.model.SeatInventoryStatus;
-import io.qzz.hoangvu.ticketpeak.api.inventory.repository.GAInventoryRepository;
+import io.qzz.hoangvu.ticketpeak.api.inventory.repository.InventoryGaRepository;
 import io.qzz.hoangvu.ticketpeak.api.inventory.repository.InventorySeatRepository;
 import io.qzz.hoangvu.ticketpeak.api.inventory.service.InventoryService;
 import io.qzz.hoangvu.ticketpeak.api.offer.model.Offer;
@@ -37,11 +38,13 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -102,7 +105,7 @@ class InventoryControllerIT {
     EventManifestRepository eventManifestRepository;
 
     @Autowired
-    GAInventoryRepository gaInventoryRepository;
+    InventoryGaRepository inventoryGaRepository;
 
     @Autowired
     InventorySeatRepository inventorySeatRepository;
@@ -113,6 +116,9 @@ class InventoryControllerIT {
     @Autowired
     InventoryService inventoryService;
 
+    @Autowired
+    EntityManager entityManager;
+
     Account organizerAccount;
     String organizerToken;
     Organization organization;
@@ -122,7 +128,7 @@ class InventoryControllerIT {
     @BeforeEach
     void setup() throws Exception {
         inventorySeatRepository.deleteAll();
-        gaInventoryRepository.deleteAll();
+        inventoryGaRepository.deleteAll();
         offerRepository.deleteAll();
         eventManifestRepository.deleteAll();
         eventRepository.deleteAll();
@@ -297,8 +303,8 @@ class InventoryControllerIT {
 
         // 7. Verify composite read models are initialized cleanly!
         // Verify GA
-        assertThat(gaInventoryRepository.existsByEventId(event.getId())).isTrue();
-        InventoryGa gaInventory = gaInventoryRepository.findByEventIdAndAreaIdAndOfferId(event.getId(), gaAreaId, gaOffer.getId()).orElseThrow();
+        assertThat(inventoryGaRepository.existsByEventId(event.getId())).isTrue();
+        InventoryGa gaInventory = inventoryGaRepository.findByEventIdAndAreaIdAndOfferId(event.getId(), gaAreaId, gaOffer.getId()).orElseThrow();
         assertThat(gaInventory.getTotal()).isEqualTo(50);
         assertThat(gaInventory.getSold()).isEqualTo(0);
         assertThat(gaInventory.getAvailable()).isEqualTo(50);
@@ -314,7 +320,7 @@ class InventoryControllerIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.gaInventory.length()").value(1))
                 .andExpect(jsonPath("$.data.gaInventory[0].areaId").value(gaAreaId))
-                .andExpect(jsonPath("$.data.gaInventory[0].capacity").value(50))
+                .andExpect(jsonPath("$.data.gaInventory[0].total").value(50))
                 .andExpect(jsonPath("$.data.gaInventory[0].sold").value(0))
                 .andExpect(jsonPath("$.data.gaInventory[0].available").value(50))
                 .andExpect(jsonPath("$.data.reservedSeats.length()").value(1))
@@ -337,14 +343,98 @@ class InventoryControllerIT {
         // Sell
         inventoryService.releaseGAInventory(event.getId(), gaAreaId, gaOffer.getId(), 5); // release holds
         inventoryService.releaseSeat(event.getId(), clonedSeatId);
-        inventoryService.sellGAInventory(event.getId(), gaAreaId, gaOffer.getId(), 10);
+        
+        // 1. Direct Sell GA (without hold)
+        inventoryService.directSellGAInventory(event.getId(), gaAreaId, gaOffer.getId(), 10);
+        
+        // 2. Hold then Confirm GA
+        inventoryService.holdGAInventory(event.getId(), gaAreaId, gaOffer.getId(), 5);
+        inventoryService.confirmGAInventory(event.getId(), gaAreaId, gaOffer.getId(), 5);
+        
+        // Sell seat
         inventoryService.sellSeat(event.getId(), clonedSeatId);
-
+ 
         // Query Availability -> verify SOLD statuses
         mockMvc.perform(get("/api/events/" + event.getId() + "/availability"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.gaInventory[0].sold").value(10))
-                .andExpect(jsonPath("$.data.gaInventory[0].available").value(40))
+                .andExpect(jsonPath("$.data.gaInventory[0].sold").value(15))
+                .andExpect(jsonPath("$.data.gaInventory[0].available").value(35))
                 .andExpect(jsonPath("$.data.reservedSeats[0].status").value("SOLD"));
+    }
+
+    @Test
+    void ga_mutations_reject_non_positive_quantity() {
+        Event event = saveEvent("show-negative-qty", "Negative Quantity Show", EventStatus.DRAFT);
+
+        inventoryGaRepository.saveAndFlush(InventoryGa.builder()
+                .eventId(event.getId())
+                .areaId("GA-A")
+                .offerId(UUID.randomUUID())
+                .total(10)
+                .available(10)
+                .held(0)
+                .sold(0)
+                .build());
+
+        assertThatThrownBy(() -> inventoryService.holdGAInventory(event.getId(), "GA-A", UUID.randomUUID(), -5))
+                .isInstanceOf(ApiException.class)
+                .extracting(ex -> ((ApiException) ex).getErrorCode())
+                .isEqualTo("INVALID_QUANTITY");
+
+        InventoryGa reloaded = inventoryGaRepository.findByEventId(event.getId()).get(0);
+        assertThat(reloaded.getAvailable()).isEqualTo(10);
+        assertThat(reloaded.getHeld()).isEqualTo(0);
+        assertThat(reloaded.getSold()).isEqualTo(0);
+    }
+
+    @Test
+    void onsale_transition_rolls_back_when_reserved_seat_has_no_matching_offer() throws Exception {
+        gaAreaRepository.saveAndFlush(GAArea.builder()
+                .id("GA-B")
+                .manifestId(manifest.getId())
+                .levelId("LV-1")
+                .sectionId("SEC-A")
+                .priceLevelId("PL-1")
+                .capacity(10)
+                .build());
+
+        RSArea rsArea = rsAreaRepository.saveAndFlush(RSArea.builder()
+                .id("RS-B")
+                .manifestId(manifest.getId())
+                .levelId("LV-1")
+                .sectionId("SEC-A")
+                .priceLevelId("PL-1")
+                .build());
+
+        SeatRow seatRow = seatRowRepository.saveAndFlush(SeatRow.builder()
+                .id("ROW-B")
+                .rsArea(rsArea)
+                .name("B")
+                .positionY(1)
+                .build());
+
+        seatRepository.saveAndFlush(Seat.builder()
+                .id("SEAT-B")
+                .seatRow(seatRow)
+                .name("B-01")
+                .positionX(1)
+                .status(SeatStatus.AVAILABLE)
+                .build());
+
+        Event event = saveEvent("show-missing-offer", "Missing Offer Show", EventStatus.DRAFT);
+
+        mockMvc.perform(post("/api/partner/events/" + event.getId() + "/publish")
+                        .header("Authorization", "Bearer " + organizerToken))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/partner/events/" + event.getId() + "/onsale")
+                        .header("Authorization", "Bearer " + organizerToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("INVALID_OFFER_MAPPING"));
+
+        entityManager.clear();
+        assertThat(eventRepository.findById(event.getId()).orElseThrow().getStatus()).isEqualTo(EventStatus.PUBLISHED);
+        assertThat(inventorySeatRepository.existsByEventId(event.getId())).isFalse();
+        assertThat(inventoryGaRepository.existsByEventId(event.getId())).isFalse();
     }
 }

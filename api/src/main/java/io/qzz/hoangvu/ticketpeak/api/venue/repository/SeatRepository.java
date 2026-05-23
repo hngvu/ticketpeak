@@ -12,4 +12,7 @@ public interface SeatRepository extends JpaRepository<Seat, String> {
 
     @org.springframework.data.jpa.repository.Query("SELECT s FROM Seat s WHERE s.seatRow.rsArea.manifestId = :manifestId")
     List<Seat> findByManifestId(@org.springframework.data.repository.query.Param("manifestId") String manifestId);
+
+    @org.springframework.data.jpa.repository.Query("SELECT s FROM Seat s JOIN FETCH s.seatRow sr JOIN FETCH sr.rsArea a WHERE a.manifestId = :manifestId")
+    List<Seat> findByManifestIdWithSection(@org.springframework.data.repository.query.Param("manifestId") String manifestId);
 }

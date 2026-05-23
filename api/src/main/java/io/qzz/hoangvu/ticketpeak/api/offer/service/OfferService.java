@@ -339,8 +339,39 @@ public class OfferService {
 
         } else if (seatingMode == SeatingMode.GENERAL_ADMISSION) {
             if (!isBlank(sectionId) || !isBlank(priceLevelId)) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_SEATING",
-                        "General admission offers must not specify sectionId or priceLevelId");
+                if (isBlank(sectionId) || isBlank(priceLevelId)) {
+                    throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_SEATING",
+                            "General admission offers specifying seating must include both sectionId and priceLevelId");
+                }
+
+                // Resolve manifest ID
+                String manifestId;
+                if (event.status() == EventStatus.DRAFT) {
+                    var manifests = venueService.listManifests(event.venueId());
+                    var activeManifest = manifests.stream()
+                            .filter(m -> m.status() == io.qzz.hoangvu.ticketpeak.api.venue.model.ManifestStatus.PUBLISHED)
+                            .findFirst()
+                            .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "NO_PUBLISHED_MANIFEST",
+                                    "The assigned venue does not have a published manifest"));
+                    manifestId = activeManifest.id();
+                } else {
+                    manifestId = event.manifestId() != null ? event.manifestId() : EventService.getSnapshotManifestId(event.id());
+                }
+
+                // Validate section and price level exist in manifest lookup tables
+                var sections = venueService.listSections(manifestId);
+                boolean sectionExists = sections.stream().anyMatch(s -> s.id().equals(sectionId));
+                if (!sectionExists) {
+                    throw new ApiException(HttpStatus.BAD_REQUEST, "SECTION_NOT_FOUND",
+                            "Section with id '" + sectionId + "' does not exist in manifest '" + manifestId + "'");
+                }
+
+                var priceLevels = venueService.listPriceLevels(manifestId);
+                boolean priceLevelExists = priceLevels.stream().anyMatch(p -> p.id().equals(priceLevelId));
+                if (!priceLevelExists) {
+                    throw new ApiException(HttpStatus.BAD_REQUEST, "PRICE_LEVEL_NOT_FOUND",
+                            "Price level with id '" + priceLevelId + "' does not exist in manifest '" + manifestId + "'");
+                }
             }
         }
     }

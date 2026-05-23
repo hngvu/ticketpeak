@@ -10,7 +10,8 @@ public record EventInventoryStatusResponse(
 ) {
     public record GAInventoryStatus(
         String areaId,
-        int capacity,
+        UUID offerId,
+        int total,
         int sold,
         int held,
         int available
@@ -18,6 +19,6 @@ public record EventInventoryStatusResponse(
 
     public record ReservedSeatStatus(
         String seatId,
-        String status // "AVAILABLE", "SOLD"
+        String status // "AVAILABLE", "HELD", "SOLD"
     ) {}
 }

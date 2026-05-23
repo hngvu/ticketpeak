@@ -17,9 +17,16 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class EventService {
@@ -62,8 +69,11 @@ public class EventService {
         validateEventDates(req.startAt(), req.endAt(), req.saleStartAt(), req.saleEndAt());
         try {
             venueService.getVenue(req.venueId());
-        } catch (Exception ex) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "VENUE_NOT_FOUND", "The assigned venue does not exist");
+        } catch (ApiException ex) {
+            if (HttpStatus.NOT_FOUND.equals(ex.getStatus())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "VENUE_NOT_FOUND", "The assigned venue does not exist");
+            }
+            throw ex;
         }
 
         String slug = req.slug();
@@ -96,7 +106,7 @@ public class EventService {
         Event savedEvent = eventRepository.save(event);
         if (req.attractionIds() != null && !req.attractionIds().isEmpty()) {
             List<UUID> uniqueAttrIds = req.attractionIds().stream().distinct().toList();
-            java.util.Set<UUID> existing = new java.util.HashSet<>(attractionRepository.findAllById(uniqueAttrIds)
+            Set<UUID> existing = new HashSet<>(attractionRepository.findAllById(uniqueAttrIds)
                     .stream().map(Attraction::getId).toList());
             uniqueAttrIds.stream()
                     .filter(id -> !existing.contains(id))
@@ -113,7 +123,7 @@ public class EventService {
 
         if (req.classificationIds() != null && !req.classificationIds().isEmpty()) {
             List<UUID> uniqueClassIds = req.classificationIds().stream().distinct().toList();
-            java.util.Set<UUID> existing = new java.util.HashSet<>(classificationRepository.findAllById(uniqueClassIds)
+            Set<UUID> existing = new HashSet<>(classificationRepository.findAllById(uniqueClassIds)
                     .stream().map(Classification::getId).toList());
             uniqueClassIds.stream()
                     .filter(id -> !existing.contains(id))
@@ -143,10 +153,17 @@ public class EventService {
 
         validateEventDates(req.startAt(), req.endAt(), req.saleStartAt(), req.saleEndAt());
 
+        if (event.getStatus() != EventStatus.DRAFT && !event.getVenueId().equals(req.venueId())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Cannot change venue for a published or active event");
+        }
+
         try {
             venueService.getVenue(req.venueId());
-        } catch (Exception ex) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "VENUE_NOT_FOUND", "The assigned venue does not exist");
+        } catch (ApiException ex) {
+            if (HttpStatus.NOT_FOUND.equals(ex.getStatus())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "VENUE_NOT_FOUND", "The assigned venue does not exist");
+            }
+            throw ex;
         }
 
         event.setVenueId(req.venueId());
@@ -166,7 +183,7 @@ public class EventService {
         eventAttractionRepository.deleteByEventId(id);
         if (req.attractionIds() != null && !req.attractionIds().isEmpty()) {
             List<UUID> uniqueAttrIds = req.attractionIds().stream().distinct().toList();
-            java.util.Set<UUID> existing = new java.util.HashSet<>(attractionRepository.findAllById(uniqueAttrIds)
+            Set<UUID> existing = new HashSet<>(attractionRepository.findAllById(uniqueAttrIds)
                     .stream().map(Attraction::getId).toList());
             uniqueAttrIds.stream()
                     .filter(attrId -> !existing.contains(attrId))
@@ -184,7 +201,7 @@ public class EventService {
         eventClassificationRepository.deleteByEventId(id);
         if (req.classificationIds() != null && !req.classificationIds().isEmpty()) {
             List<UUID> uniqueClassIds = req.classificationIds().stream().distinct().toList();
-            java.util.Set<UUID> existing = new java.util.HashSet<>(classificationRepository.findAllById(uniqueClassIds)
+            Set<UUID> existing = new HashSet<>(classificationRepository.findAllById(uniqueClassIds)
                     .stream().map(Classification::getId).toList());
             uniqueClassIds.stream()
                     .filter(classId -> !existing.contains(classId))
@@ -268,9 +285,7 @@ public class EventService {
 
         List<UUID> explicitEventIdsForClassifications = null;
         if (classificationId != null) {
-            List<Classification> allClassifications = classificationRepository.findAll();
-            List<UUID> classificationIds = new java.util.ArrayList<>();
-            findDescendantClassificationsInMemory(classificationId, allClassifications, classificationIds);
+            List<UUID> classificationIds = classificationRepository.findDescendantIds(classificationId);
             explicitEventIdsForClassifications = eventClassificationRepository.findEventIdsByClassificationIds(classificationIds);
         }
 
@@ -286,17 +301,9 @@ public class EventService {
                 explicitEventIdsForClassifications, venueIdsByLocation, explicitEventIdsForAttractions
         );
 
-        return eventRepository.findAll(spec, pageable).map(this::convertToResponse);
-    }
-
-    private void findDescendantClassificationsInMemory(UUID parentId, List<Classification> allClassifications, List<UUID> accumulator) {
-        accumulator.add(parentId);
-        List<Classification> children = allClassifications.stream()
-                .filter(c -> parentId.equals(c.getParentId()))
-                .toList();
-        for (Classification child : children) {
-            findDescendantClassificationsInMemory(child.getId(), allClassifications, accumulator);
-        }
+        Page<Event> eventPage = eventRepository.findAll(spec, pageable);
+        List<EventResponse> content = convertToResponses(eventPage.getContent());
+        return new org.springframework.data.domain.PageImpl<>(content, pageable, eventPage.getTotalElements());
     }
 
     @Transactional
@@ -512,15 +519,87 @@ public class EventService {
 
         Event savedClone = eventRepository.save(clone);
 
-        eventAttractionRepository.findByEventId(id).forEach(ea ->
-                eventAttractionRepository.save(new EventAttraction(savedClone.getId(), ea.getAttractionId()))
-        );
+        List<EventAttraction> attractionsToSave = eventAttractionRepository.findByEventId(id).stream()
+                .map(ea -> new EventAttraction(savedClone.getId(), ea.getAttractionId()))
+                .toList();
+        if (!attractionsToSave.isEmpty()) {
+            eventAttractionRepository.saveAll(attractionsToSave);
+        }
 
-        eventClassificationRepository.findByEventId(id).forEach(ec ->
-                eventClassificationRepository.save(new EventClassification(savedClone.getId(), ec.getClassificationId()))
-        );
+        List<EventClassification> classificationsToSave = eventClassificationRepository.findByEventId(id).stream()
+                .map(ec -> new EventClassification(savedClone.getId(), ec.getClassificationId()))
+                .toList();
+        if (!classificationsToSave.isEmpty()) {
+            eventClassificationRepository.saveAll(classificationsToSave);
+        }
 
         return convertToResponse(savedClone);
+    }
+
+    private List<EventResponse> convertToResponses(List<Event> events) {
+        if (events == null || events.isEmpty()) {
+            return List.of();
+        }
+
+        List<UUID> eventIds = events.stream().map(Event::getId).toList();
+
+        // 1. Fetch EventAttractions and Attractions in bulk
+        List<EventAttraction> allEventAttractions = eventAttractionRepository.findByEventIdIn(eventIds);
+        List<UUID> allAttractionIds = allEventAttractions.stream()
+                .map(EventAttraction::getAttractionId)
+                .distinct()
+                .toList();
+
+        Map<UUID, AttractionResponse> attractionResponseMap = new HashMap<>();
+        if (!allAttractionIds.isEmpty()) {
+            attractionRepository.findAllById(allAttractionIds).forEach(attraction -> {
+                attractionResponseMap.put(attraction.getId(), AttractionResponse.from(attraction));
+            });
+        }
+
+        Map<UUID, List<AttractionResponse>> attractionsByEvent = new HashMap<>();
+        for (EventAttraction ea : allEventAttractions) {
+            AttractionResponse ar = attractionResponseMap.get(ea.getAttractionId());
+            if (ar != null) {
+                attractionsByEvent.computeIfAbsent(ea.getEventId(), k -> new ArrayList<>()).add(ar);
+            }
+        }
+
+        // 2. Fetch EventClassifications and Classifications in bulk
+        List<EventClassification> allEventClassifications = eventClassificationRepository.findByEventIdIn(eventIds);
+        List<UUID> allClassificationIds = allEventClassifications.stream()
+                .map(EventClassification::getClassificationId)
+                .distinct()
+                .toList();
+
+        Map<UUID, ClassificationResponse> classificationResponseMap = new HashMap<>();
+        if (!allClassificationIds.isEmpty()) {
+            classificationRepository.findAllById(allClassificationIds).forEach(classification -> {
+                classificationResponseMap.put(classification.getId(), ClassificationResponse.from(classification));
+            });
+        }
+
+        Map<UUID, List<ClassificationResponse>> classificationsByEvent = new HashMap<>();
+        for (EventClassification ec : allEventClassifications) {
+            ClassificationResponse cr = classificationResponseMap.get(ec.getClassificationId());
+            if (cr != null) {
+                classificationsByEvent.computeIfAbsent(ec.getEventId(), k -> new ArrayList<>()).add(cr);
+            }
+        }
+
+        // 3. Fetch EventManifests in bulk
+        Map<UUID, String> manifestMap = new HashMap<>();
+        eventManifestRepository.findAllById(eventIds).forEach(em -> {
+            manifestMap.put(em.getEventId(), em.getManifestId());
+        });
+
+        // 4. Map everything together
+        return events.stream().map(e -> {
+            List<AttractionResponse> attractions = attractionsByEvent.getOrDefault(e.getId(), List.of());
+            List<ClassificationResponse> classifications = classificationsByEvent.getOrDefault(e.getId(), List.of());
+            String manifestId = manifestMap.get(e.getId());
+            return EventResponse.from(e, attractions, classifications, manifestId);
+        }).toList();
     }
 
     private EventResponse convertToResponse(Event e) {
@@ -528,8 +607,8 @@ public class EventService {
         List<UUID> attractionIds = eventAttractions.stream().map(EventAttraction::getAttractionId).toList();
         List<AttractionResponse> attractions = List.of();
         if (!attractionIds.isEmpty()) {
-            java.util.Map<UUID, Attraction> attractionMap = attractionRepository.findAllById(attractionIds).stream()
-                    .collect(java.util.stream.Collectors.toMap(Attraction::getId, java.util.function.Function.identity()));
+            Map<UUID, Attraction> attractionMap = attractionRepository.findAllById(attractionIds).stream()
+                    .collect(Collectors.toMap(Attraction::getId, Function.identity()));
             attractions = attractionIds.stream()
                     .map(attractionMap::get)
                     .filter(Objects::nonNull)
@@ -541,8 +620,8 @@ public class EventService {
         List<UUID> classificationIds = eventClassifications.stream().map(EventClassification::getClassificationId).toList();
         List<ClassificationResponse> classifications = List.of();
         if (!classificationIds.isEmpty()) {
-            java.util.Map<UUID, Classification> classificationMap = classificationRepository.findAllById(classificationIds).stream()
-                    .collect(java.util.stream.Collectors.toMap(Classification::getId, java.util.function.Function.identity()));
+            Map<UUID, Classification> classificationMap = classificationRepository.findAllById(classificationIds).stream()
+                    .collect(Collectors.toMap(Classification::getId, Function.identity()));
             classifications = classificationIds.stream()
                     .map(classificationMap::get)
                     .filter(Objects::nonNull)

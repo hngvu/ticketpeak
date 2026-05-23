@@ -17,4 +17,6 @@ public interface EventAttractionRepository extends JpaRepository<EventAttraction
 
     @Query("SELECT ea.eventId FROM EventAttraction ea WHERE ea.attractionId IN :attractionIds")
     List<UUID> findEventIdsByAttractionIds(@Param("attractionIds") List<UUID> attractionIds);
+
+    List<EventAttraction> findByEventIdIn(List<UUID> eventIds);
 }

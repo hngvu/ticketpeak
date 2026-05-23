@@ -5,7 +5,7 @@ import io.qzz.hoangvu.ticketpeak.api.event.repository.EventRepository;
 import io.qzz.hoangvu.ticketpeak.api.inventory.dto.EventInventoryStatusResponse;
 import io.qzz.hoangvu.ticketpeak.api.inventory.model.InventoryGa;
 import io.qzz.hoangvu.ticketpeak.api.inventory.model.InventorySeat;
-import io.qzz.hoangvu.ticketpeak.api.inventory.repository.GAInventoryRepository;
+import io.qzz.hoangvu.ticketpeak.api.inventory.repository.InventoryGaRepository;
 import io.qzz.hoangvu.ticketpeak.api.inventory.repository.InventorySeatRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -17,16 +17,16 @@ import java.util.UUID;
 @Service
 public class InventoryService {
 
-    private final GAInventoryRepository gaInventoryRepository;
+    private final InventoryGaRepository inventoryGaRepository;
     private final InventorySeatRepository inventorySeatRepository;
     private final EventRepository eventRepository;
 
     public InventoryService(
-            GAInventoryRepository gaInventoryRepository,
+            InventoryGaRepository inventoryGaRepository,
             InventorySeatRepository inventorySeatRepository,
             EventRepository eventRepository
     ) {
-        this.gaInventoryRepository = gaInventoryRepository;
+        this.inventoryGaRepository = inventoryGaRepository;
         this.inventorySeatRepository = inventorySeatRepository;
         this.eventRepository = eventRepository;
     }
@@ -36,12 +36,16 @@ public class InventoryService {
         if (!eventRepository.existsById(eventId)) {
             throw new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found");
         }
+        if (!inventoryGaRepository.existsByEventId(eventId) && !inventorySeatRepository.existsByEventId(eventId)) {
+            throw new ApiException(HttpStatus.CONFLICT, "INVENTORY_NOT_INITIALIZED", "Inventory not yet available for this event");
+        }
 
         // GA inventory read path
-        List<InventoryGa> gaInventories = gaInventoryRepository.findByEventId(eventId);
+        List<InventoryGa> gaInventories = inventoryGaRepository.findByEventId(eventId);
         List<EventInventoryStatusResponse.GAInventoryStatus> gaStatuses = gaInventories.stream()
                 .map(ga -> new EventInventoryStatusResponse.GAInventoryStatus(
                         ga.getAreaId(),
+                        ga.getOfferId(),
                         ga.getTotal(),
                         ga.getSold(),
                         ga.getHeld(),
@@ -63,7 +67,8 @@ public class InventoryService {
 
     @Transactional
     public void holdGAInventory(UUID eventId, String areaId, UUID offerId, int qty) {
-        int updated = gaInventoryRepository.holdGa(eventId, areaId, offerId, qty);
+        validateQuantity(qty);
+        int updated = inventoryGaRepository.holdGa(eventId, areaId, offerId, qty);
         if (updated == 0) {
             throw new ApiException(HttpStatus.CONFLICT, "INSUFFICIENT_GA_CAPACITY", "Insufficient available capacity in GA area " + areaId);
         }
@@ -71,23 +76,35 @@ public class InventoryService {
 
     @Transactional
     public void releaseGAInventory(UUID eventId, String areaId, UUID offerId, int qty) {
-        int updated = gaInventoryRepository.releaseGa(eventId, areaId, offerId, qty);
+        validateQuantity(qty);
+        int updated = inventoryGaRepository.releaseGa(eventId, areaId, offerId, qty);
         if (updated == 0) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_RELEASE", "Cannot release held capacity in GA area " + areaId);
         }
     }
 
     @Transactional
-    public void sellGAInventory(UUID eventId, String areaId, UUID offerId, int qty) {
-        int updated = gaInventoryRepository.sellGAInventory(eventId, areaId, offerId, qty);
+    public void directSellGAInventory(UUID eventId, String areaId, UUID offerId, int qty) {
+        validateQuantity(qty);
+        int updated = inventoryGaRepository.directSellGa(eventId, areaId, offerId, qty);
         if (updated == 0) {
             throw new ApiException(HttpStatus.CONFLICT, "INSUFFICIENT_GA_CAPACITY", "Insufficient capacity in General Admission area " + areaId);
         }
     }
 
     @Transactional
+    public void confirmGAInventory(UUID eventId, String areaId, UUID offerId, int qty) {
+        validateQuantity(qty);
+        int updated = inventoryGaRepository.confirmGa(eventId, areaId, offerId, qty);
+        if (updated == 0) {
+            throw new ApiException(HttpStatus.CONFLICT, "INSUFFICIENT_GA_HELD", "Insufficient held capacity in General Admission area " + areaId);
+        }
+    }
+
+    @Transactional
     public void refundGAInventory(UUID eventId, String areaId, UUID offerId, int qty) {
-        int updated = gaInventoryRepository.refundGAInventory(eventId, areaId, offerId, qty);
+        validateQuantity(qty);
+        int updated = inventoryGaRepository.refundGa(eventId, areaId, offerId, qty);
         if (updated == 0) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REFUND", "Cannot refund quantity " + qty + " for General Admission area " + areaId);
         }
@@ -122,6 +139,12 @@ public class InventoryService {
         int updated = inventorySeatRepository.refundSeat(eventId, seatId);
         if (updated == 0) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REFUND", "Seat " + seatId + " cannot be refunded");
+        }
+    }
+
+    private void validateQuantity(int qty) {
+        if (qty <= 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_QUANTITY", "Quantity must be greater than 0");
         }
     }
 }

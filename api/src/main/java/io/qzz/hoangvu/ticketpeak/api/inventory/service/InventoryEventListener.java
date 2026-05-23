@@ -1,12 +1,13 @@
 package io.qzz.hoangvu.ticketpeak.api.inventory.service;
 
+import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
 import io.qzz.hoangvu.ticketpeak.api.event.model.EventStatus;
 import io.qzz.hoangvu.ticketpeak.api.event.model.EventStatusTransitionEvent;
 import io.qzz.hoangvu.ticketpeak.api.event.repository.EventManifestRepository;
 import io.qzz.hoangvu.ticketpeak.api.inventory.model.InventoryGa;
 import io.qzz.hoangvu.ticketpeak.api.inventory.model.InventorySeat;
 import io.qzz.hoangvu.ticketpeak.api.inventory.model.SeatInventoryStatus;
-import io.qzz.hoangvu.ticketpeak.api.inventory.repository.GAInventoryRepository;
+import io.qzz.hoangvu.ticketpeak.api.inventory.repository.InventoryGaRepository;
 import io.qzz.hoangvu.ticketpeak.api.inventory.repository.InventorySeatRepository;
 import io.qzz.hoangvu.ticketpeak.api.offer.model.Offer;
 import io.qzz.hoangvu.ticketpeak.api.offer.model.SeatingMode;
@@ -16,17 +17,19 @@ import io.qzz.hoangvu.ticketpeak.api.venue.model.Seat;
 import io.qzz.hoangvu.ticketpeak.api.venue.repository.GAAreaRepository;
 import io.qzz.hoangvu.ticketpeak.api.venue.repository.SeatRepository;
 import org.springframework.context.event.EventListener;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Component
 public class InventoryEventListener {
 
-    private final GAInventoryRepository gaInventoryRepository;
+    private final InventoryGaRepository inventoryGaRepository;
     private final InventorySeatRepository inventorySeatRepository;
     private final EventManifestRepository eventManifestRepository;
     private final GAAreaRepository gaAreaRepository;
@@ -34,14 +37,14 @@ public class InventoryEventListener {
     private final OfferRepository offerRepository;
 
     public InventoryEventListener(
-            GAInventoryRepository gaInventoryRepository,
+            InventoryGaRepository inventoryGaRepository,
             InventorySeatRepository inventorySeatRepository,
             EventManifestRepository eventManifestRepository,
             GAAreaRepository gaAreaRepository,
             SeatRepository seatRepository,
             OfferRepository offerRepository
     ) {
-        this.gaInventoryRepository = gaInventoryRepository;
+        this.inventoryGaRepository = inventoryGaRepository;
         this.inventorySeatRepository = inventorySeatRepository;
         this.eventManifestRepository = eventManifestRepository;
         this.gaAreaRepository = gaAreaRepository;
@@ -62,11 +65,11 @@ public class InventoryEventListener {
         eventManifestRepository.findById(eventId).ifPresent(eventManifest -> {
             String manifestId = eventManifest.getManifestId();
 
-            // Load all offers for the event
-            List<Offer> offers = offerRepository.findByEventId(eventId);
+            // Load all offers for the event in a deterministic order
+            List<Offer> offers = offerRepository.findByEventIdOrderByCreatedAtAsc(eventId);
 
             // 1. Populate General Admission Areas Inventory (InventoryGa) if not already initialized
-            if (!gaInventoryRepository.existsByEventId(eventId)) {
+            if (!inventoryGaRepository.existsByEventId(eventId)) {
                 List<Offer> gaOffers = offers.stream()
                         .filter(o -> o.getSeatingMode() == SeatingMode.GENERAL_ADMISSION)
                         .toList();
@@ -75,25 +78,31 @@ public class InventoryEventListener {
                 List<InventoryGa> gaInventories = new ArrayList<>();
 
                 for (Offer offer : gaOffers) {
-                    gaAreas.stream()
-                            .filter(area -> area.getSectionId().equals(offer.getSectionId()) 
-                                    && area.getPriceLevelId().equals(offer.getPriceLevelId()))
-                            .findFirst()
-                            .ifPresent(area -> {
-                                int capacity = offer.getCapacityCap() != null ? offer.getCapacityCap() : area.getCapacity();
-                                gaInventories.add(InventoryGa.builder()
-                                        .eventId(eventId)
-                                        .areaId(area.getId())
-                                        .offerId(offer.getId())
-                                        .total(capacity)
-                                        .available(capacity)
-                                        .held(0)
-                                        .sold(0)
-                                        .build());
-                            });
+                    List<GAArea> matchingAreas = gaAreas.stream()
+                            .filter(area -> (offer.getSectionId() == null || Objects.equals(area.getSectionId(), offer.getSectionId()))
+                                    && (offer.getPriceLevelId() == null || Objects.equals(area.getPriceLevelId(), offer.getPriceLevelId())))
+                            .toList();
+
+                    if (matchingAreas.isEmpty()) {
+                        throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_MAPPING",
+                                "No GA area matches offer " + offer.getTicketTypeId());
+                    }
+
+                    for (GAArea area : matchingAreas) {
+                        int capacity = offer.getCapacityCap() != null ? offer.getCapacityCap() : area.getCapacity();
+                        gaInventories.add(InventoryGa.builder()
+                                .eventId(eventId)
+                                .areaId(area.getId())
+                                .offerId(offer.getId())
+                                .total(capacity)
+                                .available(capacity)
+                                .held(0)
+                                .sold(0)
+                                .build());
+                    }
                 }
                 if (!gaInventories.isEmpty()) {
-                    gaInventoryRepository.saveAll(gaInventories);
+                    inventoryGaRepository.saveAll(gaInventories);
                 }
             }
 
@@ -103,12 +112,15 @@ public class InventoryEventListener {
                         .filter(o -> o.getSeatingMode() == SeatingMode.RESERVED_SEATING)
                         .toList();
 
-                List<Seat> seats = seatRepository.findByManifestId(manifestId);
+                // High-performance query using JOIN FETCH to avoid N+1 select queries
+                List<Seat> seats = seatRepository.findByManifestIdWithSection(manifestId);
                 List<InventorySeat> inventorySeats = seats.stream()
                         .map(seat -> {
+                            // Seats with no matching offer (e.g. accessibility or staff seats) get offerId=null.
+                            // They are still tracked in inventory as AVAILABLE but cannot be sold via an offer.
                             UUID matchedOfferId = rsOffers.stream()
-                                    .filter(o -> o.getSectionId().equals(seat.getSeatRow().getRsArea().getSectionId())
-                                            && o.getPriceLevelId().equals(seat.getSeatRow().getRsArea().getPriceLevelId()))
+                                    .filter(o -> Objects.equals(o.getSectionId(), seat.getSeatRow().getRsArea().getSectionId())
+                                            && Objects.equals(o.getPriceLevelId(), seat.getSeatRow().getRsArea().getPriceLevelId()))
                                     .map(Offer::getId)
                                     .findFirst()
                                     .orElse(null);
