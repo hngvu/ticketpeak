@@ -38,6 +38,10 @@ public record CreateOfferRequest(
         @Positive(message = "must be greater than 0")
         Integer eventTicketMinimum,
 
+        @NotNull(message = "must not be null")
+        @PositiveOrZero(message = "must be greater than or equal to 0")
+        Integer capacityCap,
+
         @NotEmpty(message = "must not be empty")
         List<@NotNull(message = "must not be null") @Positive(message = "must be greater than 0") Integer> sellableQuantities,
 

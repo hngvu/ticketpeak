@@ -14,6 +14,7 @@ import io.qzz.hoangvu.ticketpeak.api.offer.dto.*;
 import io.qzz.hoangvu.ticketpeak.api.offer.model.ChargeType;
 import io.qzz.hoangvu.ticketpeak.api.offer.model.Offer;
 import io.qzz.hoangvu.ticketpeak.api.offer.model.SeatingMode;
+import io.qzz.hoangvu.ticketpeak.api.offer.model.SaleWindowType;
 import io.qzz.hoangvu.ticketpeak.api.offer.repository.OfferRepository;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.Organization;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.OrganizationStatus;
@@ -163,11 +164,11 @@ class OfferControllerIT {
         completedEvent = saveEvent("offer-show-completed", "Completed Show", EventStatus.COMPLETED);
     }
 
-    private CreateSaleWindowRequest createSaleWindowRequest(String type, int startOffsetSeconds, int endOffsetSeconds) {
+    private CreateSaleWindowRequest createSaleWindowRequest(SaleWindowType type, int startOffsetSeconds, int endOffsetSeconds) {
         return new CreateSaleWindowRequest(type, Instant.now().plusSeconds(startOffsetSeconds), Instant.now().plusSeconds(endOffsetSeconds));
     }
 
-    private UpdateSaleWindowRequest updateSaleWindowRequest(String type, int startOffsetSeconds, int endOffsetSeconds) {
+    private UpdateSaleWindowRequest updateSaleWindowRequest(SaleWindowType type, int startOffsetSeconds, int endOffsetSeconds) {
         return new UpdateSaleWindowRequest(type, Instant.now().plusSeconds(startOffsetSeconds), Instant.now().plusSeconds(endOffsetSeconds));
     }
 
@@ -179,6 +180,7 @@ class OfferControllerIT {
         return new CreateOfferRequest(
                 ticketTypeId, name, null,
                 "VND", faceValue, false, 1,
+                100,
                 List.of(1, 2, 4), windows,
                 seatingMode, null, null, List.of()
         );
@@ -189,10 +191,11 @@ class OfferControllerIT {
         CreateOfferRequest request = new CreateOfferRequest(
                 "VIP-001", "VIP Package", "Front row package",
                 "VND", new BigDecimal("1250000.00"), false, 1,
+                100,
                 List.of(1, 2, 4),
                 List.of(
-                        createSaleWindowRequest("presale", 3600, 7200),
-                        createSaleWindowRequest("general-sale", 10800, 14400)
+                        createSaleWindowRequest(SaleWindowType.PRESALE, 3600, 7200),
+                        createSaleWindowRequest(SaleWindowType.GENERAL_SALE, 10800, 14400)
                 ),
                 SeatingMode.GENERAL_ADMISSION, null, null,
                 List.of(
@@ -209,8 +212,7 @@ class OfferControllerIT {
                 .andExpect(jsonPath("$.data.ticketTypeId").value("vip-001"))
                 .andExpect(jsonPath("$.data.faceValue").value(1250000.00))
                 .andExpect(jsonPath("$.data.sellableQuantities[0]").value(1))
-                .andExpect(jsonPath("$.data.quantityAvailable").value(0))
-                .andExpect(jsonPath("$.data.quantitySold").value(0))
+                .andExpect(jsonPath("$.data.capacityCap").value(100))
                 .andExpect(jsonPath("$.data.charges.length()").value(2))
                 .andExpect(jsonPath("$.data.saleWindows.length()").value(2))
                 .andReturn()
@@ -243,8 +245,9 @@ class OfferControllerIT {
         CreateOfferRequest request = new CreateOfferRequest(
                 "vip-dup", "Standard Ticket", null,
                 "VND", new BigDecimal("250000.00"), false, 1,
+                100,
                 List.of(1, 2, 4),
-                List.of(createSaleWindowRequest("general", 3600, 7200)),
+                List.of(createSaleWindowRequest(SaleWindowType.GENERAL_SALE, 3600, 7200)),
                 SeatingMode.GENERAL_ADMISSION, null, null, List.of()
         );
 
@@ -353,7 +356,7 @@ class OfferControllerIT {
                 "Updated Name", "Updated description",
                 "USD", new BigDecimal("200000.00"), true, 2, 100,
                 List.of(2, 4),
-                List.of(updateSaleWindowRequest("general", 3600, 7200)),
+                List.of(updateSaleWindowRequest(SaleWindowType.GENERAL_SALE, 3600, 7200)),
                 SeatingMode.GENERAL_ADMISSION, null, null, List.of()
         );
 
@@ -367,7 +370,7 @@ class OfferControllerIT {
                 .andExpect(jsonPath("$.data.faceValue").value(200000.00))
                 .andExpect(jsonPath("$.data.restrictedPayment").value(true))
                 .andExpect(jsonPath("$.data.eventTicketMinimum").value(2))
-                .andExpect(jsonPath("$.data.quantityAvailable").value(100))
+                .andExpect(jsonPath("$.data.capacityCap").value(100))
                 .andExpect(jsonPath("$.data.sellableQuantities.length()").value(2))
                 .andExpect(jsonPath("$.data.saleWindows.length()").value(1));
     }
@@ -430,6 +433,7 @@ class OfferControllerIT {
         CreateOfferRequest request = new CreateOfferRequest(
                 "bad-cur", "Bad Currency", null,
                 "XYZ", new BigDecimal("100000.00"), false, 1,
+                100,
                 List.of(1), List.of(),
                 SeatingMode.GENERAL_ADMISSION, null, null, List.of()
         );
@@ -459,8 +463,9 @@ class OfferControllerIT {
         CreateOfferRequest request = new CreateOfferRequest(
                 "bad-window", "Bad Window", null,
                 "VND", new BigDecimal("100000.00"), false, 1,
+                100,
                 List.of(1),
-                List.of(createSaleWindowRequest("general", 500, 8000)),
+                List.of(createSaleWindowRequest(SaleWindowType.GENERAL_SALE, 500, 8000)),
                 SeatingMode.GENERAL_ADMISSION, null, null, List.of()
         );
 
@@ -511,10 +516,11 @@ class OfferControllerIT {
         CreateOfferRequest request = new CreateOfferRequest(
                 "WIN-001", "Bad Window", null,
                 "VND", new BigDecimal("100000.00"), false, 1,
+                100,
                 List.of(1, 2),
                 List.of(
-                        createSaleWindowRequest("presale", 7200, 10800),
-                        createSaleWindowRequest("general", 3600, 14400)
+                        createSaleWindowRequest(SaleWindowType.PRESALE, 7200, 10800),
+                        createSaleWindowRequest(SaleWindowType.GENERAL_SALE, 3600, 14400)
                 ),
                 SeatingMode.GENERAL_ADMISSION, null, null, List.of()
         );
@@ -539,34 +545,7 @@ class OfferControllerIT {
                 .andExpect(jsonPath("$.error").value("INVALID_OFFER_SEATING"));
     }
 
-    @Test
-    void update_offer_quantity_available_less_than_sold_is_rejected() throws Exception {
-        CreateOfferRequest createRequest = createOfferRequest("sold-check", "Check Sold Limits");
-        mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
-                        .header("Authorization", "Bearer " + organizerToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(createRequest)))
-                .andExpect(status().isCreated());
-
-        Offer persisted = offerRepository.findByEventIdAndTicketTypeId(publishedEvent.getId(), "sold-check").orElseThrow();
-        persisted.setQuantitySold(10);
-        offerRepository.saveAndFlush(persisted);
-
-        UpdateOfferRequest updateRequest = new UpdateOfferRequest(
-                "Updated Name", "Updated description",
-                "VND", new BigDecimal("100000.00"), false, 1, 5,
-                List.of(1, 2, 4), List.of(),
-                SeatingMode.GENERAL_ADMISSION, null, null, List.of()
-        );
-
-        mockMvc.perform(put("/api/partner/events/" + publishedEvent.getId() + "/offers/sold-check")
-                        .header("Authorization", "Bearer " + organizerToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(updateRequest)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("INVALID_OFFER_QUANTITY"))
-                .andExpect(jsonPath("$.message").value("Quantity available must be greater than or equal to quantity sold"));
-    }
+    // Obsolete check on quantityAvailable < quantitySold removed as those fields are refactored to capacityCap
 
     @Test
     void partner_can_list_all_offers_for_event() throws Exception {
@@ -635,6 +614,7 @@ class OfferControllerIT {
         CreateOfferRequest requestNoManifest = new CreateOfferRequest(
                 "rs-no-man", "RS No Manifest", null,
                 "VND", new BigDecimal("500000.00"), false, 1,
+                100,
                 List.of(1), null,
                 SeatingMode.RESERVED_SEATING, "SEC-A", "PL-1", List.of()
         );
@@ -661,6 +641,7 @@ class OfferControllerIT {
         CreateOfferRequest requestValid = new CreateOfferRequest(
                 "rs-valid", "RS Valid", null,
                 "VND", new BigDecimal("500000.00"), false, 1,
+                100,
                 List.of(1), null,
                 SeatingMode.RESERVED_SEATING, "SEC-A", "PL-1", List.of()
         );
@@ -675,6 +656,7 @@ class OfferControllerIT {
         CreateOfferRequest requestInvalidSection = new CreateOfferRequest(
                 "rs-invalid-sec", "RS Invalid Sec", null,
                 "VND", new BigDecimal("500000.00"), false, 1,
+                100,
                 List.of(1), null,
                 SeatingMode.RESERVED_SEATING, "SEC-INVALID", "PL-1", List.of()
         );
@@ -689,6 +671,7 @@ class OfferControllerIT {
         CreateOfferRequest requestInvalidPL = new CreateOfferRequest(
                 "rs-invalid-pl", "RS Invalid PL", null,
                 "VND", new BigDecimal("500000.00"), false, 1,
+                100,
                 List.of(1), null,
                 SeatingMode.RESERVED_SEATING, "SEC-A", "PL-INVALID", List.of()
         );
@@ -711,10 +694,6 @@ class OfferControllerIT {
                         .content(objectMapper.writeValueAsString(createRequest)))
                 .andExpect(status().isCreated());
 
-        Offer persisted = offerRepository.findByEventIdAndTicketTypeId(publishedEvent.getId(), "has-sales").orElseThrow();
-        persisted.setQuantitySold(1);
-        offerRepository.saveAndFlush(persisted);
-
         mockMvc.perform(delete("/api/partner/events/" + publishedEvent.getId() + "/offers/has-sales")
                         .header("Authorization", "Bearer " + organizerToken))
                 .andExpect(status().isBadRequest())
@@ -724,33 +703,44 @@ class OfferControllerIT {
 
     @Test
     void service_layer_programmatic_validations_enforced() {
-        // 1. Check faceValue < 0
-        CreateOfferRequest negativePriceReq = new CreateOfferRequest(
-                "NEG-SVC", "Invalid Price Service", null,
-                "VND", new BigDecimal("-50.00"), false, 1,
-                List.of(1, 2), null,
-                SeatingMode.GENERAL_ADMISSION, null, null, List.of()
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+            new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                "admin", "password", java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN"))
+            )
         );
-        assertThatExceptionOfType(ApiException.class)
-                .isThrownBy(() -> offerService.createOffer(publishedEvent.getId(), negativePriceReq))
-                .satisfies(ex -> {
-                    assertThat(ex.getStatus()).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST);
-                    assertThat(ex.getErrorCode()).isEqualTo("INVALID_OFFER_PRICE");
-                });
+        try {
+            // 1. Check faceValue < 0
+            CreateOfferRequest negativePriceReq = new CreateOfferRequest(
+                    "NEG-SVC", "Invalid Price Service", null,
+                    "VND", new BigDecimal("-50.00"), false, 1,
+                    100,
+                    List.of(1, 2), null,
+                    SeatingMode.GENERAL_ADMISSION, null, null, List.of()
+            );
+            assertThatExceptionOfType(ApiException.class)
+                    .isThrownBy(() -> offerService.createOffer(publishedEvent.getId(), negativePriceReq))
+                    .satisfies(ex -> {
+                        assertThat(ex.getStatus()).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST);
+                        assertThat(ex.getErrorCode()).isEqualTo("INVALID_OFFER_PRICE");
+                    });
 
-        // 2. Check eventTicketMinimum < 1
-        CreateOfferRequest badMinLimitReq = new CreateOfferRequest(
-                "MIN-SVC", "Invalid Min Service", null,
-                "VND", new BigDecimal("1000.00"), false, 0,
-                List.of(1, 2), null,
-                SeatingMode.GENERAL_ADMISSION, null, null, List.of()
-        );
-        assertThatExceptionOfType(ApiException.class)
-                .isThrownBy(() -> offerService.createOffer(publishedEvent.getId(), badMinLimitReq))
-                .satisfies(ex -> {
-                    assertThat(ex.getStatus()).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST);
-                    assertThat(ex.getErrorCode()).isEqualTo("INVALID_OFFER_LIMITS");
-                });
+            // 2. Check eventTicketMinimum < 1
+            CreateOfferRequest badMinLimitReq = new CreateOfferRequest(
+                    "MIN-SVC", "Invalid Min Service", null,
+                    "VND", new BigDecimal("1000.00"), false, 0,
+                    100,
+                    List.of(1, 2), null,
+                    SeatingMode.GENERAL_ADMISSION, null, null, List.of()
+            );
+            assertThatExceptionOfType(ApiException.class)
+                    .isThrownBy(() -> offerService.createOffer(publishedEvent.getId(), badMinLimitReq))
+                    .satisfies(ex -> {
+                        assertThat(ex.getStatus()).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST);
+                        assertThat(ex.getErrorCode()).isEqualTo("INVALID_OFFER_LIMITS");
+                    });
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
     }
 
 

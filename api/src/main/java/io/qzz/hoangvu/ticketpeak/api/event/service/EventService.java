@@ -14,6 +14,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.context.ApplicationEventPublisher;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
@@ -30,6 +32,7 @@ public class EventService {
     private final EventManifestRepository eventManifestRepository;
     private final VenueService venueService;
     private final VenueRepository venueRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public EventService(
             EventRepository eventRepository,
@@ -39,7 +42,8 @@ public class EventService {
             EventAttractionRepository eventAttractionRepository,
             EventManifestRepository eventManifestRepository,
             VenueService venueService,
-            VenueRepository venueRepository
+            VenueRepository venueRepository,
+            ApplicationEventPublisher eventPublisher
     ) {
         this.eventRepository = eventRepository;
         this.attractionRepository = attractionRepository;
@@ -49,6 +53,7 @@ public class EventService {
         this.eventManifestRepository = eventManifestRepository;
         this.venueService = venueService;
         this.venueRepository = venueRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -426,6 +431,25 @@ public class EventService {
 
         event.setStatus(EventStatus.ONSALE);
         Event savedEvent = eventRepository.save(event);
+        eventPublisher.publishEvent(new EventStatusTransitionEvent(this, savedEvent.getId(), EventStatus.ONSALE));
+        return convertToResponse(savedEvent);
+    }
+
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#id))")
+    public EventResponse startEventSales(UUID id) {
+        Event event = eventRepository.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
+
+        if (event.getStatus() != EventStatus.PUBLISHED && event.getStatus() != EventStatus.OFFSALE) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Only PUBLISHED or OFFSALE events can start sales");
+        }
+
+        event.setStatus(EventStatus.ONSALE);
+        Event savedEvent = eventRepository.save(event);
+
+        eventPublisher.publishEvent(new EventStatusTransitionEvent(this, savedEvent.getId(), EventStatus.ONSALE));
+
         return convertToResponse(savedEvent);
     }
 

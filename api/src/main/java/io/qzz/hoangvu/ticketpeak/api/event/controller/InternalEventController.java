@@ -95,6 +95,12 @@ public class InternalEventController {
         return ResponseEntity.ok(ApiResponse.success(response, "Event cancelled successfully"));
     }
 
+    @PostMapping("/{id}/onsale")
+    public ResponseEntity<ApiResponse<EventResponse>> startEventSales(@PathVariable UUID id) {
+        EventResponse response = eventService.startEventSales(id);
+        return ResponseEntity.ok(ApiResponse.success(response, "Event sales started successfully"));
+    }
+
     @PostMapping("/{id}/clone")
     public ResponseEntity<ApiResponse<EventResponse>> cloneEvent(
             @PathVariable UUID id,

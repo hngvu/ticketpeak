@@ -60,11 +60,8 @@ public class Offer {
     @Column(name = "event_ticket_minimum", nullable = false)
     Integer eventTicketMinimum;
 
-    @Column(name = "quantity_available", nullable = false)
-    Integer quantityAvailable;
-
-    @Column(name = "quantity_sold", nullable = false)
-    Integer quantitySold;
+    @Column(name = "capacity_cap", nullable = false)
+    Integer capacityCap;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "sellable_quantities", columnDefinition = "jsonb", nullable = false)
