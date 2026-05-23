@@ -114,25 +114,29 @@ public class InventoryEventListener {
 
                 // High-performance query using JOIN FETCH to avoid N+1 select queries
                 List<Seat> seats = seatRepository.findByManifestIdWithSection(manifestId);
-                List<InventorySeat> inventorySeats = seats.stream()
-                        .map(seat -> {
-                            // Seats with no matching offer (e.g. accessibility or staff seats) get offerId=null.
-                            // They are still tracked in inventory as AVAILABLE but cannot be sold via an offer.
-                            UUID matchedOfferId = rsOffers.stream()
-                                    .filter(o -> Objects.equals(o.getSectionId(), seat.getSeatRow().getRsArea().getSectionId())
-                                            && Objects.equals(o.getPriceLevelId(), seat.getSeatRow().getRsArea().getPriceLevelId()))
-                                    .map(Offer::getId)
-                                    .findFirst()
-                                    .orElse(null);
+                List<InventorySeat> inventorySeats = new ArrayList<>();
+                for (Seat seat : seats) {
+                    UUID matchedOfferId = rsOffers.stream()
+                            .filter(o -> Objects.equals(o.getSectionId(), seat.getSeatRow().getRsArea().getSectionId())
+                                    && Objects.equals(o.getPriceLevelId(), seat.getSeatRow().getRsArea().getPriceLevelId()))
+                            .map(Offer::getId)
+                            .findFirst()
+                            .orElse(null);
 
-                            return InventorySeat.builder()
-                                    .eventId(eventId)
-                                    .seatId(seat.getId())
-                                    .offerId(matchedOfferId)
-                                    .status(SeatInventoryStatus.AVAILABLE)
-                                    .build();
-                        })
-                        .toList();
+                    if (matchedOfferId == null) {
+                        throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_MAPPING",
+                                "No matching offer found for seat " + seat.getId() + " in section " 
+                                + seat.getSeatRow().getRsArea().getSectionId() + " and price level " 
+                                + seat.getSeatRow().getRsArea().getPriceLevelId());
+                    }
+
+                    inventorySeats.add(InventorySeat.builder()
+                            .eventId(eventId)
+                            .seatId(seat.getId())
+                            .offerId(matchedOfferId)
+                            .status(SeatInventoryStatus.AVAILABLE)
+                            .build());
+                }
                 if (!inventorySeats.isEmpty()) {
                     inventorySeatRepository.saveAll(inventorySeats);
                 }

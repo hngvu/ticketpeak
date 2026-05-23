@@ -436,9 +436,11 @@ public class EventService {
 
         validateEventDates(event.getStartAt(), event.getEndAt(), event.getSaleStartAt(), event.getSaleEndAt());
 
+        // Publish transition event to initialize and validate inventories first
+        eventPublisher.publishEvent(new EventStatusTransitionEvent(this, event.getId(), EventStatus.ONSALE));
+
         event.setStatus(EventStatus.ONSALE);
         Event savedEvent = eventRepository.save(event);
-        eventPublisher.publishEvent(new EventStatusTransitionEvent(this, savedEvent.getId(), EventStatus.ONSALE));
         return convertToResponse(savedEvent);
     }
 
@@ -452,11 +454,11 @@ public class EventService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Only PUBLISHED or OFFSALE events can start sales");
         }
 
+        // Publish transition event to initialize and validate inventories first
+        eventPublisher.publishEvent(new EventStatusTransitionEvent(this, event.getId(), EventStatus.ONSALE));
+
         event.setStatus(EventStatus.ONSALE);
         Event savedEvent = eventRepository.save(event);
-
-        eventPublisher.publishEvent(new EventStatusTransitionEvent(this, savedEvent.getId(), EventStatus.ONSALE));
-
         return convertToResponse(savedEvent);
     }
 
