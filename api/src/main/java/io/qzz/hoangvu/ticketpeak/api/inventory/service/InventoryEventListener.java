@@ -58,11 +58,6 @@ public class InventoryEventListener {
 
         UUID eventId = event.getEventId();
 
-        // Ensure idempotency
-        if (gaInventoryRepository.existsByEventId(eventId) || inventorySeatRepository.existsByEventId(eventId)) {
-            return;
-        }
-
         // Get the cloned venue manifest snapshot associated with the event
         eventManifestRepository.findById(eventId).ifPresent(eventManifest -> {
             String manifestId = eventManifest.getManifestId();
@@ -70,58 +65,66 @@ public class InventoryEventListener {
             // Load all offers for the event
             List<Offer> offers = offerRepository.findByEventId(eventId);
 
-            // 1. Populate General Admission Areas Inventory (InventoryGa)
-            List<Offer> gaOffers = offers.stream()
-                    .filter(o -> o.getSeatingMode() == SeatingMode.GENERAL_ADMISSION)
-                    .toList();
+            // 1. Populate General Admission Areas Inventory (InventoryGa) if not already initialized
+            if (!gaInventoryRepository.existsByEventId(eventId)) {
+                List<Offer> gaOffers = offers.stream()
+                        .filter(o -> o.getSeatingMode() == SeatingMode.GENERAL_ADMISSION)
+                        .toList();
 
-            List<GAArea> gaAreas = gaAreaRepository.findByManifestId(manifestId);
-            List<InventoryGa> gaInventories = new ArrayList<>();
+                List<GAArea> gaAreas = gaAreaRepository.findByManifestId(manifestId);
+                List<InventoryGa> gaInventories = new ArrayList<>();
 
-            for (Offer offer : gaOffers) {
-                gaAreas.stream()
-                        .filter(area -> area.getSectionId().equals(offer.getSectionId()) 
-                                && area.getPriceLevelId().equals(offer.getPriceLevelId()))
-                        .findFirst()
-                        .ifPresent(area -> {
-                            int capacity = offer.getCapacityCap() != null ? offer.getCapacityCap() : area.getCapacity();
-                            gaInventories.add(InventoryGa.builder()
-                                    .eventId(eventId)
-                                    .areaId(area.getId())
-                                    .offerId(offer.getId())
-                                    .total(capacity)
-                                    .available(capacity)
-                                    .held(0)
-                                    .sold(0)
-                                    .build());
-                        });
+                for (Offer offer : gaOffers) {
+                    gaAreas.stream()
+                            .filter(area -> area.getSectionId().equals(offer.getSectionId()) 
+                                    && area.getPriceLevelId().equals(offer.getPriceLevelId()))
+                            .findFirst()
+                            .ifPresent(area -> {
+                                int capacity = offer.getCapacityCap() != null ? offer.getCapacityCap() : area.getCapacity();
+                                gaInventories.add(InventoryGa.builder()
+                                        .eventId(eventId)
+                                        .areaId(area.getId())
+                                        .offerId(offer.getId())
+                                        .total(capacity)
+                                        .available(capacity)
+                                        .held(0)
+                                        .sold(0)
+                                        .build());
+                            });
+                }
+                if (!gaInventories.isEmpty()) {
+                    gaInventoryRepository.saveAll(gaInventories);
+                }
             }
-            gaInventoryRepository.saveAll(gaInventories);
 
-            // 2. Populate Reserved Seating Inventory (InventorySeat)
-            List<Offer> rsOffers = offers.stream()
-                    .filter(o -> o.getSeatingMode() == SeatingMode.RESERVED_SEATING)
-                    .toList();
+            // 2. Populate Reserved Seating Inventory (InventorySeat) if not already initialized
+            if (!inventorySeatRepository.existsByEventId(eventId)) {
+                List<Offer> rsOffers = offers.stream()
+                        .filter(o -> o.getSeatingMode() == SeatingMode.RESERVED_SEATING)
+                        .toList();
 
-            List<Seat> seats = seatRepository.findByManifestId(manifestId);
-            List<InventorySeat> inventorySeats = seats.stream()
-                    .map(seat -> {
-                        UUID matchedOfferId = rsOffers.stream()
-                                .filter(o -> o.getSectionId().equals(seat.getSeatRow().getRsArea().getSectionId())
-                                        && o.getPriceLevelId().equals(seat.getSeatRow().getRsArea().getPriceLevelId()))
-                                .map(Offer::getId)
-                                .findFirst()
-                                .orElse(null);
+                List<Seat> seats = seatRepository.findByManifestId(manifestId);
+                List<InventorySeat> inventorySeats = seats.stream()
+                        .map(seat -> {
+                            UUID matchedOfferId = rsOffers.stream()
+                                    .filter(o -> o.getSectionId().equals(seat.getSeatRow().getRsArea().getSectionId())
+                                            && o.getPriceLevelId().equals(seat.getSeatRow().getRsArea().getPriceLevelId()))
+                                    .map(Offer::getId)
+                                    .findFirst()
+                                    .orElse(null);
 
-                        return InventorySeat.builder()
-                                .eventId(eventId)
-                                .seatId(seat.getId())
-                                .offerId(matchedOfferId)
-                                .status(SeatInventoryStatus.AVAILABLE)
-                                .build();
-                    })
-                    .toList();
-            inventorySeatRepository.saveAll(inventorySeats);
+                            return InventorySeat.builder()
+                                    .eventId(eventId)
+                                    .seatId(seat.getId())
+                                    .offerId(matchedOfferId)
+                                    .status(SeatInventoryStatus.AVAILABLE)
+                                    .build();
+                        })
+                        .toList();
+                if (!inventorySeats.isEmpty()) {
+                    inventorySeatRepository.saveAll(inventorySeats);
+                }
+            }
         });
     }
 }
