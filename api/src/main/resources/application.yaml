@@ -113,6 +113,13 @@ app:
     allow-credentials: true
     max-age: 3600
 
+# ── Reservation ─────────────────────────────────────────────────────────────
+reservation:
+  ttl-minutes: 15
+  expiry-job:
+    delay-ms: 60000      # Run expiry sweep every 60 seconds
+    batch-size: 100      # Max reservations expired per sweep
+
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging:
   level:
