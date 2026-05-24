@@ -1,14 +1,14 @@
 package io.qzz.hoangvu.ticketpeak.api.offer.service;
 
-import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
 import io.qzz.hoangvu.ticketpeak.api.event.dto.EventResponse;
+import io.qzz.hoangvu.ticketpeak.api.event.exception.EventException;
 import io.qzz.hoangvu.ticketpeak.api.event.model.EventStatus;
 import io.qzz.hoangvu.ticketpeak.api.event.service.EventService;
 import io.qzz.hoangvu.ticketpeak.api.offer.dto.*;
+import io.qzz.hoangvu.ticketpeak.api.offer.exception.OfferException;
 import io.qzz.hoangvu.ticketpeak.api.offer.model.*;
 import io.qzz.hoangvu.ticketpeak.api.offer.repository.OfferRepository;
 import io.qzz.hoangvu.ticketpeak.api.venue.service.VenueService;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,14 +42,12 @@ public class OfferService {
         EventResponse event = eventService.getEventForPartner(eventId);
 
         if (event.status() == EventStatus.CANCELED || event.status() == EventStatus.COMPLETED) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EVENT_STATE",
-                    "Cannot create offer for canceled or completed event");
+            throw OfferException.invalidEventState("Cannot create offer for canceled or completed event");
         }
 
         String ticketTypeId = normalizeTicketTypeId(request.ticketTypeId());
         if (offerRepository.existsByEventIdAndTicketTypeId(eventId, ticketTypeId)) {
-            throw new ApiException(HttpStatus.CONFLICT, "OFFER_TICKET_TYPE_ALREADY_EXISTS",
-                    "Ticket type id is already registered for this event");
+            throw OfferException.ticketTypeAlreadyExists();
         }
 
         validateCurrency(request.currency());
@@ -96,13 +94,11 @@ public class OfferService {
         EventResponse event = eventService.getEventForPartner(eventId);
 
         if (event.status() == EventStatus.CANCELED || event.status() == EventStatus.COMPLETED) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EVENT_STATE",
-                    "Cannot update offer for canceled or completed event");
+            throw OfferException.invalidEventState("Cannot update offer for canceled or completed event");
         }
 
         Offer offer = offerRepository.findByEventIdAndTicketTypeId(eventId, normalizeTicketTypeId(ticketTypeId))
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "OFFER_NOT_FOUND",
-                        "Offer does not exist for this event"));
+                .orElseThrow(OfferException::notFound);
 
 
         validateCurrency(request.currency());
@@ -146,13 +142,11 @@ public class OfferService {
         EventResponse event = eventService.getEventForPartner(eventId);
 
         if (event.status() == EventStatus.CANCELED || event.status() == EventStatus.COMPLETED) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EVENT_STATE",
-                    "Cannot delete offer for canceled or completed event");
+            throw OfferException.invalidEventState("Cannot delete offer for canceled or completed event");
         }
 
         Offer offer = offerRepository.findByEventIdAndTicketTypeId(eventId, normalizeTicketTypeId(ticketTypeId))
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "OFFER_NOT_FOUND",
-                        "Offer does not exist for this event"));
+                .orElseThrow(OfferException::notFound);
 
         // TODO: Enforce the active-sales guard: block offer deletion once ticket sales or orders exist.
         // This will be programmatically checked once OrderRepository and TicketRepository are implemented.
@@ -172,7 +166,7 @@ public class OfferService {
     public List<OfferResponse> listPublishedEventOffers(UUID eventId) {
         EventResponse event = eventService.getEvent(eventId);
         if (event.status() == EventStatus.DRAFT) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found");
+            throw EventException.notFound();
         }
         return offerRepository.findByEventIdOrderByCreatedAtAsc(eventId)
                 .stream()
@@ -183,11 +177,10 @@ public class OfferService {
     public OfferResponse getEventOffer(UUID eventId, String ticketTypeId) {
         EventResponse event = eventService.getEvent(eventId);
         if (event.status() == EventStatus.DRAFT) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found");
+            throw EventException.notFound();
         }
         Offer offer = offerRepository.findByEventIdAndTicketTypeId(eventId, normalizeTicketTypeId(ticketTypeId))
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "OFFER_NOT_FOUND",
-                        "Offer does not exist for this event"));
+                .orElseThrow(OfferException::notFound);
         return OfferResponse.from(offer);
     }
 
@@ -195,16 +188,14 @@ public class OfferService {
     public OfferResponse getEventOfferForPartner(UUID eventId, String ticketTypeId) {
         eventService.getEventForPartner(eventId);
         Offer offer = offerRepository.findByEventIdAndTicketTypeId(eventId, normalizeTicketTypeId(ticketTypeId))
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "OFFER_NOT_FOUND",
-                        "Offer does not exist for this event"));
+                .orElseThrow(OfferException::notFound);
         return OfferResponse.from(offer);
     }
 
     private void validateCurrency(String currency) {
         String normalized = currency.trim().toUpperCase(Locale.ROOT);
         if (!ISO_4217_CURRENCIES.contains(normalized)) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_CURRENCY",
-                    "Currency must be a valid ISO 4217 code");
+            throw OfferException.invalidCurrency();
         }
     }
 
@@ -212,12 +203,10 @@ public class OfferService {
 
     private void validateFaceValueAndMinimum(BigDecimal faceValue, Integer eventTicketMinimum) {
         if (faceValue == null || faceValue.compareTo(BigDecimal.ZERO) < 0) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_PRICE",
-                    "Face value must be greater than or equal to 0");
+            throw OfferException.invalidPrice();
         }
         if (eventTicketMinimum == null || eventTicketMinimum < 1) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_LIMITS",
-                    "Event ticket minimum must be greater than or equal to 1");
+            throw OfferException.invalidLimits();
         }
     }
 
@@ -228,17 +217,14 @@ public class OfferService {
 
         for (SaleWindow window : windows) {
             if (window.endAt().isBefore(window.startAt())) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
-                        window.type() + " end must not be before start");
+                throw OfferException.invalidWindow(window.type() + " end must not be before start");
             }
 
             if (event.saleStartAt() != null && window.startAt().isBefore(event.saleStartAt())) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
-                        "Offer sale start must not be before event sale start");
+                throw OfferException.invalidWindow("Offer sale start must not be before event sale start");
             }
             if (event.saleEndAt() != null && window.endAt().isAfter(event.saleEndAt())) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
-                        "Offer sale end must not be after event sale end");
+                throw OfferException.invalidWindow("Offer sale end must not be after event sale end");
             }
         }
 
@@ -251,8 +237,7 @@ public class OfferService {
             for (SaleWindow window : windows) {
                 if (isPresale(window.type())) {
                     if (window.endAt().isAfter(generalSale.startAt())) {
-                        throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_WINDOW",
-                                "Presale must end before general sale starts");
+                        throw OfferException.invalidWindow("Presale must end before general sale starts");
                     }
                 }
             }
@@ -289,14 +274,12 @@ public class OfferService {
 
     private void validateQuantity(Integer minimum, List<Integer> quantities) {
         if (quantities == null || quantities.isEmpty()) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_QUANTITY",
-                    "Sellable quantities must not be empty");
+            throw OfferException.invalidQuantity("Sellable quantities must not be empty");
         }
 
         for (Integer quantity : quantities) {
             if (quantity < minimum) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_QUANTITY",
-                        "Sellable quantities must be greater than or equal to the minimum");
+                throw OfferException.invalidQuantity("Sellable quantities must be greater than or equal to the minimum");
             }
         }
     }
@@ -304,8 +287,7 @@ public class OfferService {
     private void validateSeatingMode(SeatingMode seatingMode, String sectionId, String priceLevelId, EventResponse event) {
         if (seatingMode == SeatingMode.RESERVED_SEATING) {
             if (isBlank(sectionId) || isBlank(priceLevelId)) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_SEATING",
-                        "Reserved seating offers require sectionId and priceLevelId");
+                throw OfferException.invalidSeating("Reserved seating offers require sectionId and priceLevelId");
             }
 
             // Resolve manifest ID
@@ -315,8 +297,7 @@ public class OfferService {
                 var activeManifest = manifests.stream()
                         .filter(m -> m.status() == io.qzz.hoangvu.ticketpeak.api.venue.model.ManifestStatus.PUBLISHED)
                         .findFirst()
-                        .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "NO_PUBLISHED_MANIFEST",
-                                "The assigned venue does not have a published manifest"));
+                        .orElseThrow(OfferException::noPublishedManifest);
                 manifestId = activeManifest.id();
             } else {
                 manifestId = event.manifestId() != null ? event.manifestId() : EventService.getSnapshotManifestId(event.id());
@@ -326,22 +307,19 @@ public class OfferService {
             var sections = venueService.listSections(manifestId);
             boolean sectionExists = sections.stream().anyMatch(s -> s.id().equals(sectionId));
             if (!sectionExists) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "SECTION_NOT_FOUND",
-                        "Section with id '" + sectionId + "' does not exist in manifest '" + manifestId + "'");
+                throw OfferException.sectionNotFound(sectionId, manifestId);
             }
 
             var priceLevels = venueService.listPriceLevels(manifestId);
             boolean priceLevelExists = priceLevels.stream().anyMatch(p -> p.id().equals(priceLevelId));
             if (!priceLevelExists) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "PRICE_LEVEL_NOT_FOUND",
-                        "Price level with id '" + priceLevelId + "' does not exist in manifest '" + manifestId + "'");
+                throw OfferException.priceLevelNotFound(priceLevelId, manifestId);
             }
 
         } else if (seatingMode == SeatingMode.GENERAL_ADMISSION) {
             if (!isBlank(sectionId) || !isBlank(priceLevelId)) {
                 if (isBlank(sectionId) || isBlank(priceLevelId)) {
-                    throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_SEATING",
-                            "General admission offers specifying seating must include both sectionId and priceLevelId");
+                    throw OfferException.invalidSeating("General admission offers specifying seating must include both sectionId and priceLevelId");
                 }
 
                 // Resolve manifest ID
@@ -351,30 +329,27 @@ public class OfferService {
                     var activeManifest = manifests.stream()
                             .filter(m -> m.status() == io.qzz.hoangvu.ticketpeak.api.venue.model.ManifestStatus.PUBLISHED)
                             .findFirst()
-                            .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "NO_PUBLISHED_MANIFEST",
-                                    "The assigned venue does not have a published manifest"));
+                            .orElseThrow(OfferException::noPublishedManifest);
                     manifestId = activeManifest.id();
                 } else {
                     manifestId = event.manifestId() != null ? event.manifestId() : EventService.getSnapshotManifestId(event.id());
                 }
 
                 // Validate section and price level exist in manifest lookup tables
-                var sections = venueService.listSections(manifestId);
-                boolean sectionExists = sections.stream().anyMatch(s -> s.id().equals(sectionId));
-                if (!sectionExists) {
-                    throw new ApiException(HttpStatus.BAD_REQUEST, "SECTION_NOT_FOUND",
-                            "Section with id '" + sectionId + "' does not exist in manifest '" + manifestId + "'");
-                }
+                    var sections = venueService.listSections(manifestId);
+                    boolean sectionExists = sections.stream().anyMatch(s -> s.id().equals(sectionId));
+                    if (!sectionExists) {
+                        throw OfferException.sectionNotFound(sectionId, manifestId);
+                    }
 
-                var priceLevels = venueService.listPriceLevels(manifestId);
-                boolean priceLevelExists = priceLevels.stream().anyMatch(p -> p.id().equals(priceLevelId));
-                if (!priceLevelExists) {
-                    throw new ApiException(HttpStatus.BAD_REQUEST, "PRICE_LEVEL_NOT_FOUND",
-                            "Price level with id '" + priceLevelId + "' does not exist in manifest '" + manifestId + "'");
+                    var priceLevels = venueService.listPriceLevels(manifestId);
+                    boolean priceLevelExists = priceLevels.stream().anyMatch(p -> p.id().equals(priceLevelId));
+                    if (!priceLevelExists) {
+                        throw OfferException.priceLevelNotFound(priceLevelId, manifestId);
+                    }
                 }
             }
         }
-    }
 
     private List<Integer> normalizeQuantities(List<Integer> quantities) {
         return quantities.stream()

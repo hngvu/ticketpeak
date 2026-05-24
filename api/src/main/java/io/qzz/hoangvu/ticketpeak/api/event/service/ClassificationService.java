@@ -1,11 +1,10 @@
 package io.qzz.hoangvu.ticketpeak.api.event.service;
 
-import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
 import io.qzz.hoangvu.ticketpeak.api.event.dto.ClassificationResponse;
 import io.qzz.hoangvu.ticketpeak.api.event.dto.CreateClassificationRequest;
+import io.qzz.hoangvu.ticketpeak.api.event.exception.EventException;
 import io.qzz.hoangvu.ticketpeak.api.event.model.Classification;
 import io.qzz.hoangvu.ticketpeak.api.event.repository.ClassificationRepository;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,14 +29,14 @@ public class ClassificationService {
         slug = slug.toLowerCase();
 
         if (classificationRepository.existsBySlug(slug)) {
-            throw new ApiException(HttpStatus.CONFLICT, "SLUG_ALREADY_EXISTS", "Classification with slug '" + slug + "' already exists");
+            throw EventException.slugAlreadyExists("Classification with slug '" + slug + "' already exists");
         }
 
         if (req.parentId() != null) {
             Classification parent = classificationRepository.findById(req.parentId())
-                    .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PARENT_NOT_FOUND", "Parent classification not found"));
+                    .orElseThrow(() -> EventException.parentNotFound());
             if (req.level() <= parent.getLevel()) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_LEVEL", "Child level must be greater than parent level");
+                throw EventException.invalidLevel();
             }
         }
 
@@ -55,11 +54,10 @@ public class ClassificationService {
     @Transactional
     public ClassificationResponse updateClassification(UUID id, CreateClassificationRequest req) {
         Classification classification = classificationRepository.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "CLASSIFICATION_NOT_FOUND", "Classification not found"));
+                .orElseThrow(() -> EventException.classificationNotFound());
 
         if (req.parentId() != null && req.parentId().equals(id)) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_PARENT",
-                    "A classification cannot be its own parent");
+            throw EventException.invalidParent();
         }
 
         String slug = req.slug();
@@ -69,14 +67,14 @@ public class ClassificationService {
         slug = slug.toLowerCase();
 
         if (!classification.getSlug().equals(slug) && classificationRepository.existsBySlug(slug)) {
-            throw new ApiException(HttpStatus.CONFLICT, "SLUG_ALREADY_EXISTS", "Classification with slug '" + slug + "' already exists");
+            throw EventException.slugAlreadyExists("Classification with slug '" + slug + "' already exists");
         }
 
         if (req.parentId() != null) {
             Classification parent = classificationRepository.findById(req.parentId())
-                    .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PARENT_NOT_FOUND", "Parent classification not found"));
+                    .orElseThrow(() -> EventException.parentNotFound());
             if (req.level() <= parent.getLevel()) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_LEVEL", "Child level must be greater than parent level");
+                throw EventException.invalidLevel();
             }
         }
 
@@ -93,7 +91,7 @@ public class ClassificationService {
     @Transactional(readOnly = true)
     public ClassificationResponse getClassification(UUID id) {
         Classification classification = classificationRepository.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "CLASSIFICATION_NOT_FOUND", "Classification not found"));
+                .orElseThrow(() -> EventException.classificationNotFound());
         return ClassificationResponse.from(classification);
     }
 

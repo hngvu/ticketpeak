@@ -1,12 +1,11 @@
 package io.qzz.hoangvu.ticketpeak.api.venue.service;
 
-import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
 import io.qzz.hoangvu.ticketpeak.api.venue.dto.*;
+import io.qzz.hoangvu.ticketpeak.api.venue.exception.VenueException;
 import io.qzz.hoangvu.ticketpeak.api.venue.model.*;
 import io.qzz.hoangvu.ticketpeak.api.venue.repository.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -103,7 +102,7 @@ public class VenueService {
     public ManifestResponse createManifest(UUID venueId, CreateManifestRequest req) {
         Venue venue = requireVenue(venueId);
         if (manifestRepository.existsById(req.id())) {
-            throw new ApiException(HttpStatus.CONFLICT, "MANIFEST_ID_EXISTS", "Manifest with id '" + req.id() + "' already exists");
+            throw VenueException.manifestIdExists(req.id());
         }
         Manifest manifest = Manifest.builder()
                 .id(req.id()).venue(venue).description(req.description())
@@ -127,7 +126,7 @@ public class VenueService {
     public ManifestResponse publishManifest(String manifestId) {
         Manifest manifest = requireManifest(manifestId);
         if (manifest.getStatus() != ManifestStatus.DRAFT) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_MANIFEST_STATUS", "Only DRAFT manifests can be published");
+            throw VenueException.invalidManifestStatus();
         }
         // Enforce at-most-one PUBLISHED per venue
         manifestRepository.findByVenueIdAndStatus(manifest.getVenue().getId(), ManifestStatus.PUBLISHED)
@@ -143,7 +142,7 @@ public class VenueService {
     public ManifestResponse archiveManifest(String manifestId) {
         Manifest manifest = requireManifest(manifestId);
         if (manifest.getStatus() == ManifestStatus.ARCHIVED) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "ALREADY_ARCHIVED", "Manifest is already archived");
+            throw VenueException.alreadyArchived();
         }
         manifest.setStatus(ManifestStatus.ARCHIVED);
         return ManifestResponse.from(manifestRepository.save(manifest));
@@ -156,7 +155,7 @@ public class VenueService {
         String newDescription = req.description() != null ? req.description() : source.getDescription() + " (clone)";
 
         if (manifestRepository.existsById(newId)) {
-            throw new ApiException(HttpStatus.CONFLICT, "MANIFEST_ID_EXISTS", "Manifest with id '" + newId + "' already exists");
+            throw VenueException.manifestIdExists(newId);
         }
         Manifest clone = Manifest.builder()
                 .id(newId).venue(source.getVenue()).description(newDescription)
@@ -300,7 +299,7 @@ public class VenueService {
     public GAAreaResponse createGAArea(String manifestId, CreateGAAreaRequest req) {
         requireManifest(manifestId);
         if (gaAreaRepository.existsById(req.id())) {
-            throw new ApiException(HttpStatus.CONFLICT, "GA_AREA_ID_EXISTS", "GA area with id '" + req.id() + "' already exists");
+            throw VenueException.gaAreaIdExists(req.id());
         }
         GAArea area = GAArea.builder().id(req.id()).manifestId(manifestId)
                 .levelId(req.levelId()).sectionId(req.sectionId()).priceLevelId(req.priceLevelId())
@@ -318,7 +317,7 @@ public class VenueService {
     public RSAreaResponse createRSArea(String manifestId, CreateRSAreaRequest req) {
         requireManifest(manifestId);
         if (rsAreaRepository.existsById(req.id())) {
-            throw new ApiException(HttpStatus.CONFLICT, "RS_AREA_ID_EXISTS", "RS area with id '" + req.id() + "' already exists");
+            throw VenueException.rsAreaIdExists(req.id());
         }
         RSArea area = RSArea.builder().id(req.id()).manifestId(manifestId)
                 .levelId(req.levelId()).sectionId(req.sectionId()).priceLevelId(req.priceLevelId()).build();
@@ -336,12 +335,12 @@ public class VenueService {
     @Transactional
     public SeatRowResponse createSeatRow(String rsAreaId, CreateSeatRowRequest req) {
         RSArea rsArea = rsAreaRepository.findById(rsAreaId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "RS_AREA_NOT_FOUND", "RS area not found"));
+                .orElseThrow(() -> VenueException.rsAreaNotFound(rsAreaId));
         if (seatRowRepository.existsById(req.id())) {
-            throw new ApiException(HttpStatus.CONFLICT, "SEAT_ROW_ID_EXISTS", "Seat row with id '" + req.id() + "' already exists");
+            throw VenueException.seatRowIdExists(req.id());
         }
         if (seatRowRepository.existsByRsAreaIdAndName(rsAreaId, req.name())) {
-            throw new ApiException(HttpStatus.CONFLICT, "SEAT_ROW_NAME_DUPLICATE", "Seat row name '" + req.name() + "' already exists in this area");
+            throw VenueException.seatRowNameDuplicate(req.name());
         }
         SeatRow row = SeatRow.builder().id(req.id()).rsArea(rsArea).name(req.name()).positionY(req.positionY()).build();
         return SeatRowResponse.from(seatRowRepository.save(row));
@@ -355,12 +354,12 @@ public class VenueService {
     @Transactional
     public SeatResponse createSeat(String rowId, CreateSeatRequest req) {
         SeatRow row = seatRowRepository.findById(rowId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "SEAT_ROW_NOT_FOUND", "Seat row not found"));
+                .orElseThrow(() -> VenueException.seatRowNotFound(rowId));
         if (seatRepository.existsById(req.id())) {
-            throw new ApiException(HttpStatus.CONFLICT, "SEAT_ID_EXISTS", "Seat with id '" + req.id() + "' already exists");
+            throw VenueException.seatIdExists(req.id());
         }
         if (seatRepository.existsBySeatRowIdAndName(rowId, req.name())) {
-            throw new ApiException(HttpStatus.CONFLICT, "SEAT_NAME_DUPLICATE", "Seat name '" + req.name() + "' already exists in this row");
+            throw VenueException.seatNameDuplicate(req.name());
         }
         Seat seat = Seat.builder().id(req.id()).seatRow(row).name(req.name()).positionX(req.positionX())
                 .status(SeatStatus.AVAILABLE).accessibility(req.accessibility())
@@ -377,11 +376,11 @@ public class VenueService {
 
     private Venue requireVenue(UUID id) {
         return venueRepository.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "VENUE_NOT_FOUND", "Venue not found: " + id));
+                .orElseThrow(() -> VenueException.notFound(id));
     }
 
     private Manifest requireManifest(String id) {
         return manifestRepository.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "MANIFEST_NOT_FOUND", "Manifest not found: " + id));
+                .orElseThrow(() -> VenueException.manifestNotFound(id));
     }
 }

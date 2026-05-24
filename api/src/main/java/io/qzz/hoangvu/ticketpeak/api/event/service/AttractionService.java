@@ -1,11 +1,10 @@
 package io.qzz.hoangvu.ticketpeak.api.event.service;
 
-import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
 import io.qzz.hoangvu.ticketpeak.api.event.dto.AttractionResponse;
 import io.qzz.hoangvu.ticketpeak.api.event.dto.CreateAttractionRequest;
+import io.qzz.hoangvu.ticketpeak.api.event.exception.EventException;
 import io.qzz.hoangvu.ticketpeak.api.event.model.Attraction;
 import io.qzz.hoangvu.ticketpeak.api.event.repository.AttractionRepository;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +29,7 @@ public class AttractionService {
         slug = slug.toLowerCase();
 
         if (attractionRepository.existsBySlug(slug)) {
-            throw new ApiException(HttpStatus.CONFLICT, "SLUG_ALREADY_EXISTS", "Attraction with slug '" + slug + "' already exists");
+            throw EventException.slugAlreadyExists("Attraction with slug '" + slug + "' already exists");
         }
 
         Attraction attraction = Attraction.builder()
@@ -47,7 +46,7 @@ public class AttractionService {
     @Transactional(readOnly = true)
     public AttractionResponse getAttraction(UUID id) {
         Attraction attraction = attractionRepository.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ATTRACTION_NOT_FOUND", "Attraction not found"));
+                .orElseThrow(() -> EventException.attractionNotFound());
         return AttractionResponse.from(attraction);
     }
 

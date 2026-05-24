@@ -1,9 +1,9 @@
 package io.qzz.hoangvu.ticketpeak.api.inventory.service;
 
-import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
 import io.qzz.hoangvu.ticketpeak.api.event.model.EventStatus;
 import io.qzz.hoangvu.ticketpeak.api.event.model.EventStatusTransitionEvent;
 import io.qzz.hoangvu.ticketpeak.api.event.repository.EventManifestRepository;
+import io.qzz.hoangvu.ticketpeak.api.inventory.exception.InventoryException;
 import io.qzz.hoangvu.ticketpeak.api.inventory.model.InventoryGa;
 import io.qzz.hoangvu.ticketpeak.api.inventory.model.InventorySeat;
 import io.qzz.hoangvu.ticketpeak.api.inventory.model.SeatInventoryStatus;
@@ -17,7 +17,6 @@ import io.qzz.hoangvu.ticketpeak.api.venue.model.Seat;
 import io.qzz.hoangvu.ticketpeak.api.venue.repository.GAAreaRepository;
 import io.qzz.hoangvu.ticketpeak.api.venue.repository.SeatRepository;
 import org.springframework.context.event.EventListener;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -84,8 +83,7 @@ public class InventoryEventListener {
                             .toList();
 
                     if (matchingAreas.isEmpty()) {
-                        throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_MAPPING",
-                                "No GA area matches offer " + offer.getTicketTypeId());
+                        throw InventoryException.invalidOfferMapping("No GA area matches offer " + offer.getTicketTypeId());
                     }
 
                     for (GAArea area : matchingAreas) {
@@ -124,10 +122,9 @@ public class InventoryEventListener {
                             .orElse(null);
 
                     if (matchedOfferId == null) {
-                        throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_MAPPING",
-                                "No matching offer found for seat " + seat.getId() + " in section " 
-                                + seat.getSeatRow().getRsArea().getSectionId() + " and price level " 
-                                + seat.getSeatRow().getRsArea().getPriceLevelId());
+                        throw InventoryException.invalidOfferMapping("No matching offer found for seat " + seat.getId()
+                                + " in section " + seat.getSeatRow().getRsArea().getSectionId()
+                                + " and price level " + seat.getSeatRow().getRsArea().getPriceLevelId());
                     }
 
                     inventorySeats.add(InventorySeat.builder()

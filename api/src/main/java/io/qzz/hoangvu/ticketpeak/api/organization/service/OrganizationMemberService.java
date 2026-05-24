@@ -2,16 +2,15 @@ package io.qzz.hoangvu.ticketpeak.api.organization.service;
 
 import io.qzz.hoangvu.ticketpeak.api.account.model.Account;
 import io.qzz.hoangvu.ticketpeak.api.account.repository.AccountRepository;
-import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
 import io.qzz.hoangvu.ticketpeak.api.organization.dto.MemberAccountSummary;
 import io.qzz.hoangvu.ticketpeak.api.organization.dto.OrganizationMemberResponse;
+import io.qzz.hoangvu.ticketpeak.api.organization.exception.OrganizationException;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.Organization;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.OrganizationMember;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.OrganizationMemberStatus;
 import io.qzz.hoangvu.ticketpeak.api.organization.repository.OrganizationMemberRepository;
 import io.qzz.hoangvu.ticketpeak.api.organization.repository.OrganizationRepository;
 import io.qzz.hoangvu.ticketpeak.api.security.AuthenticatedAccount;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -65,7 +64,7 @@ public class OrganizationMemberService {
     @PreAuthorize("hasRole('ADMIN') or @orgSecurity.isOwnerOrMember(#orgId)")
     public OrganizationMemberResponse getMemberStatus(UUID orgId, UUID accountId) {
         OrganizationMember member = organizationMemberRepository.findByOrganizationIdAndAccountId(orgId, accountId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "Organization member not found"));
+                .orElseThrow(OrganizationException::memberNotFound);
 
         Account account = accountRepository.findById(accountId).orElse(null);
 
@@ -76,17 +75,17 @@ public class OrganizationMemberService {
     @PreAuthorize("hasRole('ADMIN') or @orgSecurity.isOwner(#orgId) or @orgSecurity.hasPermission(#orgId, 'ORG_MEMBER:REMOVE')")
     public void removeMember(UUID orgId, UUID accountId) {
         Organization org = organizationRepository.findById(orgId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "Organization not found"));
+                .orElseThrow(OrganizationException::notFound);
 
         if (org.getOwnerAccountId().equals(accountId)) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "CANNOT_REMOVE_OWNER", "Cannot remove the organization owner");
+            throw OrganizationException.cannotRemoveOwner();
         }
 
         OrganizationMember member = organizationMemberRepository.findByOrganizationIdAndAccountId(orgId, accountId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "Organization member not found"));
+                .orElseThrow(OrganizationException::memberNotFound);
 
         if (member.getStatus() == OrganizationMemberStatus.REMOVED || member.getStatus() == OrganizationMemberStatus.LEFT) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATUS_TRANSITION", "Member is already inactive");
+            throw OrganizationException.invalidStatusTransition("Member is already inactive");
         }
 
         member.setStatus(OrganizationMemberStatus.REMOVED);
@@ -98,19 +97,19 @@ public class OrganizationMemberService {
     @PreAuthorize("hasRole('ADMIN') or @orgSecurity.isOwnerOrMember(#orgId)")
     public void leaveOrganization(UUID orgId) {
         Organization org = organizationRepository.findById(orgId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "Organization not found"));
+                .orElseThrow(OrganizationException::notFound);
 
         AuthenticatedAccount principal = (AuthenticatedAccount) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
         if (org.getOwnerAccountId().equals(principal.accountId())) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "CANNOT_LEAVE_AS_OWNER", "Organization owner cannot leave the organization");
+            throw OrganizationException.cannotLeaveAsOwner();
         }
 
         OrganizationMember member = organizationMemberRepository.findByOrganizationIdAndAccountId(orgId, principal.accountId())
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "Organization member not found"));
+                .orElseThrow(OrganizationException::memberNotFound);
 
         if (member.getStatus() == OrganizationMemberStatus.REMOVED || member.getStatus() == OrganizationMemberStatus.LEFT) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATUS_TRANSITION", "You are already not an active member");
+            throw OrganizationException.invalidStatusTransition("You are already not an active member");
         }
 
         member.setStatus(OrganizationMemberStatus.LEFT);
@@ -122,10 +121,10 @@ public class OrganizationMemberService {
     @PreAuthorize("hasRole('ADMIN') or @orgSecurity.isOwner(#orgId)")
     public OrganizationMemberResponse restoreMember(UUID orgId, UUID accountId) {
         OrganizationMember member = organizationMemberRepository.findByOrganizationIdAndAccountId(orgId, accountId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "Organization member not found"));
+                .orElseThrow(OrganizationException::memberNotFound);
 
         if (member.getStatus() == OrganizationMemberStatus.ACTIVE) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATUS_TRANSITION", "Member is already active");
+            throw OrganizationException.invalidStatusTransition("Member is already active");
         }
 
         member.setStatus(OrganizationMemberStatus.ACTIVE);

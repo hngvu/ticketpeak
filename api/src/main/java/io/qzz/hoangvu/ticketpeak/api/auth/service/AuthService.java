@@ -7,11 +7,12 @@ import io.qzz.hoangvu.ticketpeak.api.auth.dto.LogoutRequest;
 import io.qzz.hoangvu.ticketpeak.api.auth.dto.LoginRequest;
 import io.qzz.hoangvu.ticketpeak.api.auth.dto.RefreshRequest;
 import io.qzz.hoangvu.ticketpeak.api.auth.dto.TokenPairResponse;
+import io.qzz.hoangvu.ticketpeak.api.account.exception.AccountException;
 import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
+import io.qzz.hoangvu.ticketpeak.api.auth.exception.AuthException;
 import io.qzz.hoangvu.ticketpeak.api.security.JwtService;
 import io.qzz.hoangvu.ticketpeak.api.security.JwtTokenPair;
 import io.qzz.hoangvu.ticketpeak.api.security.RefreshTokenStore;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,11 +61,11 @@ public class AuthService {
         try {
             parsedToken = jwtService.parseRefreshToken(request.refreshToken());
         } catch (RuntimeException exception) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_REFRESH_TOKEN", "Refresh token is invalid");
+            throw AuthException.invalidRefreshToken();
         }
         Account account = loadActiveAccount(parsedToken.accountId());
         if (!refreshTokenStore.matches(account.getId(), parsedToken.refreshTokenId())) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "REFRESH_TOKEN_REVOKED", "Refresh token is no longer valid");
+            throw AuthException.refreshTokenRevoked();
         }
 
         JwtTokenPair tokenPair = jwtService.issueTokenPair(account.getId(), account.getRole());
@@ -78,10 +79,10 @@ public class AuthService {
         try {
             parsedToken = jwtService.parseRefreshToken(request.refreshToken());
         } catch (RuntimeException exception) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_REFRESH_TOKEN", "Refresh token is invalid");
+            throw AuthException.invalidRefreshToken();
         }
         if (!refreshTokenStore.matches(parsedToken.accountId(), parsedToken.refreshTokenId())) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "REFRESH_TOKEN_REVOKED", "Refresh token is no longer valid");
+            throw AuthException.refreshTokenRevoked();
         }
 
         refreshTokenStore.delete(parsedToken.accountId());
@@ -89,18 +90,18 @@ public class AuthService {
 
     private Account loadActiveAccount(UUID accountId) {
         Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", "Account does not exist"));
+                .orElseThrow(() -> AccountException.notFound());
         verifyActiveAccount(account);
         return account;
     }
 
     private void verifyActiveAccount(Account account) {
         if (account.getStatus() != AccountStatus.ACTIVE) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "ACCOUNT_INACTIVE", "Account is not active");
+            throw AuthException.accountInactive();
         }
     }
 
     private ApiException invalidCredentials(String message) {
-        return new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", message);
+        return AuthException.invalidCredentials(message);
     }
 }

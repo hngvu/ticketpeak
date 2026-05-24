@@ -1,6 +1,7 @@
 package io.qzz.hoangvu.ticketpeak.api.event.service;
 
 import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
+import io.qzz.hoangvu.ticketpeak.api.event.exception.EventException;
 import io.qzz.hoangvu.ticketpeak.api.event.dto.*;
 import io.qzz.hoangvu.ticketpeak.api.event.model.*;
 import io.qzz.hoangvu.ticketpeak.api.event.repository.*;
@@ -71,7 +72,7 @@ public class EventService {
             venueService.getVenue(req.venueId());
         } catch (ApiException ex) {
             if (HttpStatus.NOT_FOUND.equals(ex.getStatus())) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "VENUE_NOT_FOUND", "The assigned venue does not exist");
+                throw EventException.venueNotFound();
             }
             throw ex;
         }
@@ -112,7 +113,7 @@ public class EventService {
                     .filter(id -> !existing.contains(id))
                     .findFirst()
                     .ifPresent(id -> {
-                        throw new ApiException(HttpStatus.BAD_REQUEST, "ATTRACTION_NOT_FOUND", "Attraction with id " + id + " does not exist");
+                        throw EventException.attractionNotFound(id);
                     });
 
             List<EventAttraction> attractionsToSave = uniqueAttrIds.stream()
@@ -129,7 +130,7 @@ public class EventService {
                     .filter(id -> !existing.contains(id))
                     .findFirst()
                     .ifPresent(id -> {
-                        throw new ApiException(HttpStatus.BAD_REQUEST, "CLASSIFICATION_NOT_FOUND", "Classification with id " + id + " does not exist");
+                        throw EventException.classificationNotFound(id);
                     });
 
             List<EventClassification> classificationsToSave = uniqueClassIds.stream()
@@ -145,23 +146,23 @@ public class EventService {
     @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#id))")
     public EventResponse updateEvent(UUID id, UpdateEventRequest req) {
         Event event = eventRepository.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
+                .orElseThrow(() -> EventException.notFound());
 
         if (event.getStatus() == EventStatus.COMPLETED || event.getStatus() == EventStatus.CANCELED) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Cannot update ended or cancelled event");
+            throw EventException.cannotUpdateEnded();
         }
 
         validateEventDates(req.startAt(), req.endAt(), req.saleStartAt(), req.saleEndAt());
 
         if (event.getStatus() != EventStatus.DRAFT && !event.getVenueId().equals(req.venueId())) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Cannot change venue for a published or active event");
+            throw EventException.cannotChangeVenue();
         }
 
         try {
             venueService.getVenue(req.venueId());
         } catch (ApiException ex) {
             if (HttpStatus.NOT_FOUND.equals(ex.getStatus())) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "VENUE_NOT_FOUND", "The assigned venue does not exist");
+                throw EventException.venueNotFound();
             }
             throw ex;
         }
@@ -189,7 +190,7 @@ public class EventService {
                     .filter(attrId -> !existing.contains(attrId))
                     .findFirst()
                     .ifPresent(attrId -> {
-                        throw new ApiException(HttpStatus.BAD_REQUEST, "ATTRACTION_NOT_FOUND", "Attraction with id " + attrId + " does not exist");
+                        throw EventException.attractionNotFound(attrId);
                     });
 
             List<EventAttraction> attractionsToSave = uniqueAttrIds.stream()
@@ -207,7 +208,7 @@ public class EventService {
                     .filter(classId -> !existing.contains(classId))
                     .findFirst()
                     .ifPresent(classId -> {
-                        throw new ApiException(HttpStatus.BAD_REQUEST, "CLASSIFICATION_NOT_FOUND", "Classification with id " + classId + " does not exist");
+                        throw EventException.classificationNotFound(classId);
                     });
 
             List<EventClassification> classificationsToSave = uniqueClassIds.stream()
@@ -222,9 +223,9 @@ public class EventService {
     @Transactional(readOnly = true)
     public EventResponse getEvent(UUID id) {
         Event event = eventRepository.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
+                .orElseThrow(() -> EventException.notFound());
         if (event.getStatus() == EventStatus.DRAFT) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found");
+            throw EventException.notFound();
         }
         return convertToResponse(event);
     }
@@ -233,7 +234,7 @@ public class EventService {
     @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#id))")
     public EventResponse getEventForPartner(UUID id) {
         Event event = eventRepository.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
+                .orElseThrow(() -> EventException.notFound());
         return convertToResponse(event);
     }
 
@@ -310,21 +311,21 @@ public class EventService {
     @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#id))")
     public EventResponse publishEvent(UUID id) {
         Event event = eventRepository.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
+                .orElseThrow(() -> EventException.notFound());
 
         if (event.getStatus() != EventStatus.DRAFT) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Only DRAFT events can be published");
+            throw EventException.notPublishable();
         }
 
         if (event.getVenueId() == null) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "MISSING_VENUE", "Event must have an assigned venue to be published");
+            throw EventException.missingVenue();
         }
 
         var manifests = venueService.listManifests(event.getVenueId());
         var activeManifest = manifests.stream()
                 .filter(m -> m.status() == io.qzz.hoangvu.ticketpeak.api.venue.model.ManifestStatus.PUBLISHED)
                 .findFirst()
-                .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "NO_PUBLISHED_MANIFEST", "The assigned venue does not have a published manifest"));
+                .orElseThrow(() -> EventException.noPublishedManifest());
 
         String snapshotManifestId = getSnapshotManifestId(event.getId());
         var cloneRequest = new io.qzz.hoangvu.ticketpeak.api.venue.dto.CloneManifestRequest(
@@ -351,10 +352,10 @@ public class EventService {
     @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#id))")
     public EventResponse postponeEvent(UUID id, PostponeEventRequest req) {
         Event event = eventRepository.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
+                .orElseThrow(() -> EventException.notFound());
 
         if (event.getStatus() != EventStatus.PUBLISHED && event.getStatus() != EventStatus.ONSALE && event.getStatus() != EventStatus.POSTPONED) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Only published, on-sale, or postponed events can be postponed");
+            throw EventException.cannotPostpone();
         }
 
         Instant startAt = req.newStartAt();
@@ -382,10 +383,10 @@ public class EventService {
     @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#id))")
     public EventResponse cancelEvent(UUID id) {
         Event event = eventRepository.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
+                .orElseThrow(() -> EventException.notFound());
 
         if (event.getStatus() == EventStatus.CANCELED || event.getStatus() == EventStatus.COMPLETED) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Event is already in ended or cancelled state");
+            throw EventException.cannotCancel();
         }
 
         event.setStatus(EventStatus.CANCELED);
@@ -397,10 +398,10 @@ public class EventService {
     @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#id))")
     public EventResponse rescheduleEvent(UUID id, RescheduleEventRequest req) {
         Event event = eventRepository.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
+                .orElseThrow(() -> EventException.notFound());
 
         if (event.getStatus() != EventStatus.POSTPONED && event.getStatus() != EventStatus.RESCHEDULED) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Only postponed or rescheduled events can be rescheduled");
+            throw EventException.cannotReschedule();
         }
 
         Instant startAt = req.newStartAt();
@@ -428,10 +429,10 @@ public class EventService {
     @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#id))")
     public EventResponse resumeEvent(UUID id) {
         Event event = eventRepository.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
+                .orElseThrow(() -> EventException.notFound());
 
         if (event.getStatus() != EventStatus.POSTPONED && event.getStatus() != EventStatus.RESCHEDULED) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Only postponed or rescheduled events can be resumed");
+            throw EventException.cannotResume();
         }
 
         validateEventDates(event.getStartAt(), event.getEndAt(), event.getSaleStartAt(), event.getSaleEndAt());
@@ -448,10 +449,10 @@ public class EventService {
     @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#id))")
     public EventResponse startEventSales(UUID id) {
         Event event = eventRepository.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
+                .orElseThrow(() -> EventException.notFound());
 
         if (event.getStatus() != EventStatus.PUBLISHED && event.getStatus() != EventStatus.OFFSALE) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Only PUBLISHED or OFFSALE events can start sales");
+            throw EventException.cannotStartSales();
         }
 
         // Publish transition event to initialize and validate inventories first
@@ -466,7 +467,7 @@ public class EventService {
     @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#id))")
     public EventResponse cloneEvent(UUID id, CloneEventRequest req) {
         Event sourceEvent = eventRepository.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found"));
+                .orElseThrow(() -> EventException.notFound());
 
         Instant startAt = req.startAt() != null ? req.startAt() : sourceEvent.getStartAt();
         Instant endAt = req.endAt();
@@ -646,28 +647,28 @@ public class EventService {
 
     private void validateEventDates(Instant startAt, Instant endAt, Instant saleStartAt, Instant saleEndAt) {
         if (startAt == null) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EVENT_DATES", "Event start date is required");
+            throw EventException.invalidDates("Event start date is required");
         }
         if (endAt != null && !startAt.isBefore(endAt)) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EVENT_DATES", "Event start date must be before end date");
+            throw EventException.invalidDates("Event start date must be before end date");
         }
         if (saleStartAt != null && saleEndAt != null) {
             if (!saleStartAt.isBefore(saleEndAt)) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EVENT_DATES", "Sale start date must be before sale end date");
+                throw EventException.invalidDates("Sale start date must be before sale end date");
             }
         }
         if (saleStartAt != null) {
             if (endAt != null && saleStartAt.isAfter(endAt)) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EVENT_DATES", "Sale start date must be before or equal to event end date");
+                throw EventException.invalidDates("Sale start date must be before or equal to event end date");
             } else if (endAt == null && saleStartAt.isAfter(startAt)) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EVENT_DATES", "Sale start date must be before or equal to event start date");
+                throw EventException.invalidDates("Sale start date must be before or equal to event start date");
             }
         }
         if (saleEndAt != null) {
             if (endAt != null && saleEndAt.isAfter(endAt)) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EVENT_DATES", "Sale end date must be before or equal to event end date");
+                throw EventException.invalidDates("Sale end date must be before or equal to event end date");
             } else if (endAt == null && saleEndAt.isAfter(startAt)) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EVENT_DATES", "Sale end date must be before or equal to event start date");
+                throw EventException.invalidDates("Sale end date must be before or equal to event start date");
             }
         }
     }

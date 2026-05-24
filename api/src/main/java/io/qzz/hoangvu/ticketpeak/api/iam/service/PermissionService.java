@@ -1,22 +1,22 @@
 package io.qzz.hoangvu.ticketpeak.api.iam.service;
 
-import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
 import io.qzz.hoangvu.ticketpeak.api.iam.dto.AccountPermissionResponse;
 import io.qzz.hoangvu.ticketpeak.api.iam.dto.CreatePermissionRequest;
 import io.qzz.hoangvu.ticketpeak.api.iam.dto.GrantPermissionRequest;
 import io.qzz.hoangvu.ticketpeak.api.iam.dto.PermissionResponse;
+import io.qzz.hoangvu.ticketpeak.api.iam.exception.IamException;
 import io.qzz.hoangvu.ticketpeak.api.iam.model.AccountPermission;
 import io.qzz.hoangvu.ticketpeak.api.iam.model.Permission;
 import io.qzz.hoangvu.ticketpeak.api.iam.model.PermissionScope;
 import io.qzz.hoangvu.ticketpeak.api.iam.model.Role;
 import io.qzz.hoangvu.ticketpeak.api.iam.repository.AccountPermissionRepository;
 import io.qzz.hoangvu.ticketpeak.api.iam.repository.PermissionRepository;
+import io.qzz.hoangvu.ticketpeak.api.organization.exception.OrganizationException;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.Organization;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.OrganizationMemberStatus;
 import io.qzz.hoangvu.ticketpeak.api.organization.repository.OrganizationMemberRepository;
 import io.qzz.hoangvu.ticketpeak.api.organization.repository.OrganizationRepository;
 import io.qzz.hoangvu.ticketpeak.api.security.AuthenticatedAccount;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,7 +51,7 @@ public class PermissionService {
             throw new AccessDeniedException("Only platform admins can create permissions");
         }
         if (permissionRepository.existsById(request.code())) {
-            throw new ApiException(HttpStatus.CONFLICT, "PERMISSION_ALREADY_EXISTS", "Permission code already exists");
+            throw IamException.permissionAlreadyExists();
         }
         Permission permission = Permission.builder()
                 .code(request.code())
@@ -77,16 +77,16 @@ public class PermissionService {
         verifyActiveOrgMemberOrOwner(orgId, request.accountId());
 
         Permission permission = permissionRepository.findById(request.permissionCode())
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PERMISSION_NOT_FOUND", "Permission not found"));
+                .orElseThrow(IamException::permissionNotFound);
 
         if (permission.getScope() != PermissionScope.ORGANIZATION) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_PERMISSION_SCOPE", "Can only grant organization-scoped permissions");
+            throw IamException.invalidPermissionScope();
         }
 
         return accountPermissionRepository.findByAccountIdAndPermissionCodeAndOrganizationId(request.accountId(), request.permissionCode(), orgId)
                 .map(existing -> {
                     if (Boolean.TRUE.equals(existing.getIsActive())) {
-                        throw new ApiException(HttpStatus.CONFLICT, "PERMISSION_ALREADY_GRANTED", "Account already has this permission in the organization");
+                        throw IamException.permissionAlreadyGranted();
                     }
                     existing.setIsActive(true);
                     existing.setGrantedAt(Instant.now());
@@ -115,7 +115,7 @@ public class PermissionService {
 
         AccountPermission grant = accountPermissionRepository.findByAccountIdAndPermissionCodeAndOrganizationId(accountId, permissionCode, orgId)
                 .filter(ap -> Boolean.TRUE.equals(ap.getIsActive()))
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PERMISSION_GRANT_NOT_FOUND", "Permission grant not found or already revoked"));
+                .orElseThrow(IamException::permissionGrantNotFound);
 
         grant.setIsActive(false);
         grant.setRevokedBy(principal.accountId());
@@ -127,7 +127,7 @@ public class PermissionService {
     public List<AccountPermissionResponse> getAccountPermissions(UUID orgId, UUID accountId, AuthenticatedAccount principal) {
         // Verify org exists
         Organization org = organizationRepository.findById(orgId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "Organization not found"));
+                .orElseThrow(OrganizationException::notFound);
 
         boolean isSelf = principal.accountId().equals(accountId);
         boolean isAdmin = principal.role() == Role.ADMIN;
@@ -149,7 +149,7 @@ public class PermissionService {
             return;
         }
         Organization org = organizationRepository.findById(orgId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "Organization not found"));
+                .orElseThrow(OrganizationException::notFound);
 
         if (org.getOwnerAccountId().equals(principal.accountId())) {
             return;
@@ -172,7 +172,7 @@ public class PermissionService {
 
     private void verifyActiveOrgMemberOrOwner(UUID orgId, UUID targetAccountId) {
         Organization org = organizationRepository.findById(orgId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "Organization not found"));
+                .orElseThrow(OrganizationException::notFound);
 
         if (org.getOwnerAccountId().equals(targetAccountId)) {
             return;
@@ -180,7 +180,7 @@ public class PermissionService {
 
         boolean isMember = organizationMemberRepository.existsByOrganizationIdAndAccountIdAndStatus(orgId, targetAccountId, OrganizationMemberStatus.ACTIVE);
         if (!isMember) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "NOT_ORGANIZATION_MEMBER", "Account is not an active member of this organization");
+            throw OrganizationException.notOrganizationMember();
         }
     }
 }

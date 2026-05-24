@@ -1,12 +1,13 @@
 package io.qzz.hoangvu.ticketpeak.api.organization.service;
 
+import io.qzz.hoangvu.ticketpeak.api.account.exception.AccountException;
 import io.qzz.hoangvu.ticketpeak.api.account.model.Account;
 import io.qzz.hoangvu.ticketpeak.api.account.repository.AccountRepository;
-import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
 import io.qzz.hoangvu.ticketpeak.api.iam.model.Role;
 import io.qzz.hoangvu.ticketpeak.api.organization.dto.CreateInvitationRequest;
 import io.qzz.hoangvu.ticketpeak.api.organization.dto.InvitationDetailsResponse;
 import io.qzz.hoangvu.ticketpeak.api.organization.dto.InvitationResponse;
+import io.qzz.hoangvu.ticketpeak.api.organization.exception.OrganizationException;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.Organization;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.OrganizationInvitation;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.OrganizationInvitationStatus;
@@ -16,7 +17,6 @@ import io.qzz.hoangvu.ticketpeak.api.organization.repository.OrganizationInvitat
 import io.qzz.hoangvu.ticketpeak.api.organization.repository.OrganizationMemberRepository;
 import io.qzz.hoangvu.ticketpeak.api.organization.repository.OrganizationRepository;
 import io.qzz.hoangvu.ticketpeak.api.security.AuthenticatedAccount;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -53,27 +53,27 @@ public class OrganizationInvitationService {
     @PreAuthorize("hasRole('ADMIN') or @orgSecurity.isOwner(#orgId) or @orgSecurity.hasPermission(#orgId, 'ORG_MEMBER:INVITE')")
     public InvitationResponse createInvitation(UUID orgId, CreateInvitationRequest request) {
         Organization org = organizationRepository.findById(orgId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "Organization not found"));
+                .orElseThrow(OrganizationException::notFound);
 
         AuthenticatedAccount principal = (AuthenticatedAccount) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
         Account invitee = accountRepository.findById(request.inviteeAccountId())
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", "Invitee account not found"));
+                .orElseThrow(AccountException::notFound);
 
         if (invitee.getRole() != Role.ORGANIZER && invitee.getRole() != Role.ADMIN) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_INVITEE_ROLE", "Invitee must be an organizer");
+            throw OrganizationException.invalidInviteeRole();
         }
 
         boolean isAlreadyMember = organizationMemberRepository.existsByOrganizationIdAndAccountIdAndStatus(
                 orgId, invitee.getId(), OrganizationMemberStatus.ACTIVE);
         if (isAlreadyMember) {
-            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_MEMBER", "Account is already an active member");
+            throw OrganizationException.alreadyMember();
         }
 
         boolean hasPendingOrAccepted = invitationRepository.existsByOrganizationIdAndInviteeAccountIdAndStatusIn(
                 orgId, invitee.getId(), List.of(OrganizationInvitationStatus.PENDING, OrganizationInvitationStatus.ACCEPTED));
         if (hasPendingOrAccepted) {
-            throw new ApiException(HttpStatus.CONFLICT, "INVITATION_EXISTS", "A pending or accepted invitation already exists for this account");
+            throw OrganizationException.invitationExists();
         }
 
         String token = UUID.randomUUID().toString() + "-" + UUID.randomUUID().toString();
@@ -94,7 +94,7 @@ public class OrganizationInvitationService {
     @PreAuthorize("hasRole('ADMIN') or @orgSecurity.isOwnerOrMember(#orgId)")
     public List<InvitationResponse> getOrganizationInvitations(UUID orgId) {
         organizationRepository.findById(orgId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "Organization not found"));
+                .orElseThrow(OrganizationException::notFound);
                 
         return invitationRepository.findByOrganizationId(orgId).stream()
                 .map(InvitationResponse::from)
@@ -136,7 +136,7 @@ public class OrganizationInvitationService {
         OrganizationInvitation invitation = getAndCheckExpiration(token);
 
         if (invitation.getStatus() != OrganizationInvitationStatus.PENDING) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATUS", "Invitation is not pending");
+            throw OrganizationException.invitationNotPending();
         }
 
         if (!invitation.getInviteeAccountId().equals(principal.accountId())) {
@@ -165,7 +165,7 @@ public class OrganizationInvitationService {
         OrganizationInvitation invitation = getAndCheckExpiration(token);
 
         if (invitation.getStatus() != OrganizationInvitationStatus.PENDING) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATUS", "Invitation is not pending");
+            throw OrganizationException.invitationNotPending();
         }
 
         if (!invitation.getInviteeAccountId().equals(principal.accountId())) {
@@ -179,7 +179,7 @@ public class OrganizationInvitationService {
 
     private OrganizationInvitation getAndCheckExpiration(String token) {
         OrganizationInvitation invitation = invitationRepository.findByToken(token)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "INVITATION_NOT_FOUND", "Invitation not found"));
+                .orElseThrow(OrganizationException::invitationNotFound);
 
         if (invitation.getStatus() == OrganizationInvitationStatus.PENDING && invitation.getExpiresAt().isBefore(Instant.now())) {
             invitation.setStatus(OrganizationInvitationStatus.EXPIRED);

@@ -1,13 +1,14 @@
 package io.qzz.hoangvu.ticketpeak.api.organization.service;
 
+import io.qzz.hoangvu.ticketpeak.api.account.exception.AccountException;
 import io.qzz.hoangvu.ticketpeak.api.account.model.Account;
 import io.qzz.hoangvu.ticketpeak.api.account.repository.AccountRepository;
-import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
 import io.qzz.hoangvu.ticketpeak.api.iam.model.Role;
 import io.qzz.hoangvu.ticketpeak.api.organization.dto.CreateOrganizationRequest;
 import io.qzz.hoangvu.ticketpeak.api.organization.dto.OrganizationResponse;
 import io.qzz.hoangvu.ticketpeak.api.organization.dto.OrganizationSearchParams;
 import io.qzz.hoangvu.ticketpeak.api.organization.dto.UpdateOrganizationRequest;
+import io.qzz.hoangvu.ticketpeak.api.organization.exception.OrganizationException;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.Organization;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.OrganizationMember;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.OrganizationMemberStatus;
@@ -17,7 +18,6 @@ import io.qzz.hoangvu.ticketpeak.api.organization.repository.OrganizationReposit
 import io.qzz.hoangvu.ticketpeak.api.security.AuthenticatedAccount;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -52,10 +52,10 @@ public class OrganizationService {
     @PreAuthorize("hasRole('ADMIN')")
     public OrganizationResponse createOrganization(CreateOrganizationRequest request) {
         Account owner = accountRepository.findById(request.ownerAccountId())
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", "Owner account not found"));
+                .orElseThrow(AccountException::notFound);
 
         if (owner.getRole() != Role.ORGANIZER && owner.getRole() != Role.ADMIN) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OWNER_ROLE", "Owner account must be an organizer or admin");
+            throw OrganizationException.invalidOwnerRole();
         }
 
         String slug = generateUniqueSlug(request.name());
@@ -91,7 +91,7 @@ public class OrganizationService {
     @PreAuthorize("@orgSecurity.isOwner(#id)")
     public OrganizationResponse updateOrganization(UUID id, UpdateOrganizationRequest request) {
         Organization org = organizationRepository.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "Organization not found"));
+                .orElseThrow(OrganizationException::notFound);
 
         return updateFieldsAndSave(org, request);
     }
@@ -100,7 +100,7 @@ public class OrganizationService {
     @PreAuthorize("hasRole('ADMIN')")
     public OrganizationResponse adminUpdateOrganization(UUID id, UpdateOrganizationRequest request) {
         Organization org = organizationRepository.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "Organization not found"));
+                .orElseThrow(OrganizationException::notFound);
 
         return updateFieldsAndSave(org, request);
     }
@@ -122,7 +122,7 @@ public class OrganizationService {
     @PostAuthorize("returnObject.status() == T(io.qzz.hoangvu.ticketpeak.api.organization.model.OrganizationStatus).ACTIVE or hasRole('ADMIN') or @orgSecurity.isOwnerOrMember(#id)")
     public OrganizationResponse getOrganization(UUID id) {
         Organization org = organizationRepository.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "Organization not found"));
+                .orElseThrow(OrganizationException::notFound);
         return OrganizationResponse.from(org);
     }
 

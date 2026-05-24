@@ -7,10 +7,8 @@ import io.qzz.hoangvu.ticketpeak.api.account.model.Account;
 import io.qzz.hoangvu.ticketpeak.api.account.model.AccountStatus;
 import io.qzz.hoangvu.ticketpeak.api.account.model.Gender;
 import io.qzz.hoangvu.ticketpeak.api.account.repository.AccountRepository;
-import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
+import io.qzz.hoangvu.ticketpeak.api.account.exception.AccountException;
 import io.qzz.hoangvu.ticketpeak.api.iam.model.Role;
-import jakarta.persistence.EntityNotFoundException;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,7 +32,7 @@ public class AccountService {
     public AccountResponse register(RegisterAccountRequest request) {
         String email = normalizeEmail(request.email());
         if (accountRepository.existsByEmailIgnoreCase(email)) {
-            throw new ApiException(HttpStatus.CONFLICT, "EMAIL_ALREADY_EXISTS", "Email is already registered");
+            throw AccountException.emailAlreadyExists();
         }
 
         Account account = Account.builder()
@@ -67,7 +65,7 @@ public class AccountService {
 
     private Account loadAccount(UUID accountId) {
         return accountRepository.findById(accountId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", "Account does not exist"));
+                .orElseThrow(() -> AccountException.notFound());
     }
 
     private void applyUpdate(Account account, UpdateAccountRequest request) {
