@@ -16,4 +16,6 @@ public interface EventClassificationRepository extends JpaRepository<EventClassi
 
     @Query("SELECT ec.eventId FROM EventClassification ec WHERE ec.classificationId IN :classificationIds")
     List<UUID> findEventIdsByClassificationIds(@Param("classificationIds") List<UUID> classificationIds);
+
+    List<EventClassification> findByEventIdIn(List<UUID> eventIds);
 }

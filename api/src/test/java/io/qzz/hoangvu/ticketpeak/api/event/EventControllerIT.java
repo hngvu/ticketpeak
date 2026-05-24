@@ -347,7 +347,7 @@ class EventControllerIT {
                         .header("Authorization", "Bearer " + ownerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("PUBLISHED"))
-                .andExpect(jsonPath("$.data.manifestId").value("evt-" + event.getId() + "-snap"));
+                .andExpect(jsonPath("$.data.manifestId").value(io.qzz.hoangvu.ticketpeak.api.event.service.EventService.getSnapshotManifestId(event.getId())));
 
         assertThat(eventManifestRepository.existsById(event.getId())).isTrue();
 

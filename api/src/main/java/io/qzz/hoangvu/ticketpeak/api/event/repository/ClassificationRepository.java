@@ -18,4 +18,12 @@ public interface ClassificationRepository extends JpaRepository<Classification, 
 
     @Query("SELECT c FROM Classification c WHERE LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%'))")
     List<Classification> searchByName(@Param("query") String query);
+
+    @Query(value = "WITH RECURSIVE sub_classifications AS (" +
+                   "  SELECT id FROM classification WHERE id = :classificationId " +
+                   "  UNION ALL " +
+                   "  SELECT c.id FROM classification c " +
+                   "  INNER JOIN sub_classifications s ON c.parent_id = s.id" +
+                   ") SELECT id FROM sub_classifications", nativeQuery = true)
+    List<UUID> findDescendantIds(@Param("classificationId") UUID classificationId);
 }
