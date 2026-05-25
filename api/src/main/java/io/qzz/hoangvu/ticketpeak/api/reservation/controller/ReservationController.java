@@ -46,10 +46,11 @@ public class ReservationController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<ReservationResponse>>> listReservations(
-            @AuthenticationPrincipal AuthenticatedAccount account
+    public ResponseEntity<ApiResponse<org.springframework.data.domain.Page<ReservationResponse>>> listReservations(
+            @AuthenticationPrincipal AuthenticatedAccount account,
+            org.springframework.data.domain.Pageable pageable
     ) {
-        return ResponseEntity.ok(ApiResponse.success(reservationService.listReservations(account.accountId())));
+        return ResponseEntity.ok(ApiResponse.success(reservationService.listReservations(account.accountId(), pageable)));
     }
 
     @GetMapping("/{id}")

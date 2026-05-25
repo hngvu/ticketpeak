@@ -16,7 +16,6 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
-@Transactional
 public class PaymentOrchestrator {
 
     private final PaymentManager paymentManager;

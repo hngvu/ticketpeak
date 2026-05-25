@@ -196,8 +196,6 @@ public class PaymentController {
 
         } catch (Exception e) {
             log.error("Unhandled VNPay IPN system failure", e);
-            response.put("RspCode", "99");
-            response.put("Message", "Input data required");
             throw new RuntimeException(e);
         }
     }

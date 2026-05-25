@@ -15,7 +15,7 @@ import java.util.UUID;
 
 public interface ReservationRepository extends JpaRepository<Reservation, UUID> {
 
-    List<Reservation> findByAccountIdOrderByCreatedAtDesc(UUID accountId);
+    org.springframework.data.domain.Page<Reservation> findByAccountIdOrderByCreatedAtDesc(UUID accountId, org.springframework.data.domain.Pageable pageable);
 
     Optional<Reservation> findByIdAndAccountId(UUID id, UUID accountId);
 

@@ -211,7 +211,7 @@ public class PaymentManager {
                     BigDecimal chargeAmount;
                     if (charge.isPercentage()) {
                         chargeAmount = unitFaceValue.multiply(charge.amount())
-                                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                                .divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP);
                     } else {
                         chargeAmount = charge.amount();
                     }

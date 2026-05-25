@@ -159,11 +159,9 @@ public class ReservationService {
         return ReservationResponse.from(reservation);
     }
 
-    public List<ReservationResponse> listReservations(UUID accountId) {
-        return reservationRepository.findByAccountIdOrderByCreatedAtDesc(accountId)
-                .stream()
-                .map(ReservationResponse::from)
-                .toList();
+    public org.springframework.data.domain.Page<ReservationResponse> listReservations(UUID accountId, org.springframework.data.domain.Pageable pageable) {
+        return reservationRepository.findByAccountIdOrderByCreatedAtDesc(accountId, pageable)
+                .map(ReservationResponse::from);
     }
 
     // ─── Expiry batch (called by scheduler) ──────────────────────────────────
@@ -197,11 +195,6 @@ public class ReservationService {
         }
     }
 
-    private void assertPending(Reservation reservation) {
-        if (reservation.getStatus() != ReservationStatus.PENDING) {
-            throw ReservationException.alreadyFinalized();
-        }
-    }
 
     private boolean isInActiveSaleWindow(Offer offer, Instant now) {
         List<OfferSaleWindow> windows = offer.getSaleWindows();
