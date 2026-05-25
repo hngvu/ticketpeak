@@ -277,6 +277,7 @@ Rules:
 
 - All changes are committed and pushed directly to the `main` branch.
 - No separate feature branches or Pull Requests are strictly required. Developers can work and commit directly on `main` to simplify the workflow.
+- **AI Agent Commits**: Every commit created by an AI agent must be approved by the developer before being staged or committed. Agents are strictly forbidden from committing code without explicit developer approval.
 
 ### Commit format
 
@@ -402,4 +403,4 @@ Before implementing any feature or significant change:
 2. Pause for approval: present the plan to the user and wait for explicit approval before writing code.
 3. Implement: set status to `in-progress`, then write code following this file.
 4. Verify: run the relevant tests and confirm acceptance criteria are met.
-5. Complete: set status to `done`, fill in outcome, then commit using the commit format above.
+5. Complete: set status to `done`, fill in outcome, then present the final changes to the developer for explicit approval before committing using the commit format above.
