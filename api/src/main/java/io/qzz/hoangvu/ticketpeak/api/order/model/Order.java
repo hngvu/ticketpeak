@@ -31,10 +31,10 @@ public class Order {
     @Column(columnDefinition = "UUID DEFAULT uuidv7()", insertable = false, updatable = false)
     UUID id;
 
-    @Column(name = "reservation_id", nullable = false, unique = true)
+    @Column(name = "reservation_id", nullable = false)
     UUID reservationId;
 
-    @Column(name = "payment_id", nullable = false, unique = true)
+    @Column(name = "payment_id", nullable = false)
     UUID paymentId;
 
     @Column(name = "account_id", nullable = false)
@@ -54,7 +54,7 @@ public class Order {
     BigDecimal totalAmount;
 
     @Builder.Default
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     List<OrderItem> items = new ArrayList<>();
 
     @Version

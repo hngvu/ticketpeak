@@ -1,12 +1,12 @@
 package io.qzz.hoangvu.ticketpeak.api.order.dto;
 
-import io.qzz.hoangvu.ticketpeak.api.offer.model.OfferCharge;
 import io.qzz.hoangvu.ticketpeak.api.offer.model.SeatingMode;
 import io.qzz.hoangvu.ticketpeak.api.order.model.OrderItem;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public record OrderItemResponse(
         UUID id,
@@ -19,10 +19,14 @@ public record OrderItemResponse(
         BigDecimal unitTotalPrice,
         BigDecimal lineTotal,
         String currency,
-        List<OfferCharge> charges
+        List<OrderChargeResponse> charges
 ) {
 
     public static OrderItemResponse from(OrderItem item) {
+        List<OrderChargeResponse> mappedCharges = item.getCharges().stream()
+                .map(c -> new OrderChargeResponse(c.name(), c.type().name(), c.amount(), c.isPercentage()))
+                .toList();
+
         return new OrderItemResponse(
                 item.getId(),
                 item.getOfferId(),
@@ -34,7 +38,7 @@ public record OrderItemResponse(
                 item.getUnitTotalPrice(),
                 item.getLineTotal(),
                 item.getCurrency(),
-                item.getCharges()
+                mappedCharges
         );
     }
 }

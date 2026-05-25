@@ -75,8 +75,8 @@ public class OrderService {
         log.info("Processing PaymentCompletedEvent: reservation={}, payment={}", reservationId, paymentId);
 
         // 1. Idempotency guard
-        if (orderRepository.existsByReservationId(reservationId)) {
-            log.info("Order already exists for reservation {}. Skipping duplicate processing.", reservationId);
+        if (orderRepository.existsByReservationIdAndStatus(reservationId, OrderStatus.CREATED)) {
+            log.info("Order already created for reservation {}. Skipping duplicate processing.", reservationId);
             return;
         }
 
@@ -141,12 +141,8 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public OrderResponse getOrder(UUID accountId, UUID orderId) {
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findByIdAndAccountId(orderId, accountId)
                 .orElseThrow(OrderException::notFound);
-
-        if (!order.getAccountId().equals(accountId)) {
-            throw OrderException.ownerMismatch();
-        }
 
         return OrderResponse.from(order);
     }
@@ -211,6 +207,13 @@ public class OrderService {
             order.getItems().add(orderItem);
         }
 
+        BigDecimal sumOfLines = order.getItems().stream()
+                .map(OrderItem::getLineTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (sumOfLines.compareTo(totalAmount) != 0) {
+            log.warn("Order totalAmount {} differs from sum of lineTotals {} for reservation {}",
+                    totalAmount, sumOfLines, reservation.getId());
+        }
+
         return order;
     }
 
@@ -223,7 +226,7 @@ public class OrderService {
                 BigDecimal chargeAmount;
                 if (charge.isPercentage()) {
                     chargeAmount = unitFaceValue.multiply(charge.amount())
-                            .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                            .divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP);
                 } else {
                     chargeAmount = charge.amount();
                 }
@@ -231,6 +234,6 @@ public class OrderService {
             }
         }
 
-        return unitFaceValue.add(totalCharges);
+        return unitFaceValue.add(totalCharges).setScale(2, RoundingMode.HALF_UP);
     }
 }

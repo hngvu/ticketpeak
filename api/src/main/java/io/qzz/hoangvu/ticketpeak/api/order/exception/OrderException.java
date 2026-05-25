@@ -17,10 +17,6 @@ public final class OrderException {
         return new ApiException(HttpStatus.FORBIDDEN, "ORDER_OWNER_MISMATCH", "You do not own this order");
     }
 
-    public static ApiException alreadyExists(UUID reservationId) {
-        return new ApiException(HttpStatus.CONFLICT, "ORDER_ALREADY_EXISTS",
-                "An order already exists for reservation " + reservationId);
-    }
 
     /**
      * Exception to indicate that confirming the inventory holds for an order failed.

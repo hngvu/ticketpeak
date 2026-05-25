@@ -18,5 +18,5 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     Page<Order> findByAccountIdOrderByCreatedAtDesc(UUID accountId, Pageable pageable);
 
-    boolean existsByReservationId(UUID reservationId);
+    boolean existsByReservationIdAndStatus(UUID reservationId, io.qzz.hoangvu.ticketpeak.api.order.model.OrderStatus status);
 }

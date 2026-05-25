@@ -41,8 +41,9 @@ public class OrderReconciliationScheduler {
         log.info("Starting background order reconciliation for orphaned CONFIRMED reservations...");
         Instant threshold = Instant.now().minus(Duration.ofMinutes(5));
 
+        org.springframework.data.domain.Pageable limit = org.springframework.data.domain.PageRequest.of(0, 100);
         List<Reservation> orphans = reservationRepository.findByStatusAndUpdatedAtBefore(
-                ReservationStatus.CONFIRMED, threshold);
+                ReservationStatus.CONFIRMED, threshold, limit);
 
         if (orphans.isEmpty()) {
             log.info("No orphaned CONFIRMED reservations found.");
