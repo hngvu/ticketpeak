@@ -375,82 +375,6 @@ class ReservationControllerIT {
                 .andExpect(jsonPath("$.error").value("EVENT_NOT_ON_SALE"));
     }
 
-    // ─── Confirm reservation ──────────────────────────────────────────────────
-
-    @Test
-    void confirm_reservation_sells_inventory() throws Exception {
-        String createBody = """
-                {
-                  "eventId": "%s",
-                  "items": [
-                    {"offerId": "%s", "seatingMode": "GENERAL_ADMISSION", "areaId": "%s", "qty": 1}
-                  ]
-                }
-                """.formatted(onsaleEvent.getId(), gaOffer.getId(), gaAreaId);
-
-        String createResponse = mockMvc.perform(post("/api/reservations")
-                        .header("Authorization", "Bearer " + tokenA)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(createBody))
-                .andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString();
-
-        String reservationId = objectMapper.readTree(createResponse).path("data").path("id").asText();
-
-        mockMvc.perform(post("/api/reservations/" + reservationId + "/confirm")
-                        .header("Authorization", "Bearer " + tokenA))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("CONFIRMED"));
-
-        InventoryGa ga = inventoryGaRepository
-                .findByEventIdAndAreaIdAndOfferId(onsaleEvent.getId(), gaAreaId, gaOffer.getId())
-                .orElseThrow();
-        assertThat(ga.getSold()).isEqualTo(1);
-        assertThat(ga.getHeld()).isEqualTo(0);
-    }
-
-    // ─── Confirm expired reservation ──────────────────────────────────────────
-
-    @Test
-    void confirm_expired_reservation_returns_410() throws Exception {
-        String createBody = """
-                {
-                  "eventId": "%s",
-                  "items": [
-                    {"offerId": "%s", "seatingMode": "GENERAL_ADMISSION", "areaId": "%s", "qty": 1}
-                  ]
-                }
-                """.formatted(onsaleEvent.getId(), gaOffer.getId(), gaAreaId);
-
-        String createResponse = mockMvc.perform(post("/api/reservations")
-                        .header("Authorization", "Bearer " + tokenA)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(createBody))
-                .andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString();
-
-        UUID reservationId = UUID.fromString(
-                objectMapper.readTree(createResponse).path("data").path("id").asText());
-
-        // Artificially push expiry into the past
-        Reservation r = reservationRepository.findById(reservationId).orElseThrow();
-        r.setExpiresAt(Instant.now().minusSeconds(3600));
-        reservationRepository.saveAndFlush(r);
-        entityManager.clear();
-
-        mockMvc.perform(post("/api/reservations/" + reservationId + "/confirm")
-                        .header("Authorization", "Bearer " + tokenA))
-                .andExpect(status().isGone())
-                .andExpect(jsonPath("$.error").value("RESERVATION_EXPIRED"));
-
-        // Inventory should be released
-        InventoryGa ga = inventoryGaRepository
-                .findByEventIdAndAreaIdAndOfferId(onsaleEvent.getId(), gaAreaId, gaOffer.getId())
-                .orElseThrow();
-        assertThat(ga.getHeld()).isEqualTo(0);
-        assertThat(ga.getAvailable()).isEqualTo(100);
-    }
-
     // ─── Cancel reservation ───────────────────────────────────────────────────
 
     @Test
@@ -503,17 +427,21 @@ class ReservationControllerIT {
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
 
-        String reservationId = objectMapper.readTree(createResponse).path("data").path("id").asText();
+        UUID reservationId = UUID.fromString(
+                objectMapper.readTree(createResponse).path("data").path("id").asText());
 
-        mockMvc.perform(post("/api/reservations/" + reservationId + "/confirm")
-                        .header("Authorization", "Bearer " + tokenA))
-                .andExpect(status().isOk());
+        // Force CONFIRMED status directly in DB to simulate a paid/completed reservation
+        Reservation r = reservationRepository.findById(reservationId).orElseThrow();
+        r.setStatus(ReservationStatus.CONFIRMED);
+        reservationRepository.saveAndFlush(r);
+        entityManager.clear();
 
         mockMvc.perform(delete("/api/reservations/" + reservationId)
                         .header("Authorization", "Bearer " + tokenA))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("RESERVATION_ALREADY_FINALIZED"));
     }
+
 
     // ─── Access control ───────────────────────────────────────────────────────
 

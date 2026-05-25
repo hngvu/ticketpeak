@@ -60,22 +60,6 @@ public class ReservationController {
         return ResponseEntity.ok(ApiResponse.success(reservationService.getReservation(account.accountId(), id)));
     }
 
-    @PostMapping("/{id}/confirm")
-    public ResponseEntity<ApiResponse<ReservationResponse>> confirmReservation(
-            @AuthenticationPrincipal AuthenticatedAccount account,
-            @PathVariable UUID id
-    ) {
-        ReservationResponse resp = reservationService.confirmReservation(account.accountId(), id);
-        if (resp.status() == ReservationStatus.EXPIRED) {
-            throw ReservationException.expired();
-        }
-        return ResponseEntity.ok(
-                ApiResponse.success(
-                        resp,
-                        "Reservation confirmed"
-                )
-        );
-    }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<ReservationResponse>> cancelReservation(

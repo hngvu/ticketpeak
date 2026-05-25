@@ -120,6 +120,19 @@ reservation:
     delay-ms: 60000      # Run expiry sweep every 60 seconds
     batch-size: 100      # Max reservations expired per sweep
 
+# ── Payment ─────────────────────────────────────────────────────────────────
+payment:
+  vnpay:
+    tmn-code: ${VNPAY_TMN_CODE:DEMO2014}
+    hash-secret: ${VNPAY_HASH_SECRET:3E4DFD39EE75E5903C187F4A128B4F21}
+    pay-url: ${VNPAY_PAY_URL:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+    return-url: ${VNPAY_RETURN_URL:http://localhost:5173/payment/vnpay/return}
+    ipn-url: ${VNPAY_IPN_URL:http://localhost:8080/api/payments/vnpay/ipn}
+  stripe:
+    secret-key: ${STRIPE_SECRET_KEY:sk_test_mock}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_mock}
+
+
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging:
   level:

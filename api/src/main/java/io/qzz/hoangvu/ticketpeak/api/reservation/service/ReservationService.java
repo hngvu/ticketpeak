@@ -131,43 +131,6 @@ public class ReservationService {
         return ReservationResponse.from(saved);
     }
 
-    // ─── Confirm ─────────────────────────────────────────────────────────────
-
-    @Transactional
-    public ReservationResponse confirmReservation(UUID accountId, UUID reservationId) {
-        Reservation reservation = reservationRepository
-                .findByIdAndAccountIdForUpdate(reservationId, accountId)
-                .orElseThrow(ReservationException::notFound);
-
-        assertPending(reservation);
-
-        if (Instant.now().isAfter(reservation.getExpiresAt())) {
-            expireSingle(reservation);
-            Reservation saved = reservationRepository.saveAndFlush(reservation);
-            return ReservationResponse.from(saved);
-        }
-
-        for (ReservationItem item : reservation.getItems()) {
-            if (item.getSeatingMode() == SeatingMode.GENERAL_ADMISSION) {
-                try {
-                    inventoryService.confirmGAInventory(
-                            reservation.getEventId(), item.getAreaId(), item.getOfferId(), item.getQty());
-                } catch (ApiException e) {
-                    throw ReservationException.gaCapacityInsufficient(item.getAreaId());
-                }
-            } else {
-                try {
-                    inventoryService.sellSeat(reservation.getEventId(), item.getSeatId());
-                } catch (ApiException e) {
-                    throw ReservationException.seatUnavailable(item.getSeatId());
-                }
-            }
-        }
-
-        reservation.setStatus(ReservationStatus.CONFIRMED);
-        Reservation saved = reservationRepository.saveAndFlush(reservation);
-        return ReservationResponse.from(saved);
-    }
 
     // ─── Cancel ──────────────────────────────────────────────────────────────
 

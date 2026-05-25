@@ -19,6 +19,11 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
 
     Optional<Reservation> findByIdAndAccountId(UUID id, UUID accountId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM Reservation r WHERE r.id = :id")
+    Optional<Reservation> findByIdForUpdate(@Param("id") UUID id);
+
+
     /**
      * Load a reservation with a pessimistic write lock, scoped to the owning account.
      * Used by confirm and cancel to prevent races with the expiry scheduler.
