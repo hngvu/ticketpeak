@@ -61,4 +61,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
             """)
     boolean existsActiveSeatReservation(@Param("eventId") UUID eventId,
                                          @Param("seatId") String seatId);
+
+    List<Reservation> findByStatusAndUpdatedAtBefore(ReservationStatus status, Instant threshold);
 }

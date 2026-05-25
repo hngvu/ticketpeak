@@ -1,7 +1,5 @@
 package io.qzz.hoangvu.ticketpeak.api.payment.manager;
 
-import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
-import io.qzz.hoangvu.ticketpeak.api.inventory.service.InventoryService;
 import io.qzz.hoangvu.ticketpeak.api.payment.dto.PaymentStatusResponse;
 import io.qzz.hoangvu.ticketpeak.api.payment.event.PaymentCompletedEvent;
 import io.qzz.hoangvu.ticketpeak.api.payment.exception.PaymentException;
@@ -32,20 +30,17 @@ public class PaymentManager {
 
     private final PaymentRepository paymentRepository;
     private final ReservationRepository reservationRepository;
-    private final InventoryService inventoryService;
     private final ApplicationEventPublisher eventPublisher;
     private final PaymentReReadService paymentReReadService;
 
     public PaymentManager(
             PaymentRepository paymentRepository,
             ReservationRepository reservationRepository,
-            InventoryService inventoryService,
             ApplicationEventPublisher eventPublisher,
             PaymentReReadService paymentReReadService
     ) {
         this.paymentRepository = paymentRepository;
         this.reservationRepository = reservationRepository;
-        this.inventoryService = inventoryService;
         this.eventPublisher = eventPublisher;
         this.paymentReReadService = paymentReReadService;
     }
@@ -164,8 +159,6 @@ public class PaymentManager {
             reservation.setStatus(ReservationStatus.CONFIRMED);
             reservationRepository.saveAndFlush(reservation);
 
-            confirmInventoryHolds(reservation);
-
             eventPublisher.publishEvent(new PaymentCompletedEvent(
                     this,
                     payment.getId(),
@@ -232,22 +225,4 @@ public class PaymentManager {
         return totalAmount.setScale(2, RoundingMode.HALF_UP);
     }
 
-    private void confirmInventoryHolds(Reservation reservation) {
-        for (ReservationItem item : reservation.getItems()) {
-            if (item.getSeatingMode() == io.qzz.hoangvu.ticketpeak.api.offer.model.SeatingMode.GENERAL_ADMISSION) {
-                try {
-                    inventoryService.confirmGAInventory(
-                            reservation.getEventId(), item.getAreaId(), item.getOfferId(), item.getQty());
-                } catch (ApiException e) {
-                    throw PaymentException.gatewayError("General Admission inventory confirmation failed: " + e.getMessage());
-                }
-            } else {
-                try {
-                    inventoryService.sellSeat(reservation.getEventId(), item.getSeatId());
-                } catch (ApiException e) {
-                    throw PaymentException.gatewayError("Seat inventory sale failed: " + e.getMessage());
-                }
-            }
-        }
-    }
 }
