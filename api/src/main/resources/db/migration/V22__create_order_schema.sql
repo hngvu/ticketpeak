@@ -4,8 +4,8 @@
 
 CREATE TABLE purchase_order (
     id             UUID           NOT NULL DEFAULT uuidv7() PRIMARY KEY,
-    reservation_id UUID           NOT NULL UNIQUE REFERENCES reservation(id) ON DELETE RESTRICT,
-    payment_id     UUID           NOT NULL UNIQUE REFERENCES payment(id) ON DELETE RESTRICT,
+    reservation_id UUID           NOT NULL REFERENCES reservation(id) ON DELETE RESTRICT,
+    payment_id     UUID           NOT NULL REFERENCES payment(id) ON DELETE RESTRICT,
     account_id     UUID           NOT NULL REFERENCES account(id) ON DELETE RESTRICT,
     event_id       UUID           NOT NULL REFERENCES event(id) ON DELETE RESTRICT,
     status         VARCHAR(16)    NOT NULL,
@@ -21,6 +21,14 @@ CREATE TABLE purchase_order (
 CREATE INDEX idx_purchase_order_account_id ON purchase_order(account_id);
 CREATE INDEX idx_purchase_order_event_id   ON purchase_order(event_id);
 CREATE INDEX idx_purchase_order_created_at ON purchase_order(created_at);
+
+CREATE UNIQUE INDEX idx_purchase_order_unique_active_reservation
+    ON purchase_order(reservation_id)
+    WHERE status IN ('CREATED', 'CANCELLED', 'REFUNDED');
+
+CREATE UNIQUE INDEX idx_purchase_order_unique_active_payment
+    ON purchase_order(payment_id)
+    WHERE status IN ('CREATED', 'CANCELLED', 'REFUNDED');
 
 CREATE TABLE order_item (
     id               UUID           NOT NULL DEFAULT uuidv7() PRIMARY KEY,
@@ -43,3 +51,4 @@ CREATE TABLE order_item (
 );
 
 CREATE INDEX idx_order_item_order_id ON order_item(order_id);
+
