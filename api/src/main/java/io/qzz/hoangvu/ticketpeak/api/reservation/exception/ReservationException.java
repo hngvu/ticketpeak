@@ -11,10 +11,6 @@ public final class ReservationException {
         return new ApiException(HttpStatus.NOT_FOUND, "RESERVATION_NOT_FOUND", "Reservation not found");
     }
 
-    public static ApiException forbidden() {
-        return new ApiException(HttpStatus.FORBIDDEN, "RESERVATION_FORBIDDEN", "You do not have access to this reservation");
-    }
-
     public static ApiException alreadyFinalized() {
         return new ApiException(HttpStatus.CONFLICT, "RESERVATION_ALREADY_FINALIZED", "Reservation is already confirmed, expired, or cancelled");
     }
@@ -45,5 +41,13 @@ public final class ReservationException {
 
     public static ApiException currencyMismatch() {
         return new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "RESERVATION_CURRENCY_MISMATCH", "All items in a reservation must use the same currency");
+    }
+
+    public static ApiException seatUnavailable(String seatId) {
+        return new ApiException(HttpStatus.CONFLICT, "RESERVATION_SEAT_UNAVAILABLE", "Seat " + seatId + " is not available");
+    }
+
+    public static ApiException gaCapacityInsufficient(String areaId) {
+        return new ApiException(HttpStatus.CONFLICT, "RESERVATION_GA_CAPACITY_INSUFFICIENT", "Insufficient capacity in area " + areaId);
     }
 }

@@ -70,6 +70,7 @@ class ReservationControllerIT {
     @Autowired ReservationRepository reservationRepository;
     @Autowired ReservationService reservationService;
     @Autowired PasswordEncoder passwordEncoder;
+    @Autowired jakarta.persistence.EntityManager entityManager;
 
     Account buyerA;
     Account buyerB;
@@ -142,7 +143,7 @@ class ReservationControllerIT {
                 .build());
 
         // GA offer with an active sale window
-        gaOffer = offerRepository.saveAndFlush(Offer.builder()
+        Offer gaOfferToBuild = Offer.builder()
                 .eventId(onsaleEvent.getId())
                 .ticketTypeId("ga-ticket")
                 .name("GA Ticket")
@@ -151,23 +152,22 @@ class ReservationControllerIT {
                 .restrictedPayment(false)
                 .eventTicketMinimum(1)
                 .capacityCap(500)
-                .sellableQuantities(List.of(1, 2, 4))
+                .sellableQuantities(List.of(1, 2, 3, 4, 200))
                 .seatingMode(SeatingMode.GENERAL_ADMISSION)
                 .charges(List.of())
-                .build());
+                .build();
 
-        // Active sale window
         OfferSaleWindow gaWindow = OfferSaleWindow.builder()
-                .offer(gaOffer)
+                .offer(gaOfferToBuild)
                 .type(SaleWindowType.GENERAL_SALE)
                 .startAt(Instant.now().minusSeconds(3600))
                 .endAt(Instant.now().plusSeconds(3600))
                 .build();
-        gaOffer.setSaleWindows(List.of(gaWindow));
-        offerRepository.saveAndFlush(gaOffer);
+        gaOfferToBuild.setSaleWindows(List.of(gaWindow));
+        gaOffer = offerRepository.saveAndFlush(gaOfferToBuild);
 
         // RS offer
-        rsOffer = offerRepository.saveAndFlush(Offer.builder()
+        Offer rsOfferToBuild = Offer.builder()
                 .eventId(onsaleEvent.getId())
                 .ticketTypeId("rs-ticket")
                 .name("RS Ticket")
@@ -179,16 +179,16 @@ class ReservationControllerIT {
                 .sellableQuantities(List.of(1))
                 .seatingMode(SeatingMode.RESERVED_SEATING)
                 .charges(List.of())
-                .build());
+                .build();
 
         OfferSaleWindow rsWindow = OfferSaleWindow.builder()
-                .offer(rsOffer)
+                .offer(rsOfferToBuild)
                 .type(SaleWindowType.GENERAL_SALE)
                 .startAt(Instant.now().minusSeconds(3600))
                 .endAt(Instant.now().plusSeconds(3600))
                 .build();
-        rsOffer.setSaleWindows(List.of(rsWindow));
-        offerRepository.saveAndFlush(rsOffer);
+        rsOfferToBuild.setSaleWindows(List.of(rsWindow));
+        rsOffer = offerRepository.saveAndFlush(rsOfferToBuild);
 
         // Seed inventory
         inventoryGaRepository.saveAndFlush(InventoryGa.builder()
@@ -319,7 +319,7 @@ class ReservationControllerIT {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error").value("INSUFFICIENT_GA_CAPACITY"));
+                .andExpect(jsonPath("$.error").value("RESERVATION_GA_CAPACITY_INSUFFICIENT"));
     }
 
     // ─── Offer not in sale window ──────────────────────────────────────────────
@@ -359,8 +359,13 @@ class ReservationControllerIT {
                 .build());
 
         String body = """
-                {"eventId": "%s", "items": []}
-                """.formatted(draftEvent.getId());
+                {
+                  "eventId": "%s",
+                  "items": [
+                    {"offerId": "%s", "seatingMode": "GENERAL_ADMISSION", "areaId": "%s", "qty": 1}
+                  ]
+                }
+                """.formatted(draftEvent.getId(), gaOffer.getId(), gaAreaId);
 
         mockMvc.perform(post("/api/reservations")
                         .header("Authorization", "Bearer " + tokenA)
@@ -431,6 +436,7 @@ class ReservationControllerIT {
         Reservation r = reservationRepository.findById(reservationId).orElseThrow();
         r.setExpiresAt(Instant.now().minusSeconds(3600));
         reservationRepository.saveAndFlush(r);
+        entityManager.clear();
 
         mockMvc.perform(post("/api/reservations/" + reservationId + "/confirm")
                         .header("Authorization", "Bearer " + tokenA))
@@ -570,6 +576,7 @@ class ReservationControllerIT {
         Reservation r = reservationRepository.findById(reservationId).orElseThrow();
         r.setExpiresAt(Instant.now().minusSeconds(7200));
         reservationRepository.saveAndFlush(r);
+        entityManager.clear();
 
         // Trigger expiry sweep
         reservationService.expireBatch(10);

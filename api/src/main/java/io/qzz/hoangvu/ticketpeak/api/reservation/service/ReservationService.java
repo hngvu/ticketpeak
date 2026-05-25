@@ -1,5 +1,6 @@
 package io.qzz.hoangvu.ticketpeak.api.reservation.service;
 
+import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
 import io.qzz.hoangvu.ticketpeak.api.event.model.Event;
 import io.qzz.hoangvu.ticketpeak.api.event.model.EventStatus;
 import io.qzz.hoangvu.ticketpeak.api.event.repository.EventRepository;
@@ -55,6 +56,8 @@ public class ReservationService {
 
     @Transactional
     public ReservationResponse createReservation(UUID accountId, CreateReservationRequest request) {
+        // Intentionally same error for both "not found" and "wrong status"
+        // to avoid disclosing event existence to unauthorized buyers
         Event event = eventRepository.findById(request.eventId())
                 .orElseThrow(ReservationException::eventNotOnSale);
 
@@ -102,14 +105,22 @@ public class ReservationService {
 
             if (itemReq.seatingMode() == SeatingMode.GENERAL_ADMISSION) {
                 validateGaItem(itemReq, offer);
-                inventoryService.holdGAInventory(event.getId(), itemReq.areaId(), offer.getId(), itemReq.qty());
+                try {
+                    inventoryService.holdGAInventory(event.getId(), itemReq.areaId(), offer.getId(), itemReq.qty());
+                } catch (ApiException e) {
+                    throw ReservationException.gaCapacityInsufficient(itemReq.areaId());
+                }
             } else {
                 validateRsItem(itemReq);
                 if (reservationRepository.existsActiveSeatReservation(event.getId(), itemReq.seatId())) {
                     throw ReservationException.invalidItem(
                             "Seat " + itemReq.seatId() + " is already held by another reservation");
                 }
-                inventoryService.holdSeat(event.getId(), itemReq.seatId());
+                try {
+                    inventoryService.holdSeat(event.getId(), itemReq.seatId());
+                } catch (ApiException e) {
+                    throw ReservationException.seatUnavailable(itemReq.seatId());
+                }
             }
 
             items.add(item);
@@ -132,20 +143,30 @@ public class ReservationService {
 
         if (Instant.now().isAfter(reservation.getExpiresAt())) {
             expireSingle(reservation);
-            throw ReservationException.expired();
+            Reservation saved = reservationRepository.saveAndFlush(reservation);
+            return ReservationResponse.from(saved);
         }
 
         for (ReservationItem item : reservation.getItems()) {
             if (item.getSeatingMode() == SeatingMode.GENERAL_ADMISSION) {
-                inventoryService.confirmGAInventory(
-                        reservation.getEventId(), item.getAreaId(), item.getOfferId(), item.getQty());
+                try {
+                    inventoryService.confirmGAInventory(
+                            reservation.getEventId(), item.getAreaId(), item.getOfferId(), item.getQty());
+                } catch (ApiException e) {
+                    throw ReservationException.gaCapacityInsufficient(item.getAreaId());
+                }
             } else {
-                inventoryService.sellSeat(reservation.getEventId(), item.getSeatId());
+                try {
+                    inventoryService.sellSeat(reservation.getEventId(), item.getSeatId());
+                } catch (ApiException e) {
+                    throw ReservationException.seatUnavailable(item.getSeatId());
+                }
             }
         }
 
         reservation.setStatus(ReservationStatus.CONFIRMED);
-        return ReservationResponse.from(reservation);
+        Reservation saved = reservationRepository.saveAndFlush(reservation);
+        return ReservationResponse.from(saved);
     }
 
     // ─── Cancel ──────────────────────────────────────────────────────────────
@@ -162,7 +183,8 @@ public class ReservationService {
 
         releaseHolds(reservation);
         reservation.setStatus(ReservationStatus.CANCELLED);
-        return ReservationResponse.from(reservation);
+        Reservation saved = reservationRepository.saveAndFlush(reservation);
+        return ReservationResponse.from(saved);
     }
 
     // ─── Read ────────────────────────────────────────────────────────────────
@@ -189,7 +211,9 @@ public class ReservationService {
                 ReservationStatus.PENDING, Instant.now(), batchSize);
         for (Reservation r : stale) {
             expireSingle(r);
+            reservationRepository.save(r);
         }
+        reservationRepository.flush();
     }
 
     // ─── Internal helpers ────────────────────────────────────────────────────
