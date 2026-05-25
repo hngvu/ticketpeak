@@ -1,10 +1,12 @@
 package io.qzz.hoangvu.ticketpeak.api.payment.event;
 
+import lombok.Getter;
 import org.springframework.context.ApplicationEvent;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
+@Getter
 public class PaymentCompletedEvent extends ApplicationEvent {
 
     private final UUID paymentId;
@@ -30,29 +32,5 @@ public class PaymentCompletedEvent extends ApplicationEvent {
         this.accountId = accountId;
         this.amount = amount;
         this.currency = currency;
-    }
-
-    public UUID getPaymentId() {
-        return paymentId;
-    }
-
-    public UUID getReservationId() {
-        return reservationId;
-    }
-
-    public UUID getEventId() {
-        return eventId;
-    }
-
-    public UUID getAccountId() {
-        return accountId;
-    }
-
-    public BigDecimal getAmount() {
-        return amount;
-    }
-
-    public String getCurrency() {
-        return currency;
     }
 }

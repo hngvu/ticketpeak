@@ -3,10 +3,10 @@ package io.qzz.hoangvu.ticketpeak.api.payment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stripe.model.PaymentIntent;
 import io.qzz.hoangvu.ticketpeak.api.TestcontainersConfiguration;
-import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
 import io.qzz.hoangvu.ticketpeak.api.account.model.Account;
 import io.qzz.hoangvu.ticketpeak.api.account.model.AccountStatus;
 import io.qzz.hoangvu.ticketpeak.api.account.repository.AccountRepository;
+import io.qzz.hoangvu.ticketpeak.api.common.exception.ApiException;
 import io.qzz.hoangvu.ticketpeak.api.event.model.Event;
 import io.qzz.hoangvu.ticketpeak.api.event.model.EventStatus;
 import io.qzz.hoangvu.ticketpeak.api.event.repository.EventRepository;
@@ -21,11 +21,14 @@ import io.qzz.hoangvu.ticketpeak.api.offer.repository.OfferRepository;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.Organization;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.OrganizationStatus;
 import io.qzz.hoangvu.ticketpeak.api.organization.repository.OrganizationRepository;
+import io.qzz.hoangvu.ticketpeak.api.payment.gateway.StripeCheckoutBuilder;
+import io.qzz.hoangvu.ticketpeak.api.payment.gateway.VnpayCheckoutBuilder;
 import io.qzz.hoangvu.ticketpeak.api.payment.model.Payment;
 import io.qzz.hoangvu.ticketpeak.api.payment.model.PaymentProvider;
 import io.qzz.hoangvu.ticketpeak.api.payment.model.PaymentStatus;
 import io.qzz.hoangvu.ticketpeak.api.payment.repository.PaymentRepository;
-import io.qzz.hoangvu.ticketpeak.api.payment.service.PaymentService;
+import io.qzz.hoangvu.ticketpeak.api.payment.service.StripeService;
+import io.qzz.hoangvu.ticketpeak.api.payment.service.VnpayService;
 import io.qzz.hoangvu.ticketpeak.api.reservation.model.Reservation;
 import io.qzz.hoangvu.ticketpeak.api.reservation.model.ReservationItem;
 import io.qzz.hoangvu.ticketpeak.api.reservation.model.ReservationStatus;
@@ -39,6 +42,7 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -72,9 +76,13 @@ class PaymentControllerIT {
     @Autowired InventoryGaRepository inventoryGaRepository;
     @Autowired ReservationRepository reservationRepository;
     @Autowired PaymentRepository paymentRepository;
-    @Autowired PaymentService paymentService;
+    @Autowired StripeService stripeService;
+    @Autowired VnpayService vnpayService;
     @Autowired PasswordEncoder passwordEncoder;
     @Autowired jakarta.persistence.EntityManager entityManager;
+
+    @MockBean StripeCheckoutBuilder stripeCheckoutBuilder;
+    @MockBean VnpayCheckoutBuilder vnpayCheckoutBuilder;
 
     Account buyer;
     String token;
@@ -165,6 +173,14 @@ class PaymentControllerIT {
                 .held(0)
                 .sold(0)
                 .build());
+
+        // Define default mock stubbing behavior
+        Mockito.when(vnpayCheckoutBuilder.buildRedirectUrl(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
+                .thenReturn("http://mock-vnpay-url.com");
+        Mockito.when(vnpayCheckoutBuilder.verifySignature(Mockito.any(), Mockito.any(), Mockito.any()))
+                .thenReturn(true);
+        Mockito.when(stripeCheckoutBuilder.createPaymentIntentSecret(Mockito.any()))
+                .thenReturn("mock_client_secret");
     }
 
     // ─── Checkout Initiation ───────────────────────────────────────────────
@@ -186,7 +202,7 @@ class PaymentControllerIT {
                         .content(body))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.paymentId").exists())
-                .andExpect(jsonPath("$.data.checkoutUrl").exists());
+                .andExpect(jsonPath("$.data.checkoutUrl").value("http://mock-vnpay-url.com"));
 
         List<Payment> payments = paymentRepository.findAll();
         assertThat(payments).hasSize(1);
@@ -220,16 +236,11 @@ class PaymentControllerIT {
                 }
                 """.formatted(reservation.getId());
 
-        try (var mockedBuilder = Mockito.mockStatic(io.qzz.hoangvu.ticketpeak.api.payment.service.StripeCheckoutBuilder.class)) {
-            mockedBuilder.when(() -> io.qzz.hoangvu.ticketpeak.api.payment.service.StripeCheckoutBuilder.createPaymentIntentSecret(Mockito.any()))
-                    .thenReturn("mock_client_secret");
-
-            mockMvc.perform(post("/api/payments")
-                            .header("Authorization", "Bearer " + token)
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(bodyStripe))
-                    .andExpect(status().isCreated());
-        }
+        mockMvc.perform(post("/api/payments")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bodyStripe))
+                .andExpect(status().isCreated());
 
         List<Payment> payments = paymentRepository.findAll();
         assertThat(payments).hasSize(2);
@@ -254,19 +265,23 @@ class PaymentControllerIT {
         Reservation reservation = createReservation(1);
         Payment payment = createPayment(reservation, PaymentProvider.VNPAY, new BigDecimal("100000.00"));
 
-        // VNPay IPN reports wrong amount (e.g. 50k instead of 100k, scaled by 100 -> 5,000,000)
         mockMvc.perform(post("/api/payments/vnpay/ipn")
                         .param("vnp_TxnRef", payment.getId().toString())
-                        .param("vnp_Amount", "5000000") // Mismatch amount
-                        .param("vnp_SecureHash", "INVALID_MOCK_SIGNATURE")) // This signature validation will fail first
+                        .param("vnp_Amount", "5000000") // Mismatch amount (50k instead of 100k)
+                        .param("vnp_ResponseCode", "00")
+                        .param("vnp_TransactionStatus", "00")
+                        .param("vnp_SecureHash", "MOCK_SIGNATURE"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.RspCode").value("97")); // Signature check failed is tested first
+                .andExpect(jsonPath("$.RspCode").value("04")); // Invalid amount response code
     }
 
     // ─── Signature Failure IPN Rejection ───────────────────────────────────
 
     @Test
     void invalid_signature_ipn_returns_code_97() throws Exception {
+        Mockito.when(vnpayCheckoutBuilder.verifySignature(Mockito.any(), Mockito.any(), Mockito.any()))
+                .thenReturn(false);
+
         mockMvc.perform(post("/api/payments/vnpay/ipn")
                         .param("vnp_TxnRef", UUID.randomUUID().toString())
                         .param("vnp_Amount", "10000000")
@@ -289,7 +304,7 @@ class PaymentControllerIT {
     // ─── Grace Window Cases (Case 2: PENDING + passed expiry finalization) ───
 
     @Test
-    void Stripe_webhook_finalizes_unswept_expired_pending_reservation() throws Exception {
+    void stripe_webhook_finalizes_unswept_expired_pending_reservation() throws Exception {
         Reservation reservation = createReservation(1);
         Payment payment = createPayment(reservation, PaymentProvider.STRIPE, new BigDecimal("100000.00"));
 
@@ -306,8 +321,19 @@ class PaymentControllerIT {
         Mockito.when(mockIntent.getId()).thenReturn("pi_mock_123");
         Mockito.when(mockIntent.getMetadata()).thenReturn(Map.of("paymentId", payment.getId().toString()));
 
-        // Authoritative validation succeeds because it is unswept
-        paymentService.finalizeStripeWebhook(mockIntent);
+        // Stub static constructEvent to verify signature and return our event
+        com.stripe.model.Event mockEvent = Mockito.mock(com.stripe.model.Event.class);
+        Mockito.when(mockEvent.getType()).thenReturn("payment_intent.succeeded");
+        com.stripe.model.EventDataObjectDeserializer mockDeserializer = Mockito.mock(com.stripe.model.EventDataObjectDeserializer.class);
+        Mockito.when(mockDeserializer.getObject()).thenReturn(java.util.Optional.of(mockIntent));
+        Mockito.when(mockEvent.getDataObjectDeserializer()).thenReturn(mockDeserializer);
+
+        Mockito.when(stripeCheckoutBuilder.verifyStripeWebhook(Mockito.any(), Mockito.any(), Mockito.any()))
+                .thenReturn(mockEvent);
+
+        stripeService.handleWebhook(new io.qzz.hoangvu.ticketpeak.api.payment.service.WebhookContext(
+                null, "mock_payload", Map.of("Stripe-Signature", "sig")
+        ));
 
         entityManager.clear();
 
@@ -324,7 +350,7 @@ class PaymentControllerIT {
     // ─── Expiry Race Cases (Case 1: EXPIRED swept finalization) ─────────────
 
     @Test
-    void Stripe_webhook_rejects_swept_expired_reservation() throws Exception {
+    void stripe_webhook_rejects_swept_expired_reservation() throws Exception {
         Reservation reservation = createReservation(1);
         Payment payment = createPayment(reservation, PaymentProvider.STRIPE, new BigDecimal("100000.00"));
 
@@ -341,8 +367,23 @@ class PaymentControllerIT {
         Mockito.when(mockIntent.getId()).thenReturn("pi_mock_456");
         Mockito.when(mockIntent.getMetadata()).thenReturn(Map.of("paymentId", payment.getId().toString()));
 
+        // Stub event
+        com.stripe.model.Event mockEvent = Mockito.mock(com.stripe.model.Event.class);
+        Mockito.when(mockEvent.getType()).thenReturn("payment_intent.succeeded");
+        com.stripe.model.EventDataObjectDeserializer mockDeserializer = Mockito.mock(com.stripe.model.EventDataObjectDeserializer.class);
+        Mockito.when(mockDeserializer.getObject()).thenReturn(java.util.Optional.of(mockIntent));
+        Mockito.when(mockEvent.getDataObjectDeserializer()).thenReturn(mockDeserializer);
+
+        Mockito.when(stripeCheckoutBuilder.verifyStripeWebhook(Mockito.any(), Mockito.any(), Mockito.any()))
+                .thenReturn(mockEvent);
+
+        io.qzz.hoangvu.ticketpeak.api.payment.service.WebhookContext webhookContext =
+                new io.qzz.hoangvu.ticketpeak.api.payment.service.WebhookContext(
+                        null, "mock_payload", Map.of("Stripe-Signature", "sig")
+                );
+
         // Verification must throw ReservationExpired ApiException
-        assertThatThrownBy(() -> paymentService.finalizeStripeWebhook(mockIntent))
+        assertThatThrownBy(() -> stripeService.handleWebhook(webhookContext))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("Reservation has expired");
 
@@ -350,6 +391,90 @@ class PaymentControllerIT {
 
         Payment finalizedPayment = paymentRepository.findById(payment.getId()).orElseThrow();
         assertThat(finalizedPayment.getStatus()).isEqualTo(PaymentStatus.FAILED);
+    }
+
+    // ─── Unauthorized Status Queries ────────────────────────────────────────
+
+    @Test
+    void unauthorized_payment_status_lookup_returns_403() throws Exception {
+        Reservation reservation = createReservation(1);
+        Payment payment = createPayment(reservation, PaymentProvider.VNPAY, new BigDecimal("100000.00"));
+
+        // Create another buyer and login
+        Account otherBuyer = accountRepository.saveAndFlush(Account.builder()
+                .email("otherbuyer@test.com")
+                .password(passwordEncoder.encode("Password123!"))
+                .role(Role.BUYER)
+                .status(AccountStatus.ACTIVE)
+                .build());
+        String otherBuyerToken = login(otherBuyer.getEmail(), "Password123!");
+
+        // Requesting status with other buyer's token must return 403 Forbidden
+        mockMvc.perform(get("/api/payments/" + payment.getId())
+                        .header("Authorization", "Bearer " + otherBuyerToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("PAYMENT_OWNER_MISMATCH"));
+    }
+
+    // ─── VNPay IPN Happy Path End-to-End ────────────────────────────────────
+
+    @Test
+    void vnpay_ipn_happy_path_finalizes_successfully() throws Exception {
+        Reservation reservation = createReservation(1);
+        Payment payment = createPayment(reservation, PaymentProvider.VNPAY, new BigDecimal("100000.00"));
+
+        mockMvc.perform(post("/api/payments/vnpay/ipn")
+                        .param("vnp_TxnRef", payment.getId().toString())
+                        .param("vnp_Amount", "10000000") // 100,000 VND * 100
+                        .param("vnp_ResponseCode", "00")
+                        .param("vnp_TransactionStatus", "00")
+                        .param("vnp_TransactionNo", "vnp_tx_999")
+                        .param("vnp_SecureHash", "VALID_HASH"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.RspCode").value("00"))
+                .andExpect(jsonPath("$.Message").value("Confirm Success"));
+
+        entityManager.clear();
+
+        Payment finalizedPayment = paymentRepository.findById(payment.getId()).orElseThrow();
+        assertThat(finalizedPayment.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
+        assertThat(finalizedPayment.getGatewayTransactionId()).isEqualTo("vnp_tx_999");
+
+        Reservation finalizedRes = reservationRepository.findById(reservation.getId()).orElseThrow();
+        assertThat(finalizedRes.getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
+
+        InventoryGa ga = inventoryGaRepository.findByEventIdAndAreaIdAndOfferId(onsaleEvent.getId(), gaAreaId, gaOffer.getId()).orElseThrow();
+        assertThat(ga.getSold()).isEqualTo(1);
+    }
+
+    // ─── VNPay IPN Idempotency Consecutive Calls ─────────────────────────────
+
+    @Test
+    void vnpay_ipn_idempotency_ignores_consecutive_calls() throws Exception {
+        Reservation reservation = createReservation(1);
+        Payment payment = createPayment(reservation, PaymentProvider.VNPAY, new BigDecimal("100000.00"));
+
+        // First call
+        mockMvc.perform(post("/api/payments/vnpay/ipn")
+                        .param("vnp_TxnRef", payment.getId().toString())
+                        .param("vnp_Amount", "10000000")
+                        .param("vnp_ResponseCode", "00")
+                        .param("vnp_TransactionStatus", "00")
+                        .param("vnp_TransactionNo", "vnp_tx_999")
+                        .param("vnp_SecureHash", "VALID_HASH"))
+                .andExpect(status().isOk());
+
+        // Second call (idempotency success)
+        mockMvc.perform(post("/api/payments/vnpay/ipn")
+                        .param("vnp_TxnRef", payment.getId().toString())
+                        .param("vnp_Amount", "10000000")
+                        .param("vnp_ResponseCode", "00")
+                        .param("vnp_TransactionStatus", "00")
+                        .param("vnp_TransactionNo", "vnp_tx_999")
+                        .param("vnp_SecureHash", "VALID_HASH"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.RspCode").value("00"))
+                .andExpect(jsonPath("$.Message").value("Confirm Success"));
     }
 
     // ─── Helpers ────────────────────────────────────────────────────────────
@@ -362,7 +487,7 @@ class PaymentControllerIT {
                 .currency("VND")
                 .expiresAt(Instant.now().plusSeconds(900))
                 .build();
-        
+
         ReservationItem item = ReservationItem.builder()
                 .reservation(r)
                 .offerId(gaOffer.getId())
@@ -373,14 +498,14 @@ class PaymentControllerIT {
                 .currency("VND")
                 .charges(List.of())
                 .build();
-        
+
         r.setItems(List.of(item));
 
         InventoryGa inventory = inventoryGaRepository.findByEventIdAndAreaIdAndOfferId(onsaleEvent.getId(), gaAreaId, gaOffer.getId()).orElseThrow();
         inventory.setHeld(inventory.getHeld() + qty);
         inventory.setAvailable(inventory.getAvailable() - qty);
         inventoryGaRepository.saveAndFlush(inventory);
-        
+
         return reservationRepository.saveAndFlush(r);
     }
 

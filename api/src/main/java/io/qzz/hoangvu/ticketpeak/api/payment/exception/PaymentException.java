@@ -43,6 +43,10 @@ public final class PaymentException {
         return new ApiException(HttpStatus.NOT_FOUND, "PAYMENT_NOT_FOUND", "Payment record not found");
     }
 
+    public static ApiException paymentOwnerMismatch() {
+        return new ApiException(HttpStatus.FORBIDDEN, "PAYMENT_OWNER_MISMATCH", "You do not own this payment");
+    }
+
     public static ApiException unsupportedProvider() {
         return new ApiException(HttpStatus.BAD_REQUEST, "PAYMENT_UNSUPPORTED_PROVIDER", "Unsupported payment provider or currency mismatch");
     }

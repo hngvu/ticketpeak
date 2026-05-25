@@ -1,6 +1,7 @@
-package io.qzz.hoangvu.ticketpeak.api.payment.service;
+package io.qzz.hoangvu.ticketpeak.api.payment.gateway;
 
 import io.qzz.hoangvu.ticketpeak.api.payment.model.Payment;
+import org.springframework.stereotype.Component;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -17,16 +18,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class VnpayCheckoutBuilder {
+@Component
+public class VnpayCheckoutBuilder {
 
-    private VnpayCheckoutBuilder() {}
-
-    public static String buildRedirectUrl(
+    public String buildRedirectUrl(
             Payment payment,
             String tmnCode,
             String hashSecret,
             String payUrl,
-            String returnUrl
+            String returnUrl,
+            String clientIp
     ) {
         Map<String, String> vnpParams = new HashMap<>();
         vnpParams.put("vnp_Version", "2.1.0");
@@ -43,7 +44,7 @@ public final class VnpayCheckoutBuilder {
         vnpParams.put("vnp_OrderType", "other");
         vnpParams.put("vnp_Locale", "vn");
         vnpParams.put("vnp_ReturnUrl", returnUrl);
-        vnpParams.put("vnp_IpAddr", "127.0.0.1");
+        vnpParams.put("vnp_IpAddr", clientIp);
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
                 .withZone(ZoneId.of("Asia/Ho_Chi_Minh"));
@@ -78,7 +79,7 @@ public final class VnpayCheckoutBuilder {
         return payUrl + "?" + query.toString();
     }
 
-    public static boolean verifySignature(Map<String, String> params, String secureHash, String hashSecret) {
+    public boolean verifySignature(Map<String, String> params, String secureHash, String hashSecret) {
         List<String> fieldNames = new ArrayList<>(params.keySet());
         Collections.sort(fieldNames);
 
@@ -100,7 +101,7 @@ public final class VnpayCheckoutBuilder {
         return computedHash.equalsIgnoreCase(secureHash);
     }
 
-    private static String hmacSha512(String key, String data) {
+    private String hmacSha512(String key, String data) {
         try {
             Mac mac = Mac.getInstance("HmacSHA512");
             SecretKeySpec secretKeySpec = new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), "HmacSHA512");

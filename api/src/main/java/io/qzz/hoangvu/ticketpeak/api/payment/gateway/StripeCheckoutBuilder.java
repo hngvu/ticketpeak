@@ -1,19 +1,20 @@
-package io.qzz.hoangvu.ticketpeak.api.payment.service;
+package io.qzz.hoangvu.ticketpeak.api.payment.gateway;
 
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.model.Event;
 import com.stripe.model.PaymentIntent;
 import com.stripe.net.Webhook;
 import com.stripe.param.PaymentIntentCreateParams;
+import io.qzz.hoangvu.ticketpeak.api.payment.exception.PaymentException;
 import io.qzz.hoangvu.ticketpeak.api.payment.model.Payment;
+import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 
-public final class StripeCheckoutBuilder {
+@Component
+public class StripeCheckoutBuilder {
 
-    private StripeCheckoutBuilder() {}
-
-    public static String createPaymentIntentSecret(Payment payment) {
+    public String createPaymentIntentSecret(Payment payment) {
         long stripeAmount;
         if ("VND".equalsIgnoreCase(payment.getCurrency())) {
             // VND is zero-decimal
@@ -34,11 +35,11 @@ public final class StripeCheckoutBuilder {
             PaymentIntent intent = PaymentIntent.create(params);
             return intent.getClientSecret();
         } catch (Exception e) {
-            throw new RuntimeException("Stripe PaymentIntent creation failed: " + e.getMessage(), e);
+            throw PaymentException.gatewayError("Stripe PaymentIntent creation failed: " + e.getMessage());
         }
     }
 
-    public static Event verifyStripeWebhook(String payload, String signatureHeader, String webhookSecret)
+    public Event verifyStripeWebhook(String payload, String signatureHeader, String webhookSecret)
             throws SignatureVerificationException {
         return Webhook.constructEvent(payload, signatureHeader, webhookSecret);
     }
