@@ -9,6 +9,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -55,7 +56,7 @@ public class Event {
 
     @Column(name = "sale_start_at")
     Instant saleStartAt;
-    
+
     @Column(name = "sale_end_at")
     Instant saleEndAt;
 
@@ -70,6 +71,14 @@ public class Event {
 
     @Column(name = "max_transfer_count", nullable = false)
     int maxTransferCount;
+
+    /**
+     * Platform service fee percentage (e.g. 10.00 = 10%) deducted from resale gross amount.
+     * Snapshot vào payout.platform_fee_percent tại thời điểm resale sold.
+     * Default 0 — admin/organizer set per event.
+     */
+    @Column(name = "service_fee_percent", nullable = false, precision = 5, scale = 2)
+    BigDecimal serviceFeePercent;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)

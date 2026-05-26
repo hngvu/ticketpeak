@@ -158,4 +158,6 @@ springdoc:
 # ── Ticket Module (TOTP) ──────────────────────────────────────────────────────
 ticketpeak:
   totp:
-    encryption-key: ${TOTP_ENCRYPTION_KEY:QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=}
+    encryption-key: ${TOTP_ENCRYPTION_KEY}
+  encryption:
+    secret-key: ${ENCRYPTION_SECRET_KEY}

@@ -1,14 +1,12 @@
 package io.qzz.hoangvu.ticketpeak.api.ticket.service;
 
 import com.eatthepath.otp.TimeBasedOneTimePasswordGenerator;
+import io.qzz.hoangvu.ticketpeak.api.common.crypto.EncryptionService;
 import io.qzz.hoangvu.ticketpeak.api.ticket.config.TotpProperties;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 
-import javax.crypto.Cipher;
-import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
-import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.security.SecureRandom;
 import java.time.Duration;
@@ -19,16 +17,14 @@ import java.util.Base64;
 public class TotpService {
 
     private final TotpProperties totpProperties;
+    private final EncryptionService encryptionService;
     private final TimeBasedOneTimePasswordGenerator totpGenerator;
     private final SecureRandom secureRandom;
     private Key encryptionKey;
 
-    private static final String ALGORITHM = "AES/GCM/NoPadding";
-    private static final int GCM_IV_LENGTH = 12;
-    private static final int GCM_TAG_LENGTH = 128;
-
-    public TotpService(TotpProperties totpProperties) {
+    public TotpService(TotpProperties totpProperties, EncryptionService encryptionService) {
         this.totpProperties = totpProperties;
+        this.encryptionService = encryptionService;
         try {
             this.totpGenerator = new TimeBasedOneTimePasswordGenerator(Duration.ofSeconds(30));
         } catch (Exception e) {
@@ -52,40 +48,15 @@ public class TotpService {
     public String generateSecret() {
         byte[] secretBytes = new byte[20];
         secureRandom.nextBytes(secretBytes);
-        return Base64.getEncoder().encodeToString(secretBytes); // We can just use Base64 as the raw secret
+        return Base64.getEncoder().encodeToString(secretBytes);
     }
 
     public String encrypt(String rawSecret) {
-        try {
-            Cipher cipher = Cipher.getInstance(ALGORITHM);
-            byte[] iv = new byte[GCM_IV_LENGTH];
-            secureRandom.nextBytes(iv);
-            GCMParameterSpec spec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
-            cipher.init(Cipher.ENCRYPT_MODE, encryptionKey, spec);
-
-            byte[] cipherText = cipher.doFinal(rawSecret.getBytes(StandardCharsets.UTF_8));
-            byte[] encrypted = new byte[iv.length + cipherText.length];
-            System.arraycopy(iv, 0, encrypted, 0, iv.length);
-            System.arraycopy(cipherText, 0, encrypted, iv.length, cipherText.length);
-
-            return Base64.getEncoder().encodeToString(encrypted);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to encrypt TOTP secret", e);
-        }
+        return encryptionService.encrypt(rawSecret, encryptionKey);
     }
 
     private String decrypt(String ciphertextBase64) {
-        try {
-            byte[] encrypted = Base64.getDecoder().decode(ciphertextBase64);
-            Cipher cipher = Cipher.getInstance(ALGORITHM);
-            GCMParameterSpec spec = new GCMParameterSpec(GCM_TAG_LENGTH, encrypted, 0, GCM_IV_LENGTH);
-            cipher.init(Cipher.DECRYPT_MODE, encryptionKey, spec);
-
-            byte[] plaintext = cipher.doFinal(encrypted, GCM_IV_LENGTH, encrypted.length - GCM_IV_LENGTH);
-            return new String(plaintext, StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to decrypt TOTP secret", e);
-        }
+        return encryptionService.decrypt(ciphertextBase64, encryptionKey);
     }
 
     private Key getTotpKeyFromSecret(String rawSecretBase64) {

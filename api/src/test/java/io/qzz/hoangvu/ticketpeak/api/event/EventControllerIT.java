@@ -27,6 +27,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -181,6 +182,7 @@ class EventControllerIT {
                 true,
                 true,
                 0, // maxTransferCount
+                BigDecimal.ZERO,
                 List.of(),
                 List.of()
         );
@@ -214,6 +216,7 @@ class EventControllerIT {
                 true,
                 false,
                 0, // maxTransferCount
+                BigDecimal.ZERO,
                 List.of(),
                 List.of()
         );
@@ -244,6 +247,7 @@ class EventControllerIT {
                 false,
                 true,
                 0, // maxTransferCount
+                BigDecimal.ZERO,
                 List.of(),
                 List.of()
         );

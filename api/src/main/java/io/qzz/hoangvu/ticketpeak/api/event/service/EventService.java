@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.context.ApplicationEventPublisher;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -103,6 +104,7 @@ public class EventService {
                 .safeTixEnabled(req.safeTixEnabled())
                 .transferEnabled(req.transferEnabled())
                 .maxTransferCount(req.maxTransferCount())
+                .serviceFeePercent(req.serviceFeePercent() != null ? req.serviceFeePercent() : BigDecimal.ZERO)
                 .build();
 
         Event savedEvent = eventRepository.save(event);
@@ -180,6 +182,7 @@ public class EventService {
         event.setSafeTixEnabled(req.safeTixEnabled());
         event.setTransferEnabled(req.transferEnabled());
         event.setMaxTransferCount(req.maxTransferCount());
+        event.setServiceFeePercent(req.serviceFeePercent() != null ? req.serviceFeePercent() : BigDecimal.ZERO);
 
         Event savedEvent = eventRepository.save(event);
 
@@ -439,7 +442,6 @@ public class EventService {
 
         validateEventDates(event.getStartAt(), event.getEndAt(), event.getSaleStartAt(), event.getSaleEndAt());
 
-        // Publish transition event to initialize and validate inventories first
         eventPublisher.publishEvent(new EventStatusTransitionEvent(this, event.getId(), EventStatus.ONSALE));
 
         event.setStatus(EventStatus.ONSALE);
@@ -457,7 +459,6 @@ public class EventService {
             throw EventException.cannotStartSales();
         }
 
-        // Publish transition event to initialize and validate inventories first
         eventPublisher.publishEvent(new EventStatusTransitionEvent(this, event.getId(), EventStatus.ONSALE));
 
         event.setStatus(EventStatus.ONSALE);
@@ -505,6 +506,7 @@ public class EventService {
             slug = slug + "-" + UUID.randomUUID().toString().substring(0, 8);
         }
 
+        // Clone kế thừa serviceFeePercent từ source event
         Event clone = Event.builder()
                 .organizationId(sourceEvent.getOrganizationId())
                 .venueId(sourceEvent.getVenueId())
@@ -521,6 +523,7 @@ public class EventService {
                 .safeTixEnabled(sourceEvent.isSafeTixEnabled())
                 .transferEnabled(sourceEvent.isTransferEnabled())
                 .maxTransferCount(sourceEvent.getMaxTransferCount())
+                .serviceFeePercent(sourceEvent.getServiceFeePercent())
                 .build();
 
         Event savedClone = eventRepository.save(clone);
@@ -549,7 +552,6 @@ public class EventService {
 
         List<UUID> eventIds = events.stream().map(Event::getId).toList();
 
-        // 1. Fetch EventAttractions and Attractions in bulk
         List<EventAttraction> allEventAttractions = eventAttractionRepository.findByEventIdIn(eventIds);
         List<UUID> allAttractionIds = allEventAttractions.stream()
                 .map(EventAttraction::getAttractionId)
@@ -571,7 +573,6 @@ public class EventService {
             }
         }
 
-        // 2. Fetch EventClassifications and Classifications in bulk
         List<EventClassification> allEventClassifications = eventClassificationRepository.findByEventIdIn(eventIds);
         List<UUID> allClassificationIds = allEventClassifications.stream()
                 .map(EventClassification::getClassificationId)
@@ -593,13 +594,11 @@ public class EventService {
             }
         }
 
-        // 3. Fetch EventManifests in bulk
         Map<UUID, String> manifestMap = new HashMap<>();
         eventManifestRepository.findAllById(eventIds).forEach(em -> {
             manifestMap.put(em.getEventId(), em.getManifestId());
         });
 
-        // 4. Map everything together
         return events.stream().map(e -> {
             List<AttractionResponse> attractions = attractionsByEvent.getOrDefault(e.getId(), List.of());
             List<ClassificationResponse> classifications = classificationsByEvent.getOrDefault(e.getId(), List.of());

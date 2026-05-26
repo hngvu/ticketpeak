@@ -3,6 +3,7 @@ package io.qzz.hoangvu.ticketpeak.api.event.dto;
 import io.qzz.hoangvu.ticketpeak.api.event.model.Event;
 import io.qzz.hoangvu.ticketpeak.api.event.model.EventStatus;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -24,6 +25,7 @@ public record EventResponse(
     boolean safeTixEnabled,
     boolean transferEnabled,
     int maxTransferCount,
+    BigDecimal serviceFeePercent,
     List<AttractionResponse> attractions,
     List<ClassificationResponse> classifications,
     String manifestId,
@@ -48,6 +50,7 @@ public record EventResponse(
             e.isSafeTixEnabled(),
             e.isTransferEnabled(),
             e.getMaxTransferCount(),
+            e.getServiceFeePercent(),
             attractions,
             classifications,
             manifestId,

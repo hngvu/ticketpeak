@@ -18,3 +18,5 @@ payment:
 ticketpeak:
   totp:
     encryption-key: ${TOTP_ENCRYPTION_KEY:QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=}
+  encryption:
+    secret-key: ${ENCRYPTION_SECRET_KEY:dGhpcy1pcy1hLTMyLWJ5dGUtYWVzLWtleS1mb3ItdGU=}
