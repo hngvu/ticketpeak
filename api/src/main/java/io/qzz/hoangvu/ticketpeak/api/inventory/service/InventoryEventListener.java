@@ -100,6 +100,21 @@ public class InventoryEventListener {
                     }
                 }
                 if (!gaInventories.isEmpty()) {
+                    java.util.Map<String, Integer> totalByArea = new java.util.HashMap<>();
+                    for (InventoryGa row : gaInventories) {
+                        totalByArea.merge(row.getAreaId(), row.getTotal(), Integer::sum);
+                    }
+
+                    for (GAArea area : gaAreas) {
+                        Integer totalAllocated = totalByArea.get(area.getId());
+                        if (totalAllocated != null && totalAllocated > area.getCapacity()) {
+                            throw InventoryException.capacityExceeded(
+                                "GA area " + area.getId() + ": allocated " + totalAllocated
+                                + " but capacity is " + area.getCapacity()
+                            );
+                        }
+                    }
+
                     inventoryGaRepository.saveAll(gaInventories);
                 }
             }

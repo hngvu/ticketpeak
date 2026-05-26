@@ -38,31 +38,31 @@ public class PartnerOfferController {
         return ResponseEntity.ok(ApiResponse.success(offerService.listEventOffers(eventId), "OK"));
     }
 
-    @PutMapping("/{ticketTypeId}")
+    @PutMapping("/{offerId}")
     public ResponseEntity<ApiResponse<OfferResponse>> updateOffer(
             @PathVariable UUID eventId,
-            @PathVariable String ticketTypeId,
+            @PathVariable UUID offerId,
             @Valid @RequestBody UpdateOfferRequest request
     ) {
         return ResponseEntity.ok(ApiResponse.success(
-                offerService.updateOffer(eventId, ticketTypeId, request), "Offer updated"));
+                offerService.updateOffer(eventId, offerId, request), "Offer updated"));
     }
 
-    @GetMapping("/{ticketTypeId}")
+    @GetMapping("/{offerId}")
     public ResponseEntity<ApiResponse<OfferResponse>> getEventOfferForPartner(
             @PathVariable UUID eventId,
-            @PathVariable String ticketTypeId
+            @PathVariable UUID offerId
     ) {
         return ResponseEntity.ok(ApiResponse.success(
-                offerService.getEventOfferForPartner(eventId, ticketTypeId), "OK"));
+                offerService.getEventOfferForPartner(eventId, offerId), "OK"));
     }
 
-    @DeleteMapping("/{ticketTypeId}")
+    @DeleteMapping("/{offerId}")
     public ResponseEntity<ApiResponse<Void>> deleteOffer(
             @PathVariable UUID eventId,
-            @PathVariable String ticketTypeId
+            @PathVariable UUID offerId
     ) {
-        offerService.deleteOffer(eventId, ticketTypeId);
+        offerService.deleteOffer(eventId, offerId);
         return ResponseEntity.ok(ApiResponse.success(null, "Offer deleted"));
     }
 }

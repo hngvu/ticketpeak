@@ -20,6 +20,8 @@ import io.qzz.hoangvu.ticketpeak.api.offer.model.OfferSaleWindow;
 import io.qzz.hoangvu.ticketpeak.api.offer.model.SaleWindowType;
 import io.qzz.hoangvu.ticketpeak.api.offer.model.SeatingMode;
 import io.qzz.hoangvu.ticketpeak.api.offer.repository.OfferRepository;
+import io.qzz.hoangvu.ticketpeak.api.offer.repository.TicketTypeRepository;
+import io.qzz.hoangvu.ticketpeak.api.offer.model.TicketType;
 import io.qzz.hoangvu.ticketpeak.api.offer.repository.OfferSaleWindowRepository;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.Organization;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.OrganizationStatus;
@@ -145,7 +147,7 @@ class ReservationControllerIT {
         // GA offer with an active sale window
         Offer gaOfferToBuild = Offer.builder()
                 .eventId(onsaleEvent.getId())
-                .ticketTypeId("ga-ticket")
+                .ticketTypeId(java.util.UUID.randomUUID())
                 .name("GA Ticket")
                 .currency("VND")
                 .faceValue(new BigDecimal("200000.00"))
@@ -169,7 +171,7 @@ class ReservationControllerIT {
         // RS offer
         Offer rsOfferToBuild = Offer.builder()
                 .eventId(onsaleEvent.getId())
-                .ticketTypeId("rs-ticket")
+                .ticketTypeId(java.util.UUID.randomUUID())
                 .name("RS Ticket")
                 .currency("VND")
                 .faceValue(new BigDecimal("500000.00"))

@@ -10,6 +10,10 @@ public final class InventoryException {
         return new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OFFER_MAPPING", message);
     }
 
+    public static ApiException capacityExceeded(String detail) {
+        return new ApiException(HttpStatus.CONFLICT, "INVENTORY_CAPACITY_EXCEEDED", detail);
+    }
+
     public static ApiException inventoryNotInitialized() {
         return new ApiException(HttpStatus.CONFLICT, "INVENTORY_NOT_INITIALIZED", "Inventory not yet available for this event");
     }

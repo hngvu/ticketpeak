@@ -13,6 +13,8 @@ import io.qzz.hoangvu.ticketpeak.api.inventory.repository.InventoryGaRepository;
 import io.qzz.hoangvu.ticketpeak.api.offer.model.Offer;
 import io.qzz.hoangvu.ticketpeak.api.offer.model.SeatingMode;
 import io.qzz.hoangvu.ticketpeak.api.offer.repository.OfferRepository;
+import io.qzz.hoangvu.ticketpeak.api.offer.repository.TicketTypeRepository;
+import io.qzz.hoangvu.ticketpeak.api.offer.model.TicketType;
 import io.qzz.hoangvu.ticketpeak.api.order.dto.OrderResponse;
 import io.qzz.hoangvu.ticketpeak.api.order.model.Order;
 import io.qzz.hoangvu.ticketpeak.api.order.model.OrderStatus;
@@ -103,7 +105,7 @@ public class OrderServiceIT {
 
         offer = offerRepository.save(Offer.builder()
                 .eventId(event.getId()).name("GA").seatingMode(SeatingMode.GENERAL_ADMISSION)
-                .ticketTypeId("GA").faceValue(new BigDecimal("100.00"))
+                .ticketTypeId(java.util.UUID.randomUUID()).faceValue(new BigDecimal("100.00"))
                 .currency("USD")
                 .eventTicketMinimum(1)
                 .restrictedPayment(false)

@@ -11,7 +11,7 @@ import java.util.UUID;
 public record OfferResponse(
         UUID id,
         UUID eventId,
-        String ticketTypeId,
+        UUID ticketTypeId,
         String name,
         String description,
         String currency,

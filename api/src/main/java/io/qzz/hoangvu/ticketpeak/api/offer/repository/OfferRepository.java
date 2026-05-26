@@ -11,9 +11,13 @@ public interface OfferRepository extends JpaRepository<Offer, UUID> {
     List<Offer> findByEventIdOrderByCreatedAtAsc(UUID eventId);
     List<Offer> findByEventId(UUID eventId);
 
-    Optional<Offer> findByEventIdAndTicketTypeId(UUID eventId, String ticketTypeId);
+    Optional<Offer> findByEventIdAndTicketTypeId(UUID eventId, UUID ticketTypeId);
 
-    boolean existsByEventIdAndTicketTypeId(UUID eventId, String ticketTypeId);
+    boolean existsByEventIdAndTicketTypeId(UUID eventId, UUID ticketTypeId);
 
-    void deleteByEventIdAndTicketTypeId(UUID eventId, String ticketTypeId);
+    void deleteByEventIdAndTicketTypeId(UUID eventId, UUID ticketTypeId);
+    
+    Optional<Offer> findByEventIdAndId(UUID eventId, UUID id);
+    
+    void deleteByEventIdAndId(UUID eventId, UUID id);
 }

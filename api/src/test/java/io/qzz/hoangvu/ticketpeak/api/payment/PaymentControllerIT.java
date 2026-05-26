@@ -18,6 +18,8 @@ import io.qzz.hoangvu.ticketpeak.api.offer.model.OfferSaleWindow;
 import io.qzz.hoangvu.ticketpeak.api.offer.model.SaleWindowType;
 import io.qzz.hoangvu.ticketpeak.api.offer.model.SeatingMode;
 import io.qzz.hoangvu.ticketpeak.api.offer.repository.OfferRepository;
+import io.qzz.hoangvu.ticketpeak.api.offer.repository.TicketTypeRepository;
+import io.qzz.hoangvu.ticketpeak.api.offer.model.TicketType;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.Organization;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.OrganizationStatus;
 import io.qzz.hoangvu.ticketpeak.api.organization.repository.OrganizationRepository;
@@ -143,7 +145,7 @@ class PaymentControllerIT {
 
         Offer gaOfferToBuild = Offer.builder()
                 .eventId(onsaleEvent.getId())
-                .ticketTypeId("ga-ticket")
+                .ticketTypeId(java.util.UUID.randomUUID())
                 .name("GA Ticket")
                 .currency("VND")
                 .faceValue(new BigDecimal("100000.00")) // Base amount 100k

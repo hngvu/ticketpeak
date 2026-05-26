@@ -8,6 +8,7 @@ import io.qzz.hoangvu.ticketpeak.api.offer.dto.*;
 import io.qzz.hoangvu.ticketpeak.api.offer.exception.OfferException;
 import io.qzz.hoangvu.ticketpeak.api.offer.model.*;
 import io.qzz.hoangvu.ticketpeak.api.offer.repository.OfferRepository;
+import io.qzz.hoangvu.ticketpeak.api.offer.repository.TicketTypeRepository;
 import io.qzz.hoangvu.ticketpeak.api.venue.service.VenueService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
 public class OfferService {
 
     private final OfferRepository offerRepository;
+    private final TicketTypeRepository ticketTypeRepository;
     private final EventService eventService;
     private final VenueService venueService;
 
@@ -30,8 +32,9 @@ public class OfferService {
             .map(Currency::getCurrencyCode)
             .collect(Collectors.toUnmodifiableSet());
 
-    public OfferService(OfferRepository offerRepository, EventService eventService, VenueService venueService) {
+    public OfferService(OfferRepository offerRepository, TicketTypeRepository ticketTypeRepository, EventService eventService, VenueService venueService) {
         this.offerRepository = offerRepository;
+        this.ticketTypeRepository = ticketTypeRepository;
         this.eventService = eventService;
         this.venueService = venueService;
     }
@@ -45,10 +48,9 @@ public class OfferService {
             throw OfferException.invalidEventState("Cannot create offer for canceled or completed event");
         }
 
-        String ticketTypeId = normalizeTicketTypeId(request.ticketTypeId());
-        if (offerRepository.existsByEventIdAndTicketTypeId(eventId, ticketTypeId)) {
-            throw OfferException.ticketTypeAlreadyExists();
-        }
+        TicketType ticketType = ticketTypeRepository.findById(request.ticketTypeId())
+                .filter(tt -> tt.getEventId().equals(eventId))
+                .orElseThrow(OfferException::ticketTypeNotFound);
 
         validateCurrency(request.currency());
         validateFaceValueAndMinimum(request.faceValue(), request.eventTicketMinimum());
@@ -58,7 +60,7 @@ public class OfferService {
 
         Offer offer = Offer.builder()
                 .eventId(eventId)
-                .ticketTypeId(ticketTypeId)
+                .ticketTypeId(ticketType.getId())
                 .name(trimToNull(request.name()))
                 .description(trimToNull(request.description()))
                 .currency(request.currency().trim().toUpperCase(Locale.ROOT))
@@ -90,14 +92,14 @@ public class OfferService {
 
     @Transactional
     @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#eventId))")
-    public OfferResponse updateOffer(UUID eventId, String ticketTypeId, UpdateOfferRequest request) {
+    public OfferResponse updateOffer(UUID eventId, UUID offerId, UpdateOfferRequest request) {
         EventResponse event = eventService.getEventForPartner(eventId);
 
         if (event.status() == EventStatus.CANCELED || event.status() == EventStatus.COMPLETED) {
             throw OfferException.invalidEventState("Cannot update offer for canceled or completed event");
         }
 
-        Offer offer = offerRepository.findByEventIdAndTicketTypeId(eventId, normalizeTicketTypeId(ticketTypeId))
+        Offer offer = offerRepository.findByEventIdAndId(eventId, offerId)
                 .orElseThrow(OfferException::notFound);
 
 
@@ -138,14 +140,14 @@ public class OfferService {
 
     @Transactional
     @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#eventId))")
-    public void deleteOffer(UUID eventId, String ticketTypeId) {
+    public void deleteOffer(UUID eventId, UUID offerId) {
         EventResponse event = eventService.getEventForPartner(eventId);
 
         if (event.status() == EventStatus.CANCELED || event.status() == EventStatus.COMPLETED) {
             throw OfferException.invalidEventState("Cannot delete offer for canceled or completed event");
         }
 
-        Offer offer = offerRepository.findByEventIdAndTicketTypeId(eventId, normalizeTicketTypeId(ticketTypeId))
+        Offer offer = offerRepository.findByEventIdAndId(eventId, offerId)
                 .orElseThrow(OfferException::notFound);
 
         // TODO: Enforce the active-sales guard: block offer deletion once ticket sales or orders exist.
@@ -174,20 +176,20 @@ public class OfferService {
                 .toList();
     }
 
-    public OfferResponse getEventOffer(UUID eventId, String ticketTypeId) {
+    public OfferResponse getEventOffer(UUID eventId, UUID offerId) {
         EventResponse event = eventService.getEvent(eventId);
         if (event.status() == EventStatus.DRAFT) {
             throw EventException.notFound();
         }
-        Offer offer = offerRepository.findByEventIdAndTicketTypeId(eventId, normalizeTicketTypeId(ticketTypeId))
+        Offer offer = offerRepository.findByEventIdAndId(eventId, offerId)
                 .orElseThrow(OfferException::notFound);
         return OfferResponse.from(offer);
     }
 
     @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#eventId))")
-    public OfferResponse getEventOfferForPartner(UUID eventId, String ticketTypeId) {
+    public OfferResponse getEventOfferForPartner(UUID eventId, UUID offerId) {
         eventService.getEventForPartner(eventId);
-        Offer offer = offerRepository.findByEventIdAndTicketTypeId(eventId, normalizeTicketTypeId(ticketTypeId))
+        Offer offer = offerRepository.findByEventIdAndId(eventId, offerId)
                 .orElseThrow(OfferException::notFound);
         return OfferResponse.from(offer);
     }
@@ -371,11 +373,6 @@ public class OfferService {
                         charge.isPercentage()
                 ))
                 .toList();
-    }
-
-    private String normalizeTicketTypeId(String ticketTypeId) {
-        String normalized = trimToNull(ticketTypeId);
-        return normalized == null ? null : normalized.toLowerCase(Locale.ROOT);
     }
 
     private String trimToNull(String value) {

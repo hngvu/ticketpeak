@@ -21,6 +21,8 @@ import io.qzz.hoangvu.ticketpeak.api.inventory.service.InventoryService;
 import io.qzz.hoangvu.ticketpeak.api.offer.model.Offer;
 import io.qzz.hoangvu.ticketpeak.api.offer.model.SeatingMode;
 import io.qzz.hoangvu.ticketpeak.api.offer.repository.OfferRepository;
+import io.qzz.hoangvu.ticketpeak.api.offer.repository.TicketTypeRepository;
+import io.qzz.hoangvu.ticketpeak.api.offer.model.TicketType;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.Organization;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.OrganizationStatus;
 import io.qzz.hoangvu.ticketpeak.api.organization.repository.OrganizationRepository;
@@ -112,6 +114,9 @@ class InventoryControllerIT {
 
     @Autowired
     OfferRepository offerRepository;
+
+    @Autowired
+    TicketTypeRepository ticketTypeRepository;
 
     @Autowired
     InventoryService inventoryService;
@@ -253,7 +258,7 @@ class InventoryControllerIT {
         // 4. Create GA and RS Offers mapped to the Section & Price Level
         Offer gaOffer = offerRepository.saveAndFlush(Offer.builder()
                 .eventId(event.getId())
-                .ticketTypeId("ga-ticket")
+                .ticketTypeId(java.util.UUID.randomUUID())
                 .name("Standard GA")
                 .currency("VND")
                 .faceValue(new BigDecimal("150000.00"))
@@ -269,7 +274,7 @@ class InventoryControllerIT {
 
         Offer rsOffer = offerRepository.saveAndFlush(Offer.builder()
                 .eventId(event.getId())
-                .ticketTypeId("rs-ticket")
+                .ticketTypeId(java.util.UUID.randomUUID())
                 .name("Reserved Seating")
                 .currency("VND")
                 .faceValue(new BigDecimal("250000.00"))

@@ -40,7 +40,7 @@ public class Offer {
     UUID eventId;
 
     @Column(name = "ticket_type_id", nullable = false)
-    String ticketTypeId;
+    UUID ticketTypeId;
 
     @Column(nullable = false)
     String name;

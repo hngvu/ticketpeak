@@ -16,6 +16,8 @@ import io.qzz.hoangvu.ticketpeak.api.offer.model.Offer;
 import io.qzz.hoangvu.ticketpeak.api.offer.model.SeatingMode;
 import io.qzz.hoangvu.ticketpeak.api.offer.model.SaleWindowType;
 import io.qzz.hoangvu.ticketpeak.api.offer.repository.OfferRepository;
+import io.qzz.hoangvu.ticketpeak.api.offer.repository.TicketTypeRepository;
+import io.qzz.hoangvu.ticketpeak.api.offer.model.TicketType;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.Organization;
 import io.qzz.hoangvu.ticketpeak.api.organization.model.OrganizationStatus;
 import io.qzz.hoangvu.ticketpeak.api.organization.repository.OrganizationRepository;
@@ -72,6 +74,9 @@ class OfferControllerIT {
 
     @Autowired
     OfferRepository offerRepository;
+
+    @Autowired
+    TicketTypeRepository ticketTypeRepository;
 
     @Autowired
     PasswordEncoder passwordEncoder;
@@ -172,11 +177,21 @@ class OfferControllerIT {
         return new UpdateSaleWindowRequest(type, Instant.now().plusSeconds(startOffsetSeconds), Instant.now().plusSeconds(endOffsetSeconds));
     }
 
-    private CreateOfferRequest createOfferRequest(String ticketTypeId, String name) {
+    
+
+    private CreateOfferRequest createOfferRequest(java.util.UUID ticketTypeId, String name) {
         return createOfferRequest(ticketTypeId, name, new BigDecimal("100000.00"), SeatingMode.GENERAL_ADMISSION, List.of());
     }
 
-    private CreateOfferRequest createOfferRequest(String ticketTypeId, String name, BigDecimal faceValue, SeatingMode seatingMode, List<CreateSaleWindowRequest> windows) {
+    
+    private java.util.UUID createTicketType(java.util.UUID eventId, String slug) {
+        return ticketTypeRepository.saveAndFlush(TicketType.builder()
+                .eventId(eventId)
+                .name(slug)
+                .slug(slug)
+                .build()).getId();
+    }
+    private CreateOfferRequest createOfferRequest(java.util.UUID ticketTypeId, String name, BigDecimal faceValue, SeatingMode seatingMode, List<CreateSaleWindowRequest> windows) {
         return new CreateOfferRequest(
                 ticketTypeId, name, null,
                 "VND", faceValue, false, 1,
@@ -189,7 +204,7 @@ class OfferControllerIT {
     @Test
     void create_offer_persists_and_is_returned_by_event_lookup() throws Exception {
         CreateOfferRequest request = new CreateOfferRequest(
-                "VIP-001", "VIP Package", "Front row package",
+                createTicketType(publishedEvent.getId(), "VIP-001"), "VIP Package", "Front row package",
                 "VND", new BigDecimal("1250000.00"), false, 1,
                 100,
                 List.of(1, 2, 4),
@@ -243,7 +258,7 @@ class OfferControllerIT {
     @Test
     void duplicate_ticket_type_id_within_same_event_is_rejected() throws Exception {
         CreateOfferRequest request = new CreateOfferRequest(
-                "vip-dup", "Standard Ticket", null,
+                createTicketType(publishedEvent.getId(), "vip-dup"), "Standard Ticket", null,
                 "VND", new BigDecimal("250000.00"), false, 1,
                 100,
                 List.of(1, 2, 4),
@@ -267,7 +282,7 @@ class OfferControllerIT {
 
     @Test
     void same_ticket_type_id_allowed_across_different_events() throws Exception {
-        CreateOfferRequest request = createOfferRequest("vip-cross", "VIP Cross");
+        CreateOfferRequest request = createOfferRequest(createTicketType(publishedEvent.getId(), "vip-cross"), "VIP Cross");
 
         mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
                         .header("Authorization", "Bearer " + organizerToken)
@@ -284,7 +299,7 @@ class OfferControllerIT {
 
     @Test
     void unauthorized_requests_are_rejected() throws Exception {
-        CreateOfferRequest request = createOfferRequest("unauth", "No Auth");
+        CreateOfferRequest request = createOfferRequest(createTicketType(publishedEvent.getId(), "unauth"), "No Auth");
 
         mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -294,7 +309,7 @@ class OfferControllerIT {
 
     @Test
     void buyer_cannot_create_offer() throws Exception {
-        CreateOfferRequest request = createOfferRequest("buyer-no", "Buyer Try");
+        CreateOfferRequest request = createOfferRequest(createTicketType(publishedEvent.getId(), "buyer-no"), "Buyer Try");
 
         mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
                         .header("Authorization", "Bearer " + buyerToken)
@@ -305,7 +320,7 @@ class OfferControllerIT {
 
     @Test
     void cannot_create_offer_for_canceled_event() throws Exception {
-        CreateOfferRequest request = createOfferRequest("canceled-no", "Canceled");
+        CreateOfferRequest request = createOfferRequest(createTicketType(publishedEvent.getId(), "canceled-no"), "Canceled");
 
         mockMvc.perform(post("/api/partner/events/" + canceledEvent.getId() + "/offers")
                         .header("Authorization", "Bearer " + organizerToken)
@@ -317,7 +332,7 @@ class OfferControllerIT {
 
     @Test
     void cannot_create_offer_for_completed_event() throws Exception {
-        CreateOfferRequest request = createOfferRequest("completed-no", "Completed");
+        CreateOfferRequest request = createOfferRequest(createTicketType(publishedEvent.getId(), "completed-no"), "Completed");
 
         mockMvc.perform(post("/api/partner/events/" + completedEvent.getId() + "/offers")
                         .header("Authorization", "Bearer " + organizerToken)
@@ -329,7 +344,7 @@ class OfferControllerIT {
 
     @Test
     void public_api_returns_404_for_draft_event_offers() throws Exception {
-        CreateOfferRequest request = createOfferRequest("draft-offer", "Draft Offer");
+        CreateOfferRequest request = createOfferRequest(createTicketType(publishedEvent.getId(), "draft-offer"), "Draft Offer");
 
         mockMvc.perform(post("/api/partner/events/" + draftEvent.getId() + "/offers")
                         .header("Authorization", "Bearer " + organizerToken)
@@ -344,7 +359,7 @@ class OfferControllerIT {
 
     @Test
     void update_offer_modifies_fields() throws Exception {
-        CreateOfferRequest createRequest = createOfferRequest("update-me", "Original Name");
+        CreateOfferRequest createRequest = createOfferRequest(createTicketType(publishedEvent.getId(), "update-me"), "Original Name");
 
         mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
                         .header("Authorization", "Bearer " + organizerToken)
@@ -377,7 +392,7 @@ class OfferControllerIT {
 
     @Test
     void delete_offer_removes_it() throws Exception {
-        CreateOfferRequest createRequest = createOfferRequest("delete-me", "To Delete");
+        CreateOfferRequest createRequest = createOfferRequest(createTicketType(publishedEvent.getId(), "delete-me"), "To Delete");
 
         mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
                         .header("Authorization", "Bearer " + organizerToken)
@@ -400,7 +415,7 @@ class OfferControllerIT {
 
     @Test
     void cannot_delete_offer_for_canceled_or_completed_event() throws Exception {
-        CreateOfferRequest createRequest = createOfferRequest("del-state", "Delete State Test");
+        CreateOfferRequest createRequest = createOfferRequest(createTicketType(publishedEvent.getId(), "del-state"), "Delete State Test");
 
         mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
                         .header("Authorization", "Bearer " + organizerToken)
@@ -431,7 +446,7 @@ class OfferControllerIT {
     @Test
     void invalid_currency_is_rejected() throws Exception {
         CreateOfferRequest request = new CreateOfferRequest(
-                "bad-cur", "Bad Currency", null,
+                createTicketType(publishedEvent.getId(), "bad-cur"), "Bad Currency", null,
                 "XYZ", new BigDecimal("100000.00"), false, 1,
                 100,
                 List.of(1), List.of(),
@@ -461,7 +476,7 @@ class OfferControllerIT {
                 .build());
 
         CreateOfferRequest request = new CreateOfferRequest(
-                "bad-window", "Bad Window", null,
+                createTicketType(publishedEvent.getId(), "bad-window"), "Bad Window", null,
                 "VND", new BigDecimal("100000.00"), false, 1,
                 100,
                 List.of(1),
@@ -481,7 +496,7 @@ class OfferControllerIT {
     void event_scoping_keeps_offers_isolated() throws Exception {
         Event secondPublished = saveEvent("scope-two", "Scope Two", EventStatus.PUBLISHED);
 
-        CreateOfferRequest request = createOfferRequest("scope-001", "Scoped");
+        CreateOfferRequest request = createOfferRequest(createTicketType(publishedEvent.getId(), "scope-001"), "Scoped");
 
         mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
                         .header("Authorization", "Bearer " + organizerToken)
@@ -500,7 +515,7 @@ class OfferControllerIT {
 
     @Test
     void negative_price_is_rejected_by_validation() throws Exception {
-        CreateOfferRequest request = createOfferRequest("NEG-001", "Invalid Price", new BigDecimal("-1.00"), SeatingMode.GENERAL_ADMISSION, List.of());
+        CreateOfferRequest request = createOfferRequest(createTicketType(publishedEvent.getId(), "NEG-001"), "Invalid Price", new BigDecimal("-1.00"), SeatingMode.GENERAL_ADMISSION, List.of());
 
         mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
                         .header("Authorization", "Bearer " + organizerToken)
@@ -514,7 +529,7 @@ class OfferControllerIT {
     @Test
     void impossible_sale_window_is_rejected() throws Exception {
         CreateOfferRequest request = new CreateOfferRequest(
-                "WIN-001", "Bad Window", null,
+                createTicketType(publishedEvent.getId(), "WIN-001"), "Bad Window", null,
                 "VND", new BigDecimal("100000.00"), false, 1,
                 100,
                 List.of(1, 2),
@@ -535,7 +550,7 @@ class OfferControllerIT {
 
     @Test
     void reserved_seating_requires_section_and_price_level() throws Exception {
-        CreateOfferRequest request = createOfferRequest("RS-001", "Reserved Seat", new BigDecimal("750000.00"), SeatingMode.RESERVED_SEATING, List.of());
+        CreateOfferRequest request = createOfferRequest(createTicketType(publishedEvent.getId(), "RS-001"), "Reserved Seat", new BigDecimal("750000.00"), SeatingMode.RESERVED_SEATING, List.of());
 
         mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
                         .header("Authorization", "Bearer " + organizerToken)
@@ -549,8 +564,8 @@ class OfferControllerIT {
 
     @Test
     void partner_can_list_all_offers_for_event() throws Exception {
-        CreateOfferRequest firstOffer = createOfferRequest("tier-one", "Tier One");
-        CreateOfferRequest secondOffer = createOfferRequest("tier-two", "Tier Two");
+        CreateOfferRequest firstOffer = createOfferRequest(createTicketType(publishedEvent.getId(), "tier-one"), "Tier One");
+        CreateOfferRequest secondOffer = createOfferRequest(createTicketType(publishedEvent.getId(), "tier-two"), "Tier Two");
 
         mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
                         .header("Authorization", "Bearer " + organizerToken)
@@ -575,7 +590,7 @@ class OfferControllerIT {
 
     @Test
     void partner_can_get_single_offer_even_if_draft() throws Exception {
-        CreateOfferRequest request = createOfferRequest("draft-single", "Draft Single");
+        CreateOfferRequest request = createOfferRequest(createTicketType(publishedEvent.getId(), "draft-single"), "Draft Single");
 
         mockMvc.perform(post("/api/partner/events/" + draftEvent.getId() + "/offers")
                         .header("Authorization", "Bearer " + organizerToken)
@@ -599,7 +614,7 @@ class OfferControllerIT {
 
     @Test
     void admin_can_bypass_organizer_check_to_create_offer() throws Exception {
-        CreateOfferRequest request = createOfferRequest("admin-bypass", "Admin Bypass Offer");
+        CreateOfferRequest request = createOfferRequest(createTicketType(publishedEvent.getId(), "admin-bypass"), "Admin Bypass Offer");
 
         mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
                         .header("Authorization", "Bearer " + adminToken)
@@ -612,7 +627,7 @@ class OfferControllerIT {
     @Test
     void reserved_seating_offer_validates_section_and_price_level() throws Exception {
         CreateOfferRequest requestNoManifest = new CreateOfferRequest(
-                "rs-no-man", "RS No Manifest", null,
+                createTicketType(publishedEvent.getId(), "rs-no-man"), "RS No Manifest", null,
                 "VND", new BigDecimal("500000.00"), false, 1,
                 100,
                 List.of(1), null,
@@ -639,7 +654,7 @@ class OfferControllerIT {
         priceLevelRepository.saveAndFlush(PriceLevel.builder().id("PL-1").manifest(manifest).description("Price Level 1").build());
 
         CreateOfferRequest requestValid = new CreateOfferRequest(
-                "rs-valid", "RS Valid", null,
+                createTicketType(publishedEvent.getId(), "rs-valid"), "RS Valid", null,
                 "VND", new BigDecimal("500000.00"), false, 1,
                 100,
                 List.of(1), null,
@@ -654,7 +669,7 @@ class OfferControllerIT {
                 .andExpect(jsonPath("$.data.ticketTypeId").value("rs-valid"));
 
         CreateOfferRequest requestInvalidSection = new CreateOfferRequest(
-                "rs-invalid-sec", "RS Invalid Sec", null,
+                createTicketType(publishedEvent.getId(), "rs-invalid-sec"), "RS Invalid Sec", null,
                 "VND", new BigDecimal("500000.00"), false, 1,
                 100,
                 List.of(1), null,
@@ -669,7 +684,7 @@ class OfferControllerIT {
                 .andExpect(jsonPath("$.error").value("SECTION_NOT_FOUND"));
 
         CreateOfferRequest requestInvalidPL = new CreateOfferRequest(
-                "rs-invalid-pl", "RS Invalid PL", null,
+                createTicketType(publishedEvent.getId(), "rs-invalid-pl"), "RS Invalid PL", null,
                 "VND", new BigDecimal("500000.00"), false, 1,
                 100,
                 List.of(1), null,
@@ -696,7 +711,7 @@ class OfferControllerIT {
         try {
             // 1. Check faceValue < 0
             CreateOfferRequest negativePriceReq = new CreateOfferRequest(
-                    "NEG-SVC", "Invalid Price Service", null,
+                createTicketType(publishedEvent.getId(), "NEG-SVC"), "Invalid Price Service", null,
                     "VND", new BigDecimal("-50.00"), false, 1,
                     100,
                     List.of(1, 2), null,
@@ -711,7 +726,7 @@ class OfferControllerIT {
 
             // 2. Check eventTicketMinimum < 1
             CreateOfferRequest badMinLimitReq = new CreateOfferRequest(
-                    "MIN-SVC", "Invalid Min Service", null,
+                createTicketType(publishedEvent.getId(), "MIN-SVC"), "Invalid Min Service", null,
                     "VND", new BigDecimal("1000.00"), false, 0,
                     100,
                     List.of(1, 2), null,

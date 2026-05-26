@@ -27,11 +27,11 @@ public class PublicOfferController {
         return ResponseEntity.ok(ApiResponse.success(offerService.listPublishedEventOffers(eventId), "OK"));
     }
 
-    @GetMapping("/{ticketTypeId}")
+    @GetMapping("/{offerId}")
     public ResponseEntity<ApiResponse<OfferResponse>> getEventOffer(
             @PathVariable UUID eventId,
-            @PathVariable String ticketTypeId
+            @PathVariable UUID offerId
     ) {
-        return ResponseEntity.ok(ApiResponse.success(offerService.getEventOffer(eventId, ticketTypeId), "OK"));
+        return ResponseEntity.ok(ApiResponse.success(offerService.getEventOffer(eventId, offerId), "OK"));
     }
 }
