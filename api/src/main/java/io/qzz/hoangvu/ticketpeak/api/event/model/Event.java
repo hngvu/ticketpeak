@@ -68,6 +68,9 @@ public class Event {
     @Column(name = "transfer_enabled", nullable = false)
     boolean transferEnabled;
 
+    @Column(name = "max_transfer_count", nullable = false)
+    int maxTransferCount;
+
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)
     Instant createdAt;

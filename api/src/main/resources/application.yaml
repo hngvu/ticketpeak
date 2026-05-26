@@ -154,3 +154,8 @@ springdoc:
     display-request-duration: true
   default-consumes-media-type: application/json
   default-produces-media-type: application/json
+
+# ── Ticket Module (TOTP) ──────────────────────────────────────────────────────
+ticketpeak:
+  totp:
+    encryption-key: ${TOTP_ENCRYPTION_KEY:QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=}

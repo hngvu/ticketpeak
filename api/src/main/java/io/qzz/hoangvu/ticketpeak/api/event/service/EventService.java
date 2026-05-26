@@ -102,6 +102,7 @@ public class EventService {
                 .restrictSingleSeat(req.restrictSingleSeat())
                 .safeTixEnabled(req.safeTixEnabled())
                 .transferEnabled(req.transferEnabled())
+                .maxTransferCount(req.maxTransferCount())
                 .build();
 
         Event savedEvent = eventRepository.save(event);
@@ -178,6 +179,7 @@ public class EventService {
         event.setRestrictSingleSeat(req.restrictSingleSeat());
         event.setSafeTixEnabled(req.safeTixEnabled());
         event.setTransferEnabled(req.transferEnabled());
+        event.setMaxTransferCount(req.maxTransferCount());
 
         Event savedEvent = eventRepository.save(event);
 
@@ -518,6 +520,7 @@ public class EventService {
                 .restrictSingleSeat(sourceEvent.isRestrictSingleSeat())
                 .safeTixEnabled(sourceEvent.isSafeTixEnabled())
                 .transferEnabled(sourceEvent.isTransferEnabled())
+                .maxTransferCount(sourceEvent.getMaxTransferCount())
                 .build();
 
         Event savedClone = eventRepository.save(clone);

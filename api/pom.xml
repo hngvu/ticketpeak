@@ -99,6 +99,11 @@
             <artifactId>stripe-java</artifactId>
             <version>32.1.0</version>
         </dependency>
+        <dependency>
+            <groupId>com.eatthepath</groupId>
+            <artifactId>java-otp</artifactId>
+            <version>0.4.0</version>
+        </dependency>
 
 
         <dependency>

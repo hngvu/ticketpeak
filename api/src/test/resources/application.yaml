@@ -13,3 +13,8 @@ payment:
   stripe:
     secret-key: ${STRIPE_SECRET_KEY:sk_test_mock}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_mock}
+
+# ── Ticket Module (TOTP) ──────────────────────────────────────────────────────
+ticketpeak:
+  totp:
+    encryption-key: ${TOTP_ENCRYPTION_KEY:QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=}

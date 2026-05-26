@@ -6,6 +6,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,4 +21,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     Page<Order> findByAccountIdOrderByCreatedAtDesc(UUID accountId, Pageable pageable);
 
     boolean existsByReservationIdAndStatus(UUID reservationId, io.qzz.hoangvu.ticketpeak.api.order.model.OrderStatus status);
+
+    @Query("SELECT o FROM Order o LEFT JOIN FETCH o.items WHERE o.id = :id")
+    Optional<Order> findByIdWithItems(@Param("id") UUID id);
 }

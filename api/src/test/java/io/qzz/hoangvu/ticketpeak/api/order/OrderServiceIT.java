@@ -64,6 +64,7 @@ public class OrderServiceIT {
     @Autowired VenueRepository venueRepository;
     @Autowired EventRepository eventRepository;
     @Autowired OfferRepository offerRepository;
+    @Autowired TicketTypeRepository ticketTypeRepository;
     @Autowired OrderService orderService;
 
     Account buyer;
@@ -78,6 +79,7 @@ public class OrderServiceIT {
         reservationRepository.deleteAll();
         inventoryGaRepository.deleteAll();
         offerRepository.deleteAll();
+        ticketTypeRepository.deleteAll();
         eventRepository.deleteAll();
         venueRepository.deleteAll();
         organizationRepository.deleteAll();
@@ -103,9 +105,15 @@ public class OrderServiceIT {
                 .title("Event").slug("event").status(EventStatus.PUBLISHED).timezone("UTC")
                 .startAt(Instant.now().plusSeconds(86400)).endAt(Instant.now().plusSeconds(90000)).build());
 
+        TicketType ticketType = ticketTypeRepository.save(TicketType.builder()
+                .eventId(event.getId())
+                .name("Standard")
+                .slug("standard")
+                .build());
+
         offer = offerRepository.save(Offer.builder()
                 .eventId(event.getId()).name("GA").seatingMode(SeatingMode.GENERAL_ADMISSION)
-                .ticketTypeId(java.util.UUID.randomUUID()).faceValue(new BigDecimal("100.00"))
+                .ticketTypeId(ticketType.getId()).faceValue(new BigDecimal("100.00"))
                 .currency("USD")
                 .eventTicketMinimum(1)
                 .restrictedPayment(false)
@@ -163,8 +171,8 @@ public class OrderServiceIT {
         // Assert
         List<Order> orders = orderRepository.findAll();
         assertThat(orders).hasSize(1);
-        Order order = orders.get(0);
-        assertThat(order.getStatus()).isEqualTo(OrderStatus.CREATED);
+        Order order = orderRepository.findByIdWithItems(orders.get(0).getId()).orElseThrow();
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.CONFIRMED);
         assertThat(order.getTotalAmount()).isEqualByComparingTo(BigDecimal.valueOf(100));
         assertThat(order.getItems()).hasSize(1);
         assertThat(order.getItems().get(0).getQty()).isEqualTo(2);

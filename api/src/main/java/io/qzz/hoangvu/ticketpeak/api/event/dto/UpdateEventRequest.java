@@ -1,5 +1,6 @@
 package io.qzz.hoangvu.ticketpeak.api.event.dto;
 
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
@@ -28,6 +29,8 @@ public record UpdateEventRequest(
     boolean restrictSingleSeat,
     boolean safeTixEnabled,
     boolean transferEnabled,
+    @Min(value = 0, message = "Max transfer count must be at least 0")
+    int maxTransferCount,
     List<UUID> attractionIds,
     List<UUID> classificationIds
 ) {}

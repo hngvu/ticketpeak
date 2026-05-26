@@ -1,7 +1,7 @@
 package io.qzz.hoangvu.ticketpeak.api.order.model;
 
 public enum OrderStatus {
-    CREATED,
+    CONFIRMED,
     FAILED,
     CANCELLED,
     REFUNDED

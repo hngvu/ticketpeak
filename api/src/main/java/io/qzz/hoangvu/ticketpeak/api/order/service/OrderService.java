@@ -22,6 +22,13 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.context.ApplicationEventPublisher;
+import io.qzz.hoangvu.ticketpeak.api.offer.repository.OfferRepository;
+import io.qzz.hoangvu.ticketpeak.api.offer.repository.TicketTypeRepository;
+import io.qzz.hoangvu.ticketpeak.api.offer.model.Offer;
+import io.qzz.hoangvu.ticketpeak.api.offer.model.TicketType;
+import io.qzz.hoangvu.ticketpeak.api.order.event.OrderCreatedEvent;
+import io.qzz.hoangvu.ticketpeak.api.order.event.OrderItemSnapshot;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -37,17 +44,26 @@ public class OrderService {
     private final ReservationRepository reservationRepository;
     private final InventoryService inventoryService;
     private final OrderReconciliationService reconciliationService;
+    private final ApplicationEventPublisher eventPublisher;
+    private final OfferRepository offerRepository;
+    private final TicketTypeRepository ticketTypeRepository;
 
     public OrderService(
             OrderRepository orderRepository,
             ReservationRepository reservationRepository,
             InventoryService inventoryService,
-            OrderReconciliationService reconciliationService
+            OrderReconciliationService reconciliationService,
+            ApplicationEventPublisher eventPublisher,
+            OfferRepository offerRepository,
+            TicketTypeRepository ticketTypeRepository
     ) {
         this.orderRepository = orderRepository;
         this.reservationRepository = reservationRepository;
         this.inventoryService = inventoryService;
         this.reconciliationService = reconciliationService;
+        this.eventPublisher = eventPublisher;
+        this.offerRepository = offerRepository;
+        this.ticketTypeRepository = ticketTypeRepository;
     }
 
     // ─── Event Listener: Order Creation ──────────────────────────────────
@@ -75,7 +91,7 @@ public class OrderService {
         log.info("Processing PaymentCompletedEvent: reservation={}, payment={}", reservationId, paymentId);
 
         // 1. Idempotency guard
-        if (orderRepository.existsByReservationIdAndStatus(reservationId, OrderStatus.CREATED)) {
+        if (orderRepository.existsByReservationIdAndStatus(reservationId, OrderStatus.CONFIRMED)) {
             log.info("Order already created for reservation {}. Skipping duplicate processing.", reservationId);
             return;
         }
@@ -111,6 +127,16 @@ public class OrderService {
             // 5. Transition reservation to FINALIZED
             reservation.setStatus(ReservationStatus.FINALIZED);
             reservationRepository.save(reservation);
+
+            // 6. Publish OrderCreatedEvent
+            List<OrderItemSnapshot> snapshots = buildSnapshots(order);
+            eventPublisher.publishEvent(new OrderCreatedEvent(
+                    this,
+                    order.getId(),
+                    order.getAccountId(),
+                    order.getEventId(),
+                    snapshots
+            ));
 
             log.info("Order created successfully for reservation {}. Order ID: {}",
                     reservationId, order.getId());
@@ -179,7 +205,7 @@ public class OrderService {
                 .paymentId(paymentId)
                 .accountId(reservation.getAccountId())
                 .eventId(reservation.getEventId())
-                .status(OrderStatus.CREATED)
+                .status(OrderStatus.CONFIRMED)
                 .totalAmount(totalAmount)
                 .currency(currency)
                 .items(new ArrayList<>())
@@ -235,5 +261,32 @@ public class OrderService {
         }
 
         return unitFaceValue.add(totalCharges).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private List<OrderItemSnapshot> buildSnapshots(Order order) {
+        List<OrderItemSnapshot> snapshots = new ArrayList<>();
+        for (OrderItem item : order.getItems()) {
+            Offer offer = offerRepository.findById(item.getOfferId())
+                    .orElseThrow(() -> OrderException.inventoryConfirmFailed("Offer not found: " + item.getOfferId()));
+            TicketType ticketType = ticketTypeRepository.findById(offer.getTicketTypeId())
+                    .orElseThrow(() -> OrderException.inventoryConfirmFailed("TicketType not found: " + offer.getTicketTypeId()));
+            
+            snapshots.add(new OrderItemSnapshot(
+                    item.getId(),
+                    item.getOfferId(),
+                    offer.getTicketTypeId(),
+                    ticketType.getName(),
+                    offer.getName(),
+                    item.getUnitFaceValue(),
+                    item.getCurrency(),
+                    item.getQty(),
+                    item.getSeatingMode() == io.qzz.hoangvu.ticketpeak.api.offer.model.SeatingMode.GENERAL_ADMISSION ?
+                            io.qzz.hoangvu.ticketpeak.api.offer.model.SeatingMode.GENERAL_ADMISSION :
+                            io.qzz.hoangvu.ticketpeak.api.offer.model.SeatingMode.RESERVED_SEATING,
+                    item.getAreaId(),
+                    item.getSeatId()
+            ));
+        }
+        return snapshots;
     }
 }

@@ -1,6 +1,6 @@
 # 015 Ticket API — Issuance, TOTP QR, Check-in, Transfer, and Void
 
-Status: planned
+Status: done
 
 ---
 

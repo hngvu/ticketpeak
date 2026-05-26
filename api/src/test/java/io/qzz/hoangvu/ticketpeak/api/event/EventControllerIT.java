@@ -180,6 +180,7 @@ class EventControllerIT {
                 false,
                 true,
                 true,
+                0, // maxTransferCount
                 List.of(),
                 List.of()
         );
@@ -212,6 +213,7 @@ class EventControllerIT {
                 true,
                 true,
                 false,
+                0, // maxTransferCount
                 List.of(),
                 List.of()
         );
@@ -241,6 +243,7 @@ class EventControllerIT {
                 false,
                 false,
                 true,
+                0, // maxTransferCount
                 List.of(),
                 List.of()
         );
