@@ -264,12 +264,38 @@ public class OrderService {
     }
 
     private List<OrderItemSnapshot> buildSnapshots(Order order) {
+        List<UUID> offerIds = order.getItems().stream()
+                .map(OrderItem::getOfferId)
+                .distinct()
+                .toList();
+
+        List<Offer> offers = offerRepository.findAllById(offerIds);
+        java.util.Map<UUID, Offer> offerMap = new java.util.HashMap<>();
+        for (Offer o : offers) {
+            offerMap.put(o.getId(), o);
+        }
+
+        List<UUID> ticketTypeIds = offers.stream()
+                .map(Offer::getTicketTypeId)
+                .distinct()
+                .toList();
+
+        List<TicketType> ticketTypes = ticketTypeRepository.findAllById(ticketTypeIds);
+        java.util.Map<UUID, TicketType> ticketTypeMap = new java.util.HashMap<>();
+        for (TicketType t : ticketTypes) {
+            ticketTypeMap.put(t.getId(), t);
+        }
+
         List<OrderItemSnapshot> snapshots = new ArrayList<>();
         for (OrderItem item : order.getItems()) {
-            Offer offer = offerRepository.findById(item.getOfferId())
-                    .orElseThrow(() -> OrderException.inventoryConfirmFailed("Offer not found: " + item.getOfferId()));
-            TicketType ticketType = ticketTypeRepository.findById(offer.getTicketTypeId())
-                    .orElseThrow(() -> OrderException.inventoryConfirmFailed("TicketType not found: " + offer.getTicketTypeId()));
+            Offer offer = offerMap.get(item.getOfferId());
+            if (offer == null) {
+                throw OrderException.inventoryConfirmFailed("Offer not found: " + item.getOfferId());
+            }
+            TicketType ticketType = ticketTypeMap.get(offer.getTicketTypeId());
+            if (ticketType == null) {
+                throw OrderException.inventoryConfirmFailed("TicketType not found: " + offer.getTicketTypeId());
+            }
             
             snapshots.add(new OrderItemSnapshot(
                     item.getId(),
@@ -280,9 +306,7 @@ public class OrderService {
                     item.getUnitFaceValue(),
                     item.getCurrency(),
                     item.getQty(),
-                    item.getSeatingMode() == io.qzz.hoangvu.ticketpeak.api.offer.model.SeatingMode.GENERAL_ADMISSION ?
-                            io.qzz.hoangvu.ticketpeak.api.offer.model.SeatingMode.GENERAL_ADMISSION :
-                            io.qzz.hoangvu.ticketpeak.api.offer.model.SeatingMode.RESERVED_SEATING,
+                    item.getSeatingMode(),
                     item.getAreaId(),
                     item.getSeatId()
             ));

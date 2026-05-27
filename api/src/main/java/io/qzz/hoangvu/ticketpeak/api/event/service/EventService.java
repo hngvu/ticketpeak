@@ -105,6 +105,9 @@ public class EventService {
                 .transferEnabled(req.transferEnabled())
                 .maxTransferCount(req.maxTransferCount())
                 .serviceFeePercent(req.serviceFeePercent() != null ? req.serviceFeePercent() : BigDecimal.ZERO)
+                .resaleEnabled(false)
+                .maxResaleListingsPerUser(1)
+                .resalePriceCapPercent(null)
                 .build();
 
         Event savedEvent = eventRepository.save(event);
@@ -524,6 +527,9 @@ public class EventService {
                 .transferEnabled(sourceEvent.isTransferEnabled())
                 .maxTransferCount(sourceEvent.getMaxTransferCount())
                 .serviceFeePercent(sourceEvent.getServiceFeePercent())
+                .resaleEnabled(sourceEvent.isResaleEnabled())
+                .maxResaleListingsPerUser(sourceEvent.getMaxResaleListingsPerUser())
+                .resalePriceCapPercent(sourceEvent.getResalePriceCapPercent())
                 .build();
 
         Event savedClone = eventRepository.save(clone);
@@ -543,6 +549,20 @@ public class EventService {
         }
 
         return convertToResponse(savedClone);
+    }
+
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#eventId))")
+    public EventResponse updateResaleConfig(UUID eventId, io.qzz.hoangvu.ticketpeak.api.resale.dto.UpdateResaleConfigRequest req) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> EventException.notFound());
+        
+        event.setResaleEnabled(req.resaleEnabled());
+        event.setResalePriceCapPercent(req.resalePriceCapPercent());
+        event.setMaxResaleListingsPerUser(req.maxResaleListingsPerUser());
+        
+        Event savedEvent = eventRepository.save(event);
+        return convertToResponse(savedEvent);
     }
 
     private List<EventResponse> convertToResponses(List<Event> events) {

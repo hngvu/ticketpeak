@@ -10,7 +10,9 @@ import io.qzz.hoangvu.ticketpeak.api.ticket.model.TicketTransfer;
 import io.qzz.hoangvu.ticketpeak.api.ticket.model.TicketTransferStatus;
 import io.qzz.hoangvu.ticketpeak.api.ticket.repository.TicketRepository;
 import io.qzz.hoangvu.ticketpeak.api.ticket.repository.TicketTransferRepository;
+import io.qzz.hoangvu.ticketpeak.api.ticket.event.TicketsVoidedEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,7 @@ public class TicketService {
     private final TicketTransferRepository transferRepository;
     private final EventRepository eventRepository;
     private final TotpService totpService;
+    private final ApplicationEventPublisher eventPublisher;
 
     // ── Reads ─────────────────────────────────────────────────────────────
 
@@ -133,8 +136,11 @@ public class TicketService {
         TicketTransfer transfer = transferRepository.findById(transferId)
                 .orElseThrow(TicketException::transferNotFound);
 
-        if (!transfer.getSenderId().equals(senderId) || transfer.getStatus() != TicketTransferStatus.PENDING) {
+        if (!transfer.getSenderId().equals(senderId)) {
             throw TicketException.transferNotFound();
+        }
+        if (transfer.getStatus() != TicketTransferStatus.PENDING) {
+            throw TicketException.transferNotPending();
         }
 
         Ticket ticket = ticketRepository.findById(transfer.getTicketId())
@@ -154,5 +160,10 @@ public class TicketService {
         List<Ticket> tickets = ticketRepository.findByOrderId(orderId);
         tickets.forEach(t -> t.setStatus(TicketStatus.VOID));
         ticketRepository.saveAll(tickets);
+
+        List<UUID> ids = tickets.stream().map(Ticket::getId).toList();
+        if (!ids.isEmpty()) {
+            eventPublisher.publishEvent(new TicketsVoidedEvent(ids));
+        }
     }
 }

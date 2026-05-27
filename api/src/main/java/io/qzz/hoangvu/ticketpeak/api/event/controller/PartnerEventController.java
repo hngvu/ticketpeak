@@ -162,4 +162,19 @@ public class PartnerEventController {
         EventResponse response = eventService.cloneEvent(id, request);
         return ResponseEntity.ok(ApiResponse.success(response, "Event cloned successfully"));
     }
+
+    @GetMapping("/{id}/resale-config")
+    public ResponseEntity<ApiResponse<EventResponse>> getResaleConfig(@PathVariable UUID id) {
+        EventResponse response = eventService.getEventForPartner(id);
+        return ResponseEntity.ok(ApiResponse.success(response, "OK"));
+    }
+
+    @PutMapping("/{id}/resale-config")
+    public ResponseEntity<ApiResponse<EventResponse>> updateResaleConfig(
+            @PathVariable UUID id,
+            @Valid @RequestBody io.qzz.hoangvu.ticketpeak.api.resale.dto.UpdateResaleConfigRequest request
+    ) {
+        EventResponse response = eventService.updateResaleConfig(id, request);
+        return ResponseEntity.ok(ApiResponse.success(response, "Resale config updated successfully"));
+    }
 }

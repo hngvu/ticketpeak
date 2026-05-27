@@ -80,6 +80,15 @@ public class Event {
     @Column(name = "service_fee_percent", nullable = false, precision = 5, scale = 2)
     BigDecimal serviceFeePercent;
 
+    @Column(name = "resale_enabled", nullable = false)
+    boolean resaleEnabled;
+
+    @Column(name = "resale_price_cap_percent", precision = 5, scale = 2)
+    BigDecimal resalePriceCapPercent;
+
+    @Column(name = "max_resale_listings_per_user", nullable = false)
+    int maxResaleListingsPerUser;
+
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)
     Instant createdAt;
