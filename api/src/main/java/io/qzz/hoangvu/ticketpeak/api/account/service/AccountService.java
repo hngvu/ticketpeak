@@ -92,6 +92,10 @@ public class AccountService {
         }
     }
 
+    public boolean existsByEmail(String email) {
+        return accountRepository.existsByEmailIgnoreCase(normalizeEmail(email));
+    }
+
     private Gender parseGender(String value) {
         if (value == null || value.isBlank()) {
             return null;

@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -31,6 +32,11 @@ public class AccountController {
     public ResponseEntity<ApiResponse<AccountResponse>> register(@Valid @RequestBody RegisterAccountRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(accountService.register(request), "Account created"));
+    }
+
+    @GetMapping("/exists")
+    public ResponseEntity<ApiResponse<Boolean>> existsByEmail(@RequestParam String email) {
+        return ResponseEntity.ok(ApiResponse.success(accountService.existsByEmail(email), "OK"));
     }
 
     @GetMapping("/me")
