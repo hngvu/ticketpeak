@@ -78,7 +78,7 @@ class VenueControllerIT {
                 "Saigon Hall", "1 Le Duan", "Ho Chi Minh City", "VN",
                 null, null, null, null, null, null, null, null);
 
-        String responseStr = mockMvc.perform(post("/api/internal/venues")
+        String responseStr = mockMvc.perform(post("/api/ops/venues")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
@@ -97,7 +97,7 @@ class VenueControllerIT {
 
     @Test
     void venue_deactivate_and_activate() throws Exception {
-        String responseStr = mockMvc.perform(post("/api/internal/venues")
+        String responseStr = mockMvc.perform(post("/api/ops/venues")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
@@ -106,12 +106,12 @@ class VenueControllerIT {
                 .andReturn().getResponse().getContentAsString();
         String venueId = JsonPath.read(responseStr, "$.data.id");
 
-        mockMvc.perform(post("/api/internal/venues/" + venueId + "/deactivate")
+        mockMvc.perform(post("/api/ops/venues/" + venueId + "/deactivate")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("INACTIVE"));
 
-        mockMvc.perform(post("/api/internal/venues/" + venueId + "/activate")
+        mockMvc.perform(post("/api/ops/venues/" + venueId + "/activate")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("ACTIVE"));
@@ -119,7 +119,7 @@ class VenueControllerIT {
 
     @Test
     void manifest_lifecycle_at_most_one_published() throws Exception {
-        String responseStr = mockMvc.perform(post("/api/internal/venues")
+        String responseStr = mockMvc.perform(post("/api/ops/venues")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
@@ -128,25 +128,25 @@ class VenueControllerIT {
                 .andReturn().getResponse().getContentAsString();
         String venueId = JsonPath.read(responseStr, "$.data.id");
 
-        mockMvc.perform(post("/api/internal/venues/" + venueId + "/manifests")
+        mockMvc.perform(post("/api/ops/venues/" + venueId + "/manifests")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CreateManifestRequest("M001", "Layout A", 1000))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.status").value("DRAFT"));
 
-        mockMvc.perform(post("/api/internal/venues/" + venueId + "/manifests")
+        mockMvc.perform(post("/api/ops/venues/" + venueId + "/manifests")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CreateManifestRequest("M002", "Layout B", 500))))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(post("/api/internal/venues/manifests/M001/publish")
+        mockMvc.perform(post("/api/ops/venues/manifests/M001/publish")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("PUBLISHED"));
 
-        mockMvc.perform(post("/api/internal/venues/manifests/M002/publish")
+        mockMvc.perform(post("/api/ops/venues/manifests/M002/publish")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("PUBLISHED"));
@@ -156,7 +156,7 @@ class VenueControllerIT {
 
     @Test
     void cannot_publish_non_draft_manifest() throws Exception {
-        String responseStr = mockMvc.perform(post("/api/internal/venues")
+        String responseStr = mockMvc.perform(post("/api/ops/venues")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
@@ -165,17 +165,17 @@ class VenueControllerIT {
                 .andReturn().getResponse().getContentAsString();
         String venueId = JsonPath.read(responseStr, "$.data.id");
 
-        mockMvc.perform(post("/api/internal/venues/" + venueId + "/manifests")
+        mockMvc.perform(post("/api/ops/venues/" + venueId + "/manifests")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CreateManifestRequest("M003", "L", 100))))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(post("/api/internal/venues/manifests/M003/publish")
+        mockMvc.perform(post("/api/ops/venues/manifests/M003/publish")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(post("/api/internal/venues/manifests/M003/publish")
+        mockMvc.perform(post("/api/ops/venues/manifests/M003/publish")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("INVALID_MANIFEST_STATUS"));
@@ -183,7 +183,7 @@ class VenueControllerIT {
 
     @Test
     void lookup_tables_upsert_and_list() throws Exception {
-        String responseStr = mockMvc.perform(post("/api/internal/venues")
+        String responseStr = mockMvc.perform(post("/api/ops/venues")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
@@ -192,20 +192,20 @@ class VenueControllerIT {
                 .andReturn().getResponse().getContentAsString();
         String venueId = JsonPath.read(responseStr, "$.data.id");
 
-        mockMvc.perform(post("/api/internal/venues/" + venueId + "/manifests")
+        mockMvc.perform(post("/api/ops/venues/" + venueId + "/manifests")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CreateManifestRequest("M004", "L", 100))))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(put("/api/internal/venues/manifests/M004/levels")
+        mockMvc.perform(put("/api/ops/venues/manifests/M004/levels")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new UpsertLookupRequest("L1", "Floor 1"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.description").value("Floor 1"));
 
-        mockMvc.perform(get("/api/internal/venues/manifests/M004/levels")
+        mockMvc.perform(get("/api/ops/venues/manifests/M004/levels")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(1));
@@ -213,7 +213,7 @@ class VenueControllerIT {
 
     @Test
     void seat_uniqueness_enforced() throws Exception {
-        String responseStr = mockMvc.perform(post("/api/internal/venues").header("Authorization", "Bearer " + adminToken)
+        String responseStr = mockMvc.perform(post("/api/ops/venues").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 new CreateVenueRequest("V", "A", "C", "VN", null, null, null, null, null, null, null, null))))
@@ -221,25 +221,25 @@ class VenueControllerIT {
                 .andReturn().getResponse().getContentAsString();
         String venueId = JsonPath.read(responseStr, "$.data.id");
 
-        mockMvc.perform(post("/api/internal/venues/" + venueId + "/manifests").header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(post("/api/ops/venues/" + venueId + "/manifests").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CreateManifestRequest("M005", "L", 100))))
                 .andExpect(status().isCreated());
-        mockMvc.perform(post("/api/internal/venues/manifests/M005/rs-areas").header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(post("/api/ops/venues/manifests/M005/rs-areas").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CreateRSAreaRequest("RA001", "L1", "S1", "P1"))))
                 .andExpect(status().isCreated());
-        mockMvc.perform(post("/api/internal/venues/rs-areas/RA001/rows").header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(post("/api/ops/venues/rs-areas/RA001/rows").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CreateSeatRowRequest("ROW001", "A", null))))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(post("/api/internal/venues/rows/ROW001/seats").header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(post("/api/ops/venues/rows/ROW001/seats").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CreateSeatRequest("S001", "1", null, null, null, null))))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(post("/api/internal/venues/rows/ROW001/seats").header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(post("/api/ops/venues/rows/ROW001/seats").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CreateSeatRequest("S002", "1", null, null, null, null))))
                 .andExpect(status().isConflict())
@@ -248,7 +248,7 @@ class VenueControllerIT {
 
     @Test
     void seat_row_uniqueness_enforced() throws Exception {
-        String responseStr = mockMvc.perform(post("/api/internal/venues").header("Authorization", "Bearer " + adminToken)
+        String responseStr = mockMvc.perform(post("/api/ops/venues").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 new CreateVenueRequest("V-Row", "A", "C", "VN", null, null, null, null, null, null, null, null))))
@@ -256,21 +256,21 @@ class VenueControllerIT {
                 .andReturn().getResponse().getContentAsString();
         String venueId = JsonPath.read(responseStr, "$.data.id");
 
-        mockMvc.perform(post("/api/internal/venues/" + venueId + "/manifests").header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(post("/api/ops/venues/" + venueId + "/manifests").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CreateManifestRequest("M005-Row", "L", 100))))
                 .andExpect(status().isCreated());
-        mockMvc.perform(post("/api/internal/venues/manifests/M005-Row/rs-areas").header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(post("/api/ops/venues/manifests/M005-Row/rs-areas").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CreateRSAreaRequest("RA001-Row", "L1", "S1", "P1"))))
                 .andExpect(status().isCreated());
         
-        mockMvc.perform(post("/api/internal/venues/rs-areas/RA001-Row/rows").header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(post("/api/ops/venues/rs-areas/RA001-Row/rows").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CreateSeatRowRequest("ROW001-Row", "Row-A", null))))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(post("/api/internal/venues/rs-areas/RA001-Row/rows").header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(post("/api/ops/venues/rs-areas/RA001-Row/rows").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CreateSeatRowRequest("ROW002-Row", "Row-A", null))))
                 .andExpect(status().isConflict())
@@ -279,7 +279,7 @@ class VenueControllerIT {
 
     @Test
     void manifest_clone_copies_hierarchy() throws Exception {
-        String responseStr = mockMvc.perform(post("/api/internal/venues").header("Authorization", "Bearer " + adminToken)
+        String responseStr = mockMvc.perform(post("/api/ops/venues").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 new CreateVenueRequest("V", "A", "C", "VN", null, null, null, null, null, null, null, null))))
@@ -287,23 +287,23 @@ class VenueControllerIT {
                 .andReturn().getResponse().getContentAsString();
         String venueId = JsonPath.read(responseStr, "$.data.id");
 
-        mockMvc.perform(post("/api/internal/venues/" + venueId + "/manifests").header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(post("/api/ops/venues/" + venueId + "/manifests").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CreateManifestRequest("M006", "Original", 100))))
                 .andExpect(status().isCreated());
-        mockMvc.perform(put("/api/internal/venues/manifests/M006/levels").header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(put("/api/ops/venues/manifests/M006/levels").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new UpsertLookupRequest("L1", "Level 1"))))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(post("/api/internal/venues/manifests/M006/clone").header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(post("/api/ops/venues/manifests/M006/clone").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CloneManifestRequest("M006-CLONE", "Clone Layout"))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.id").value("M006-CLONE"))
                 .andExpect(jsonPath("$.data.status").value("DRAFT"));
 
-        mockMvc.perform(get("/api/internal/venues/manifests/M006-CLONE/levels").header("Authorization", "Bearer " + adminToken))
+        mockMvc.perform(get("/api/ops/venues/manifests/M006-CLONE/levels").header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(1));
     }
@@ -325,7 +325,7 @@ class VenueControllerIT {
                 "Saigon Hall", "1 Le Duan", "Ho Chi Minh City", "VN",
                 null, null, null, null, null, null, null, null);
 
-        mockMvc.perform(post("/api/internal/venues")
+        mockMvc.perform(post("/api/ops/venues")
                         .header("Authorization", "Bearer " + organizerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))

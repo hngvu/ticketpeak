@@ -13,13 +13,13 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/internal/venues")
+@RequestMapping("/api/ops/venues")
 @PreAuthorize("hasRole('ADMIN')")
-public class InternalVenueController {
+public class OpsVenueController {
 
     private final VenueService venueService;
 
-    public InternalVenueController(VenueService venueService) {
+    public OpsVenueController(VenueService venueService) {
         this.venueService = venueService;
     }
 

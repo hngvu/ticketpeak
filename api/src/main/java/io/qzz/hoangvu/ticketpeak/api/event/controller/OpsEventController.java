@@ -15,12 +15,12 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/internal/events")
-public class InternalEventController {
+@RequestMapping("/api/ops/events")
+public class OpsEventController {
 
     private final EventService eventService;
 
-    public InternalEventController(EventService eventService) {
+    public OpsEventController(EventService eventService) {
         this.eventService = eventService;
     }
 

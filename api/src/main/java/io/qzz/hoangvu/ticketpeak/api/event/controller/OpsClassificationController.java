@@ -16,12 +16,12 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/internal/classifications")
-public class InternalClassificationController {
+@RequestMapping("/api/ops/classifications")
+public class OpsClassificationController {
 
     private final ClassificationService classificationService;
 
-    public InternalClassificationController(ClassificationService classificationService) {
+    public OpsClassificationController(ClassificationService classificationService) {
         this.classificationService = classificationService;
     }
 

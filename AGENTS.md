@@ -218,7 +218,7 @@ Rules:
 ## API Conventions
 
 - Base path and Namespaces:
-  - `/api/internal/...` - Platform Admin (Internal platform management)
+  - `/api/ops/...` - Platform Admin (Internal platform management)
   - `/api/partner/...` - Organizers (Partner portal)
   - `/api/...` - Buyers/Public (General ticket discovery & purchase)
 - Auth: `Authorization: Bearer <JWT>`

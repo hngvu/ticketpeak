@@ -16,12 +16,12 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/internal/attractions")
-public class InternalAttractionController {
+@RequestMapping("/api/ops/attractions")
+public class OpsAttractionController {
 
     private final AttractionService attractionService;
 
-    public InternalAttractionController(AttractionService attractionService) {
+    public OpsAttractionController(AttractionService attractionService) {
         this.attractionService = attractionService;
     }
 

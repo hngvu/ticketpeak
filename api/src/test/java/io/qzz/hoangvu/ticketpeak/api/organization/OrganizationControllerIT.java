@@ -100,7 +100,7 @@ class OrganizationControllerIT {
                 "Peak Events", ownerAccount.getId(), "Bio", null, null, null, null, null, null
         );
 
-        mockMvc.perform(post("/api/internal/organizations")
+        mockMvc.perform(post("/api/ops/organizations")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -117,7 +117,7 @@ class OrganizationControllerIT {
                 "Peak Events", ownerAccount.getId(), null, null, null, null, null, null, null
         );
 
-        mockMvc.perform(post("/api/internal/organizations")
+        mockMvc.perform(post("/api/ops/organizations")
                         .header("Authorization", "Bearer " + ownerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -133,14 +133,14 @@ class OrganizationControllerIT {
                 "Test Org", ownerAccount.getId(), null, null, null, null, null, null, null
         );
 
-        mockMvc.perform(post("/api/internal/organizations")
+        mockMvc.perform(post("/api/ops/organizations")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request1)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.slug").value("test-org"));
 
-        mockMvc.perform(post("/api/internal/organizations")
+        mockMvc.perform(post("/api/ops/organizations")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request2)))
@@ -157,7 +157,7 @@ class OrganizationControllerIT {
                 .status(OrganizationStatus.ACTIVE)
                 .build());
 
-        mockMvc.perform(get("/api/internal/organizations?name=find")
+        mockMvc.perform(get("/api/ops/organizations?name=find")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content.length()").value(1))
@@ -173,7 +173,7 @@ class OrganizationControllerIT {
                 .status(OrganizationStatus.ACTIVE)
                 .build());
 
-        mockMvc.perform(get("/api/internal/organizations/" + org.getId())
+        mockMvc.perform(get("/api/ops/organizations/" + org.getId())
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.name").value("GetMe"));

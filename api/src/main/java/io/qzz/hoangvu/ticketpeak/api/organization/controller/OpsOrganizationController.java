@@ -17,12 +17,12 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/internal/organizations")
-public class InternalOrganizationController {
+@RequestMapping("/api/ops/organizations")
+public class OpsOrganizationController {
 
     private final OrganizationService organizationService;
 
-    public InternalOrganizationController(OrganizationService organizationService) {
+    public OpsOrganizationController(OrganizationService organizationService) {
         this.organizationService = organizationService;
     }
 

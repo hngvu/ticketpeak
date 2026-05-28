@@ -306,9 +306,9 @@ Tất cả require `@AuthenticationPrincipal`, ownership enforced trong service.
 ### [NEW] `payout/controller/InternalPayoutController.java`
 
 ```
-GET   /api/internal/payouts                    — list with filter (status, scheduledBefore, sellerId)
-GET   /api/internal/payouts/{id}               — detail
-PATCH /api/internal/payouts/{id}/status        — update status (PROCESSING / PAID / FAILED)
+GET   /api/ops/payouts                    — list with filter (status, scheduledBefore, sellerId)
+GET   /api/ops/payouts/{id}               — detail
+PATCH /api/ops/payouts/{id}/status        — update status (PROCESSING / PAID / FAILED)
 ```
 
 Require `hasRole('ADMIN')`.

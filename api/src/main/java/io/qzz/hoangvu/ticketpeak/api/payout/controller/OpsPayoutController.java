@@ -16,10 +16,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/internal/payouts")
+@RequestMapping("/api/ops/payouts")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
-public class InternalPayoutController {
+public class OpsPayoutController {
 
     private final PayoutService payoutService;
 

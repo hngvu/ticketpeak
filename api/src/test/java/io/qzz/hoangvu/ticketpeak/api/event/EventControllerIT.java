@@ -270,7 +270,7 @@ class EventControllerIT {
                 "V-Pop King"
         );
 
-        String attrRes = mockMvc.perform(post("/api/internal/attractions")
+        String attrRes = mockMvc.perform(post("/api/ops/attractions")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(attrReq)))
@@ -291,7 +291,7 @@ class EventControllerIT {
                 null
         );
 
-        String classRes = mockMvc.perform(post("/api/internal/classifications")
+        String classRes = mockMvc.perform(post("/api/ops/classifications")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(classReq)))
@@ -314,7 +314,7 @@ class EventControllerIT {
                 .andExpect(jsonPath("$.data[0].name").value("Music"));
 
         // 5. Admin and Organizer endpoints fail for public anonymous
-        mockMvc.perform(post("/api/internal/attractions")
+        mockMvc.perform(post("/api/ops/attractions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(attrReq)))
                 .andExpect(status().isUnauthorized());

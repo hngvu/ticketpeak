@@ -46,7 +46,7 @@ Implemented the full Event API layer with the following structure:
 - `GET /api/partner/events/{id}` allows secure retrieval of DRAFT events for partners.
 - Publish (with venue manifest snapshot), postpone, cancel, and clone lifecycle transitions.
 
-**Internal/Admin endpoints** (`/api/internal/attractions`, `/api/internal/classifications`):
+**Internal/Admin endpoints** (`/api/ops/attractions`, `/api/ops/classifications`):
 - Write-only (POST, DELETE) endpoints for ADMIN role only.
 
 **Tests**: 8 integration tests covering CRUD, lifecycle, keyword search, hierarchical classification search, and DRAFT isolation — all passing.
