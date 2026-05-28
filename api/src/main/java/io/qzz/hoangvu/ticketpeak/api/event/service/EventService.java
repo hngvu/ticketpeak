@@ -265,7 +265,9 @@ public class EventService {
     ) {
         List<UUID> venueIdsByLocation = null;
         if (city != null || country != null) {
-            venueIdsByLocation = venueRepository.searchByLocation(city, country).stream()
+            String cityParam = (city != null && !city.isBlank()) ? "%" + city + "%" : null;
+            String countryParam = (country != null && !country.isBlank()) ? "%" + country + "%" : null;
+            venueIdsByLocation = venueRepository.searchByLocation(cityParam, countryParam).stream()
                     .map(v -> v.getId())
                     .toList();
         }
@@ -275,7 +277,8 @@ public class EventService {
         List<UUID> eventIdsForAttractionsByQuery = null;
 
         if (query != null && !query.isBlank()) {
-            venueIdsByQuery = venueRepository.searchByKeyword(query).stream()
+            String queryParam = "%" + query + "%";
+            venueIdsByQuery = venueRepository.searchByKeyword(queryParam).stream()
                     .map(v -> v.getId())
                     .toList();
 

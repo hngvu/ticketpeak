@@ -22,7 +22,7 @@ public class Manifest {
     String id; // Custom String ID (e.g., "000001002")
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "venue_id", nullable = false)
+    @JoinColumn(name = "venue_id", referencedColumnName = "id", nullable = false)
     Venue venue;
 
     @Column(nullable = false)

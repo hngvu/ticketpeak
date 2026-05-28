@@ -64,12 +64,18 @@ services:
 
   # Backend (Dockerfile bạn vừa tạo)
   ticketpeak-api:
-    build: .
+    build: . 
     container_name: ticketpeak-api
     ports:
       - "8080:8080"
     env_file:
       - .env
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      S3_ENDPOINT: http://minio:9000
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
     depends_on:
       postgres:
         condition: service_healthy

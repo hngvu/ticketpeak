@@ -14,23 +14,23 @@ public interface VenueRepository extends JpaRepository<Venue, UUID> {
 
     @Query("""
             SELECT v FROM Venue v
-            WHERE (:name IS NULL OR LOWER(v.name) LIKE LOWER(CONCAT('%', :name, '%')))
+            WHERE (CAST(:name AS String) IS NULL OR LOWER(v.name) LIKE LOWER(CAST(:name AS String)))
               AND (:status IS NULL OR v.status = :status)
             """)
     Page<Venue> search(@Param("name") String name, @Param("status") VenueStatus status, Pageable pageable);
 
     @Query("""
             SELECT v FROM Venue v
-            WHERE (:city IS NULL OR LOWER(v.city) LIKE LOWER(CONCAT('%', :city, '%')))
-              AND (:country IS NULL OR LOWER(v.country) LIKE LOWER(CONCAT('%', :country, '%')))
+            WHERE (CAST(:city AS String) IS NULL OR LOWER(v.city) LIKE LOWER(CAST(:city AS String)))
+              AND (CAST(:country AS String) IS NULL OR LOWER(v.country) LIKE LOWER(CAST(:country AS String)))
             """)
     java.util.List<Venue> searchByLocation(@Param("city") String city, @Param("country") String country);
 
     @Query("""
             SELECT v FROM Venue v
-            WHERE LOWER(v.name) LIKE LOWER(CONCAT('%', :query, '%'))
-               OR LOWER(v.city) LIKE LOWER(CONCAT('%', :query, '%'))
-               OR LOWER(v.country) LIKE LOWER(CONCAT('%', :query, '%'))
+            WHERE LOWER(v.name) LIKE LOWER(CAST(:query AS String))
+               OR LOWER(v.city) LIKE LOWER(CAST(:query AS String))
+               OR LOWER(v.country) LIKE LOWER(CAST(:query AS String))
             """)
     java.util.List<Venue> searchByKeyword(@Param("query") String query);
 }

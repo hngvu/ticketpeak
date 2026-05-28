@@ -56,7 +56,8 @@ public class VenueService {
 
     @Transactional(readOnly = true)
     public Page<VenueResponse> listVenues(String name, VenueStatus status, Pageable pageable) {
-        return venueRepository.search(name, status, pageable).map(VenueResponse::from);
+        String nameParam = (name != null && !name.isBlank()) ? "%" + name + "%" : null;
+        return venueRepository.search(nameParam, status, pageable).map(VenueResponse::from);
     }
 
     @Transactional(readOnly = true)

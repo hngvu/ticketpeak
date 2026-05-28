@@ -53,16 +53,16 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/auth/login", "/api/auth/refresh", "/api/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/accounts/register").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/events/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/resale/listings").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/events", "/api/events/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/resale/listings", "/api/resale/listings/**").permitAll()
                         .requestMatchers("/api/payments/vnpay/return", "/api/payments/vnpay/ipn", "/api/payments/stripe/webhook").permitAll()
 
-                        .requestMatchers(HttpMethod.GET, "/api/attractions/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/classifications/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/venues/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/organizations/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/attractions", "/api/attractions/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/classifications", "/api/classifications/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/venues", "/api/venues/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/organizations", "/api/organizations/**").permitAll()
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/api-docs/**").permitAll()
-                        .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
