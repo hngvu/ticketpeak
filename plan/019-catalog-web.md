@@ -366,9 +366,15 @@ Events dùng `EventCardHorizontal` — thumbnail trái, info phải. Phù hợp 
 ---
 
 ## Status
-
-`planned`
-
+ 
+`done`
+ 
 ## Outcome
+ 
+Fully implemented on SvelteKit client and Spring Boot api:
+1. **Discover Landing (`/discover`)**: Implemented homepage rendering 4 dynamic sections: Trending, Weekend, Top Concerts, and Popular Venues using asynchronous parallel SSR queries.
+2. **Category Page (`/discover/[category]`)**: Implemented dynamic genre pills with automatic layout hierarchy (Concerts, Sports, Arts, Family) mapping queries back to `/api/classifications`.
+3. **Search Results (`/search`)**: Retains state with inline query parameters for `q`, `startDate`, `endDate`, and `location`. Supports date presets (Today, This Weekend) and custom pickers.
+4. **Attraction & Venue Pages**: Implemented UUID-safe parsing for dynamic routes `attractions/[id]-[slug]` and `venues/[id]-[slug]` with fallbacks and list pagination.
+5. **Shared Components**: Reusable components created under `lib/components/catalog/` (`EventCard`, `VenueCard`, `PaginationBar`, `HorizontalScroll`, etc.) adhering to `DESIGN.md`.
 
-_To be filled after implementation._

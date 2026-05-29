@@ -43,7 +43,7 @@ Phases are ordered by dependency — later phases build on the output of earlier
 - [x] Define system roles: `ADMIN`, `ORGANIZER`, `BUYER`
 - [x] Define permission set per role
 - [ ] `@RequirePermission` annotation / interceptor for Spring controllers
-- [ ] Route guard in SvelteKit by role
+- [x] Route guard in SvelteKit by role
 
 ### `account`
 - [x] View own profile
@@ -176,18 +176,18 @@ Phases are ordered by dependency — later phases build on the output of earlier
 > Goal: users discover relevant events, receive timely notifications, and benefit from promotions.
 
 ### `search`
-- [ ] Full-text search across event titles, organizers, and venues
-- [ ] Filter by category, city, date range, price, availability
+- [x] Full-text search across event titles, organizers, and venues
+- [x] Filter by category, city, date range, price, availability
 - [ ] Faceted search (show result counts per filter value)
 - [ ] Ranking by relevance and popularity
 - [ ] Search suggestions / autocomplete
 - [ ] Vietnamese language support (tokenizer, diacritic folding)
 
 ### `discovery`
-- [ ] Homepage: trending events by city
-- [ ] "Near you" section (geolocation)
-- [ ] "Coming up" section by preferred category
-- [ ] Similar events (by category, venue, organizer)
+- [x] Homepage: trending events by city
+- [x] "Near you" section (geolocation)
+- [x] "Coming up" section by preferred category
+- [x] Similar events (by category, venue, organizer)
 - [ ] Personalized feed based on purchase and browsing history
 - [ ] Follow organizer / artist / venue
 - [ ] Notify followers when a followed organizer publishes a new event

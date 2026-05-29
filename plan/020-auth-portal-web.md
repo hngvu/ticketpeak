@@ -304,9 +304,14 @@ Dùng trong tất cả `+page.server.ts` cần check auth.
 ---
 
 ## Status
-
-`planned`
-
+ 
+`done`
+ 
 ## Outcome
+ 
+Fully implemented across multiple distinct user portals:
+1. **Buyer Portal (`/auth`)**: Implemented high-fidelity Ticketmaster-style split landing layout on desktop (hero banner on left, unified wizard form on right). Features interactive multi-step workflow checking email existence server-side, transitioning seamlessly into Login or customized Registration forms.
+2. **B2B Portal (`/b2b` & `/b2b/login`)**: Complete organizer dashboard landing and login layout using deep-tone marketing grids, with authorization guards strictly requiring the `ORGANIZER` role.
+3. **Ops Internal Portal (`/ops/login`)**: Dedicated charcoal dark mode layout for system administrators. Stripped of navigations, registration paths, and social logins.
+4. **Token Security (`hooks.server.ts`)**: Implemented secure httpOnly `access_token` and `refresh_token` session cookie strategy with automatic silent token rotation and server-side route guards validating role-based authorization rules.
 
-_To be filled after implementation._
