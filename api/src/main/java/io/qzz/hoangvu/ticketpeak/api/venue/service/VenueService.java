@@ -166,17 +166,17 @@ public class VenueService {
 
         // Clone lookup tables in batch
         List<Level> levels = levelRepository.findByManifestId(sourceManifestId).stream()
-                .map(l -> Level.builder().id(l.getId()).manifest(clone).description(l.getDescription()).build())
+                .map(l -> Level.builder().id(l.getId()).manifest(clone).description(l.getDescription()).color(l.getColor()).build())
                 .toList();
         levelRepository.saveAll(levels);
 
         List<Section> sections = sectionRepository.findByManifestId(sourceManifestId).stream()
-                .map(s -> Section.builder().id(s.getId()).manifest(clone).description(s.getDescription()).build())
+                .map(s -> Section.builder().id(s.getId()).manifest(clone).description(s.getDescription()).color(s.getColor()).build())
                 .toList();
         sectionRepository.saveAll(sections);
 
         List<PriceLevel> priceLevels = priceLevelRepository.findByManifestId(sourceManifestId).stream()
-                .map(p -> PriceLevel.builder().id(p.getId()).manifest(clone).description(p.getDescription()).build())
+                .map(p -> PriceLevel.builder().id(p.getId()).manifest(clone).description(p.getDescription()).color(p.getColor()).build())
                 .toList();
         priceLevelRepository.saveAll(priceLevels);
 
@@ -258,7 +258,7 @@ public class VenueService {
     @Transactional
     public LevelResponse upsertLevel(String manifestId, UpsertLookupRequest req) {
         Manifest manifest = requireManifest(manifestId);
-        Level level = Level.builder().id(req.id()).manifest(manifest).description(req.description()).build();
+        Level level = Level.builder().id(req.id()).manifest(manifest).description(req.description()).color(req.color()).build();
         return LevelResponse.from(levelRepository.save(level));
     }
 
@@ -271,7 +271,7 @@ public class VenueService {
     @Transactional
     public SectionResponse upsertSection(String manifestId, UpsertLookupRequest req) {
         Manifest manifest = requireManifest(manifestId);
-        Section section = Section.builder().id(req.id()).manifest(manifest).description(req.description()).build();
+        Section section = Section.builder().id(req.id()).manifest(manifest).description(req.description()).color(req.color()).build();
         return SectionResponse.from(sectionRepository.save(section));
     }
 
@@ -284,7 +284,7 @@ public class VenueService {
     @Transactional
     public PriceLevelResponse upsertPriceLevel(String manifestId, UpsertLookupRequest req) {
         Manifest manifest = requireManifest(manifestId);
-        PriceLevel pl = PriceLevel.builder().id(req.id()).manifest(manifest).description(req.description()).build();
+        PriceLevel pl = PriceLevel.builder().id(req.id()).manifest(manifest).description(req.description()).color(req.color()).build();
         return PriceLevelResponse.from(priceLevelRepository.save(pl));
     }
 

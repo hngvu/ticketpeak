@@ -30,4 +30,12 @@ public class CheckInController {
         CheckInResponse result = checkInService.checkIn(staff.accountId(), eventId, request);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
+
+    @GetMapping("/tickets")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    public ResponseEntity<ApiResponse<java.util.List<io.qzz.hoangvu.ticketpeak.api.ticket.dto.SimulatedTicketResponse>>> getTicketsForSimulation(
+            @PathVariable UUID eventId) {
+        java.util.List<io.qzz.hoangvu.ticketpeak.api.ticket.dto.SimulatedTicketResponse> responses = checkInService.getTicketsForSimulation(eventId);
+        return ResponseEntity.ok(ApiResponse.success(responses));
+    }
 }

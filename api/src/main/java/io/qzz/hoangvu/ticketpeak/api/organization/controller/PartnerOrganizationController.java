@@ -10,6 +10,9 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import io.qzz.hoangvu.ticketpeak.api.security.AuthenticatedAccount;
 
 import java.util.List;
 import java.util.UUID;
@@ -30,6 +33,16 @@ public class PartnerOrganizationController {
         this.organizationService = organizationService;
         this.memberService = memberService;
         this.invitationService = invitationService;
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<OrganizationResponse>>> getMyOrganizations() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof AuthenticatedAccount acc) {
+            List<OrganizationResponse> responses = organizationService.getMyOrganizations(acc.accountId());
+            return ResponseEntity.ok(ApiResponse.success(responses, "OK"));
+        }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
     @PutMapping("/{id}")

@@ -17,6 +17,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -85,6 +86,16 @@ public class GlobalExceptionHandler {
         log.debug("Resource not found: {}", request.getRequestURI());
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ApiErrorResponse(false, "NOT_FOUND", "The requested resource was not found", Instant.now()));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiErrorResponse> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException exception) {
+        log.warn("Parameter type mismatch: {} = {} (expected type: {})", 
+                exception.getName(), exception.getValue(), 
+                exception.getRequiredType() != null ? exception.getRequiredType().getSimpleName() : "unknown");
+        String message = String.format("Invalid value '%s' for parameter '%s'", exception.getValue(), exception.getName());
+        return ResponseEntity.badRequest()
+                .body(new ApiErrorResponse(false, "INVALID_PARAMETER", message, Instant.now()));
     }
 
     @ExceptionHandler(Exception.class)

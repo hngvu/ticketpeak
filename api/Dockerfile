@@ -23,10 +23,10 @@ ENV TZ=UTC \
     JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0"
 
 # --chown đảm bảo spring user sở hữu files
-COPY --chown=spring:spring --from=layers /app/dependencies/ ./
-COPY --chown=spring:spring --from=layers /app/spring-boot-loader/ ./
-COPY --chown=spring:spring --from=layers /app/snapshot-dependencies/ ./
-COPY --chown=spring:spring --from=layers /app/application/ ./
+COPY --chown=spring:spring --from=layers /app/app/dependencies/ ./
+COPY --chown=spring:spring --from=layers /app/app/spring-boot-loader/ ./
+COPY --chown=spring:spring --from=layers /app/app/snapshot-dependencies/ ./
+COPY --chown=spring:spring --from=layers /app/app/application/ ./
 
 EXPOSE 8080
 

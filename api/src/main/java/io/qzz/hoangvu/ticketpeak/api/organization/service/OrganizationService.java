@@ -119,6 +119,18 @@ public class OrganizationService {
     }
 
     @Transactional(readOnly = true)
+    public java.util.List<OrganizationResponse> getMyOrganizations(UUID accountId) {
+        java.util.List<Organization> owned = organizationRepository.findByOwnerAccountId(accountId);
+        java.util.List<Organization> memberOf = organizationMemberRepository.findByAccountIdAndStatus(accountId, OrganizationMemberStatus.ACTIVE)
+                .stream().map(OrganizationMember::getOrganization).toList();
+
+        java.util.Set<Organization> all = new java.util.LinkedHashSet<>(owned);
+        all.addAll(memberOf);
+
+        return all.stream().map(OrganizationResponse::from).toList();
+    }
+
+    @Transactional(readOnly = true)
     @PostAuthorize("returnObject.status() == T(io.qzz.hoangvu.ticketpeak.api.organization.model.OrganizationStatus).ACTIVE or hasRole('ADMIN') or @orgSecurity.isOwnerOrMember(#id)")
     public OrganizationResponse getOrganization(UUID id) {
         Organization org = organizationRepository.findById(id)

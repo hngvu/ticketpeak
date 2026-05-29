@@ -53,4 +53,26 @@ public class CheckInService {
 
         return CheckInResponse.success(ticket);
     }
+
+    @Transactional(readOnly = true)
+    public java.util.List<io.qzz.hoangvu.ticketpeak.api.ticket.dto.SimulatedTicketResponse> getTicketsForSimulation(UUID eventId) {
+        java.util.List<Ticket> tickets = ticketRepository.findByEventId(eventId);
+        return tickets.stream().map(t -> {
+            String otp = "";
+            try {
+                otp = totpService.generateOtp(t.getTotpSecretEnc());
+            } catch (Exception e) {
+                // Fallback for missing/empty OTP
+            }
+            String payload = t.getId().toString() + ":" + otp;
+            return new io.qzz.hoangvu.ticketpeak.api.ticket.dto.SimulatedTicketResponse(
+                    t.getId(),
+                    t.getOfferName(),
+                    t.getSeatId(),
+                    t.getStatus().name(),
+                    otp,
+                    payload
+            );
+        }).toList();
+    }
 }

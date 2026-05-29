@@ -21,4 +21,6 @@ public class PriceLevel {
     Manifest manifest;
 
     String description; // e.g., "VIP", "Category A"
+
+    String color;
 }

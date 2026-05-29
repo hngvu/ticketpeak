@@ -22,4 +22,6 @@ public class Level {
 
     @Column(nullable = false)
     String description; // e.g., "Planta 1", "Orchestra"
+
+    String color;
 }

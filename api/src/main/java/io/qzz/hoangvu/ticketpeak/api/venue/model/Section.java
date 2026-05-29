@@ -22,4 +22,6 @@ public class Section {
 
     @Column(nullable = false)
     String description; // e.g., "Patio de Butacas", "Anfiteatro"
+
+    String color;
 }
