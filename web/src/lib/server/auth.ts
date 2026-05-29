@@ -17,8 +17,11 @@ export function parseJwt(token: string): any {
 	}
 }
 
-export function getCurrentUser(cookies: import('@sveltejs/kit').Cookies): User | null {
-	const token = cookies.get('access_token');
+export function getCurrentUser(
+	cookies: import('@sveltejs/kit').Cookies,
+	tokenKey: string = 'access_token'
+): User | null {
+	const token = cookies.get(tokenKey);
 	if (!token) return null;
 	const parsed = parseJwt(token);
 	if (!parsed) return null;

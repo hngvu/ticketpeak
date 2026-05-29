@@ -60,7 +60,7 @@ export const actions: Actions = {
 			}
 
 			// 3. Store cookies for genuine admin accounts
-			cookies.set('access_token', accessToken, {
+			cookies.set('ops_access_token', accessToken, {
 				path: '/',
 				httpOnly: true,
 				secure: true,
@@ -68,7 +68,7 @@ export const actions: Actions = {
 				maxAge: accessTokenExpiresIn || 900
 			});
 
-			cookies.set('refresh_token', refreshToken, {
+			cookies.set('ops_refresh_token', refreshToken, {
 				path: '/',
 				httpOnly: true,
 				secure: true,

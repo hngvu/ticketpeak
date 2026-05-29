@@ -5,9 +5,21 @@ import { env } from '$env/dynamic/private';
 const API_BASE = env.API_BASE || 'http://localhost:8080';
 
 export const handle: Handle = async ({ event, resolve }) => {
-	let user = getCurrentUser(event.cookies);
-	const accessToken = event.cookies.get('access_token');
-	const refreshToken = event.cookies.get('refresh_token');
+	const pathname = event.url.pathname;
+	let accessKey = 'access_token';
+	let refreshKey = 'refresh_token';
+
+	if (pathname.startsWith('/b2b')) {
+		accessKey = 'b2b_access_token';
+		refreshKey = 'b2b_refresh_token';
+	} else if (pathname.startsWith('/ops')) {
+		accessKey = 'ops_access_token';
+		refreshKey = 'ops_refresh_token';
+	}
+
+	let user = getCurrentUser(event.cookies, accessKey);
+	const accessToken = event.cookies.get(accessKey);
+	const refreshToken = event.cookies.get(refreshKey);
 
 	// If access token is missing or expired, but we have a refresh token, try to refresh
 	if ((!accessToken || !user) && refreshToken) {
@@ -36,7 +48,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 						} = json.data;
 
 						// Set new cookies
-						event.cookies.set('access_token', newAccess, {
+						event.cookies.set(accessKey, newAccess, {
 							path: '/',
 							httpOnly: true,
 							secure: true,
@@ -44,7 +56,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 							maxAge: accessTokenExpiresIn || 900
 						});
 
-						event.cookies.set('refresh_token', newRefresh, {
+						event.cookies.set(refreshKey, newRefresh, {
 							path: '/',
 							httpOnly: true,
 							secure: true,
@@ -61,27 +73,25 @@ export const handle: Handle = async ({ event, resolve }) => {
 						}
 					} else {
 						// refresh payload is invalid, clear cookies
-						event.cookies.delete('access_token', { path: '/' });
-						event.cookies.delete('refresh_token', { path: '/' });
+						event.cookies.delete(accessKey, { path: '/' });
+						event.cookies.delete(refreshKey, { path: '/' });
 					}
 				} else {
 					// refresh failed (e.g. 401), clear cookies
-					event.cookies.delete('access_token', { path: '/' });
-					event.cookies.delete('refresh_token', { path: '/' });
+					event.cookies.delete(accessKey, { path: '/' });
+					event.cookies.delete(refreshKey, { path: '/' });
 				}
 			} catch (err) {
 				console.error('[HOOKS REFRESH ERROR]:', err);
 			}
 		} else {
 			// refresh token expired, clear both cookies
-			event.cookies.delete('access_token', { path: '/' });
-			event.cookies.delete('refresh_token', { path: '/' });
+			event.cookies.delete(accessKey, { path: '/' });
+			event.cookies.delete(refreshKey, { path: '/' });
 		}
 	}
 
 	event.locals.user = user;
-
-	const pathname = event.url.pathname;
 
 	// Route guards:
 	// 1. /auth: if logged in, redirect to correct portal based on role

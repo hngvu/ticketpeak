@@ -36,7 +36,7 @@ export const actions: Actions = {
 			const { accessToken, refreshToken, accessTokenExpiresIn, refreshTokenExpiresIn } = res;
 
 			// Store cookies
-			cookies.set('access_token', accessToken, {
+			cookies.set('b2b_access_token', accessToken, {
 				path: '/',
 				httpOnly: true,
 				secure: true,
@@ -44,7 +44,7 @@ export const actions: Actions = {
 				maxAge: accessTokenExpiresIn || 900
 			});
 
-			cookies.set('refresh_token', refreshToken, {
+			cookies.set('b2b_refresh_token', refreshToken, {
 				path: '/',
 				httpOnly: true,
 				secure: true,

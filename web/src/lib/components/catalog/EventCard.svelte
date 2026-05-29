@@ -1,6 +1,6 @@
 <script lang="ts">
-	/* eslint-disable @typescript-eslint/no-explicit-any */
-	import { resolve } from '$app/paths';
+	/* eslint-disable svelte/no-navigation-without-resolve */
+	import { encodeUuidToBase62 } from '$lib/base62';
 
 	export interface EventCardProps {
 		event: {
@@ -65,7 +65,7 @@
 </script>
 
 <a
-	href={resolve(`/events/${event.id}-${event.slug}` as any)}
+	href="/{event.slug}/event/{encodeUuidToBase62(event.id)}"
 	class="group flex h-full transform flex-col overflow-hidden rounded-lg border border-hairline bg-canvas shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-hairline-strong hover:shadow-md"
 >
 	<!-- Thumbnail Aspect 16:9 -->

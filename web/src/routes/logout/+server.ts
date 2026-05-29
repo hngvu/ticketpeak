@@ -22,6 +22,10 @@ export const POST: RequestHandler = async ({ cookies }) => {
 	// Always clear cookies locally even if backend call fails
 	cookies.delete('access_token', { path: '/' });
 	cookies.delete('refresh_token', { path: '/' });
+	cookies.delete('b2b_access_token', { path: '/' });
+	cookies.delete('b2b_refresh_token', { path: '/' });
+	cookies.delete('ops_access_token', { path: '/' });
+	cookies.delete('ops_refresh_token', { path: '/' });
 
 	throw redirect(303, '/');
 };

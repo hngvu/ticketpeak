@@ -1,6 +1,6 @@
 <script lang="ts">
-	/* eslint-disable @typescript-eslint/no-explicit-any */
-	import { resolve } from '$app/paths';
+	/* eslint-disable svelte/no-navigation-without-resolve */
+	import { encodeUuidToBase62 } from '$lib/base62';
 
 	export interface EventCardProps {
 		event: {
@@ -88,7 +88,7 @@
 			<h3
 				class="line-clamp-1 text-sm leading-snug font-bold tracking-tight text-ink transition-colors group-hover:text-primary md:text-base"
 			>
-				<a href={resolve(`/events/${event.id}-${event.slug}` as any)}>{event.title}</a>
+				<a href="/{event.slug}/event/{encodeUuidToBase62(event.id)}">{event.title}</a>
 			</h3>
 			<div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-mute">
 				<span>{parts?.time || ''}</span>
@@ -119,7 +119,7 @@
 			<span class="font-mono text-sm font-bold text-ink">$25.00</span>
 		</div>
 		<a
-			href={resolve(`/events/${event.id}-${event.slug}` as any)}
+			href="/{event.slug}/event/{encodeUuidToBase62(event.id)}"
 			class="inline-flex h-9 cursor-pointer items-center justify-center rounded-full bg-primary px-5 text-xs font-semibold text-on-primary shadow-sm transition-colors group-hover:shadow hover:bg-primary/95"
 		>
 			<span>See Tickets</span>
