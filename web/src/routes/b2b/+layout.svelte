@@ -11,41 +11,39 @@
 	let showAccountMenu = $state(false);
 	let isSidebarCollapsed = $state(false);
 
-	const isLoginPageOrLanding = $derived(
-		page.url.pathname === '/b2b/login' || page.url.pathname === '/b2b'
-	);
+	const isLoginPageOrLanding = $derived(page.url.pathname === '/b2b/login');
 
 	const sidebarItems = $derived([
 		{
 			label: 'Events',
 			href: `/b2b/dashboard?organizationId=${data.selectedOrgId || ''}`,
 			active: page.url.pathname.startsWith('/b2b/dashboard'),
-			icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="h-5 w-5"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18"/></svg>`
+			iconUrl: '/calendar.svg'
 		},
 		{
 			label: 'Sales',
 			href: `/b2b/sales?organizationId=${data.selectedOrgId || ''}`,
 			active: page.url.pathname.startsWith('/b2b/sales'),
-			icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="h-5 w-5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`
+			iconUrl: '/trendingup.svg'
 		},
 		{
 			label: 'Entry Gate',
 			href: `/b2b/entry?organizationId=${data.selectedOrgId || ''}`,
 			active:
 				page.url.pathname.startsWith('/b2b/entry') || page.url.pathname.startsWith('/b2b/check-in'),
-			icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="h-5 w-5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h3v3H7zm10 0h-3v3h3zM7 17h3v-3H7zm10 0h-3v-3h3zM10 12h4m-2-2v4"/></svg>`
+			iconUrl: '/scan.svg'
 		},
 		{
 			label: 'Reports',
 			href: `/b2b/reports?organizationId=${data.selectedOrgId || ''}`,
 			active: page.url.pathname.startsWith('/b2b/reports'),
-			icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="h-5 w-5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>`
+			iconUrl: '/document.svg'
 		},
 		{
 			label: 'Marketing',
 			href: `/b2b/marketing?organizationId=${data.selectedOrgId || ''}`,
 			active: page.url.pathname.startsWith('/b2b/marketing'),
-			icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="h-5 w-5"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5zM2 2l7.5 7.5M14 14l3-3"/></svg>`
+			iconUrl: '/megaphone.svg'
 		}
 	]);
 
@@ -62,7 +60,7 @@
 			class="sticky top-0 z-40 flex items-center justify-between border-b border-slate-800 bg-slate-900 px-6 py-4 text-white"
 		>
 			<div class="flex items-center gap-3">
-				<a href="/b2b" class="flex items-center gap-2">
+				<a href="/business" class="flex items-center gap-2">
 					<img src="/logo.png" alt="Ticketpeak Logo" class="h-8 brightness-0 invert" />
 					<span
 						class="rounded-full bg-primary/20 px-2.5 py-0.5 text-xs font-bold tracking-wider text-primary uppercase"
@@ -128,15 +126,11 @@
 						class="relative rounded-full p-1.5 text-slate-300 transition hover:bg-slate-800 hover:text-white focus:outline-none"
 						aria-label="Notifications"
 					>
-						<svg
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							class="h-5 w-5"
-						>
-							<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />
-						</svg>
+						<span
+							class="block h-5 w-5 bg-current"
+							style="mask: url(/bell.svg) no-repeat center / contain; -webkit-mask: url(/bell.svg) no-repeat center / contain;"
+							aria-hidden="true"
+						></span>
 						<span class="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary"></span>
 					</button>
 
@@ -164,7 +158,11 @@
 							class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-sm font-bold text-primary transition-all duration-200 hover:opacity-85 focus:outline-none"
 							aria-label="User Account Menu"
 						>
-							{data.user?.email?.[0]?.toUpperCase() || 'O'}
+							<span
+								class="h-4.5 w-4.5 bg-current"
+								style="mask: url(/user.svg) no-repeat center / contain; -webkit-mask: url(/user.svg) no-repeat center / contain;"
+								aria-hidden="true"
+							></span>
 						</button>
 
 						<!-- Account Dropdown Menu -->
@@ -243,9 +241,11 @@
 									: 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}"
 								title={isSidebarCollapsed ? item.label : ''}
 							>
-								<span class="shrink-0 text-current">
-									{@html item.icon}
-								</span>
+								<span
+									class="h-5 w-5 shrink-0 bg-current"
+									style="mask: url({item.iconUrl}) no-repeat center / contain; -webkit-mask: url({item.iconUrl}) no-repeat center / contain;"
+									aria-hidden="true"
+								></span>
 								{#if !isSidebarCollapsed}
 									<span class="truncate transition-opacity duration-200">{item.label}</span>
 								{/if}

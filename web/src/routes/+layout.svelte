@@ -454,6 +454,7 @@
 					<a href="/discover" class="transition-colors hover:text-white">Hotels</a>
 					<a href="/discover" class="transition-colors hover:text-white">Sell</a>
 					<a href="/discover" class="transition-colors hover:text-white">Gift Cards</a>
+					<a href="/business" class="transition-colors hover:text-white">For Organizers</a>
 					<a href="/discover" class="transition-colors hover:text-white">Help</a>
 					<a href="/discover" class="transition-colors hover:text-white">VIP</a>
 					<img
