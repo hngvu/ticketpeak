@@ -5,6 +5,9 @@ import { sveltekit } from '@sveltejs/kit/vite';
 
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
+	ssr: {
+		noExternal: ['@tabler/icons-svelte']
+	},
 	test: {
 		expect: { requireAssertions: true },
 		projects: [

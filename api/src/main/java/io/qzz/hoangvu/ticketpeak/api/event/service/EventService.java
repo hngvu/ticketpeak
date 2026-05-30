@@ -568,7 +568,7 @@ public class EventService {
         return convertToResponse(savedEvent);
     }
 
-    private List<EventResponse> convertToResponses(List<Event> events) {
+    public List<EventResponse> convertToResponses(List<Event> events) {
         if (events == null || events.isEmpty()) {
             return List.of();
         }

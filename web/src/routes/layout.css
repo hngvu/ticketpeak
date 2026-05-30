@@ -38,3 +38,51 @@ body {
 	color: var(--color-body);
 	font-family: var(--font-sans);
 }
+
+/* Premium ultra-thin scrollbars with no arrows at the two ends */
+::-webkit-scrollbar,
+*::-webkit-scrollbar {
+	width: 4px !important;
+	height: 4px !important;
+	display: block !important;
+}
+
+::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+	background: transparent !important;
+}
+
+::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+	background: #cbd5e1 !important; /* slate-300 */
+	border-radius: 9999px !important;
+}
+
+::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
+	background: #94a3b8 !important; /* slate-400 */
+}
+
+/* Explicitly hide scrollbar buttons (arrows at top/bottom/left/right) on all scrollable elements */
+::-webkit-scrollbar-button,
+*::-webkit-scrollbar-button {
+	display: none !important;
+	width: 0 !important;
+	height: 0 !important;
+}
+
+/* Firefox compatibility */
+* {
+	scrollbar-width: thin !important;
+	scrollbar-color: #cbd5e1 transparent !important;
+}
+
+/* Helper class to hide scrollbars completely while preserving scroll functionality */
+.no-scrollbar::-webkit-scrollbar {
+	display: none !important;
+}
+
+.no-scrollbar {
+	-ms-overflow-style: none !important; /* IE and Edge */
+	scrollbar-width: none !important; /* Firefox */
+}

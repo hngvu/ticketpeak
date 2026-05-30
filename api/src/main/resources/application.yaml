@@ -103,10 +103,10 @@ app:
     refresh-token-expiry: 604800  # 7 ngày (giây)
 
   s3:
-    endpoint: ${S3_ENDPOINT}
-    access-key: ${S3_ACCESS_KEY}
-    secret-key: ${S3_SECRET_KEY}
-    bucket-name: ${S3_BUCKET_NAME}
+    endpoint: ${S3_ENDPOINT:http://localhost:9000}
+    access-key: ${S3_ACCESS_KEY:storage}
+    secret-key: ${S3_SECRET_KEY:ilovestorage}
+    bucket-name: ${S3_BUCKET_NAME:ticketpeak-storage}
     region: ${S3_REGION:ap-southeast-1} 
 
   cors:

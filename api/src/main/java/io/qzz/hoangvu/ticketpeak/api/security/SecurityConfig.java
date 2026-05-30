@@ -55,6 +55,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/accounts/register").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/accounts/exists").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/events", "/api/events/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/event-groups", "/api/event-groups/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/resale/listings", "/api/resale/listings/**").permitAll()
                         .requestMatchers("/api/payments/vnpay/return", "/api/payments/vnpay/ipn", "/api/payments/stripe/webhook").permitAll()
 
