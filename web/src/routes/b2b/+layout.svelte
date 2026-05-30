@@ -5,19 +5,20 @@
 	import '../../routes/layout.css';
 	import { page } from '$app/state';
 	import {
-		IconLayoutDashboard,
-		IconCalendar,
-		IconTicket,
-		IconChartBar,
-		IconScan,
-		IconSpeakerphone,
 		IconChevronRight,
 		IconChevronDown,
 		IconSearch,
 		IconBell,
 		IconLayoutGrid,
 		IconLogout,
-		IconExternalLink
+		IconExternalLink,
+		IconSpeakerphone,
+		IconTicket,
+		IconReportMoney,
+		IconScan,
+		IconChartBar,
+		IconLayoutDashboard,
+		IconCalendar
 	} from '@tabler/icons-svelte';
 
 	let { data, children }: { data: any; children: Snippet } = $props();
@@ -43,39 +44,65 @@
 			icon: IconTicket,
 			items: [
 				{
-					label: 'Create event',
-					href: `/b2b/dashboard?action=create&organizationId=${data.selectedOrgId || ''}`,
+					label: 'All Events',
+					href: `/b2b/events?tab=all&organizationId=${data.selectedOrgId || ''}`,
 					active:
-						page.url.pathname.startsWith('/b2b/dashboard') &&
-						page.url.searchParams.get('action') === 'create'
+						page.url.pathname.startsWith('/b2b/events') &&
+						page.url.searchParams.get('tab') === 'all'
 				},
 				{
-					label: 'Interactive Seat Map (ISM)',
-					href: `/b2b/dashboard?tab=ism&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/dashboard') &&
-						page.url.searchParams.get('tab') === 'ism'
+					label: 'Create Event',
+					href: `/b2b/events/create?organizationId=${data.selectedOrgId || ''}`,
+					active: page.url.pathname === '/b2b/events/create'
 				},
 				{
-					label: 'Holds & Kills',
-					href: `/b2b/dashboard?tab=holds&organizationId=${data.selectedOrgId || ''}`,
+					label: 'Event Groups',
+					href: `/b2b/events?tab=groups&organizationId=${data.selectedOrgId || ''}`,
 					active:
-						page.url.pathname.startsWith('/b2b/dashboard') &&
-						page.url.searchParams.get('tab') === 'holds'
-				},
-				{
-					label: 'Event groups & Tours',
-					href: `/b2b/dashboard?tab=groups&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/dashboard') &&
+						page.url.pathname.startsWith('/b2b/events') &&
 						page.url.searchParams.get('tab') === 'groups'
 				},
 				{
-					label: 'Templates',
-					href: `/b2b/dashboard?tab=templates&organizationId=${data.selectedOrgId || ''}`,
+					label: 'Bulk Edit',
+					href: `/b2b/events?tab=bulk&organizationId=${data.selectedOrgId || ''}`,
 					active:
-						page.url.pathname.startsWith('/b2b/dashboard') &&
+						page.url.pathname.startsWith('/b2b/events') &&
+						page.url.searchParams.get('tab') === 'bulk'
+				},
+				{
+					label: 'Templates',
+					href: `/b2b/events?tab=templates&organizationId=${data.selectedOrgId || ''}`,
+					active:
+						page.url.pathname.startsWith('/b2b/events') &&
 						page.url.searchParams.get('tab') === 'templates'
+				},
+				{
+					label: 'Offers & Presales',
+					href: `/b2b/events?tab=offers&organizationId=${data.selectedOrgId || ''}`,
+					active:
+						page.url.pathname.startsWith('/b2b/events') &&
+						page.url.searchParams.get('tab') === 'offers'
+				},
+				{
+					label: 'Holds & Kills',
+					href: `/b2b/events?tab=holds&organizationId=${data.selectedOrgId || ''}`,
+					active:
+						page.url.pathname.startsWith('/b2b/events') &&
+						page.url.searchParams.get('tab') === 'holds'
+				},
+				{
+					label: 'Seat Map',
+					href: `/b2b/events?tab=ism&organizationId=${data.selectedOrgId || ''}`,
+					active:
+						page.url.pathname.startsWith('/b2b/events') &&
+						page.url.searchParams.get('tab') === 'ism'
+				},
+				{
+					label: 'Collaborators',
+					href: `/b2b/events?tab=collaborators&organizationId=${data.selectedOrgId || ''}`,
+					active:
+						page.url.pathname.startsWith('/b2b/events') &&
+						page.url.searchParams.get('tab') === 'collaborators'
 				}
 			]
 		},
@@ -83,42 +110,42 @@
 			id: 'sales',
 			label: 'Sales',
 			subtitle: 'Thương mại & Kho vé',
-			icon: IconChartBar,
+			icon: IconReportMoney,
 			items: [
 				{
-					label: 'Real-time sales',
+					label: 'Real-time Sales',
 					href: `/b2b/sales?tab=realtime&organizationId=${data.selectedOrgId || ''}`,
 					active:
 						page.url.pathname.startsWith('/b2b/sales') &&
 						page.url.searchParams.get('tab') === 'realtime'
 				},
 				{
-					label: 'Price management',
-					href: `/b2b/sales?tab=pricing&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/sales') &&
-						page.url.searchParams.get('tab') === 'pricing'
-				},
-				{
-					label: 'Offers & Presales',
-					href: `/b2b/sales?tab=offers&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/sales') &&
-						page.url.searchParams.get('tab') === 'offers'
-				},
-				{
-					label: 'Inventory control',
+					label: 'Inventory',
 					href: `/b2b/sales?tab=inventory&organizationId=${data.selectedOrgId || ''}`,
 					active:
 						page.url.pathname.startsWith('/b2b/sales') &&
 						page.url.searchParams.get('tab') === 'inventory'
 				},
 				{
-					label: 'Orders & Refunds',
+					label: 'Price Management',
+					href: `/b2b/sales?tab=pricing&organizationId=${data.selectedOrgId || ''}`,
+					active:
+						page.url.pathname.startsWith('/b2b/sales') &&
+						page.url.searchParams.get('tab') === 'pricing'
+				},
+				{
+					label: 'Orders',
 					href: `/b2b/sales?tab=orders&organizationId=${data.selectedOrgId || ''}`,
 					active:
 						page.url.pathname.startsWith('/b2b/sales') &&
 						(page.url.searchParams.get('tab') === 'orders' || !page.url.searchParams.get('tab'))
+				},
+				{
+					label: 'Price Requests',
+					href: `/b2b/sales?tab=requests&organizationId=${data.selectedOrgId || ''}`,
+					active:
+						page.url.pathname.startsWith('/b2b/sales') &&
+						page.url.searchParams.get('tab') === 'requests'
 				}
 			]
 		},
@@ -129,32 +156,53 @@
 			icon: IconScan,
 			items: [
 				{
-					label: 'Ingress monitor',
-					href: `/b2b/entry?tab=ingress&organizationId=${data.selectedOrgId || ''}`,
+					label: 'Entrances',
+					href: `/b2b/entry?tab=entrances&organizationId=${data.selectedOrgId || ''}`,
 					active:
 						page.url.pathname.startsWith('/b2b/entry') &&
-						page.url.searchParams.get('tab') === 'ingress'
+						page.url.searchParams.get('tab') === 'entrances'
 				},
 				{
-					label: 'Device management',
+					label: 'Scan Devices',
 					href: `/b2b/entry?tab=devices&organizationId=${data.selectedOrgId || ''}`,
 					active:
 						page.url.pathname.startsWith('/b2b/entry') &&
 						page.url.searchParams.get('tab') === 'devices'
 				},
 				{
-					label: 'Staff allocation',
-					href: `/b2b/entry?tab=staff&organizationId=${data.selectedOrgId || ''}`,
+					label: 'Attendance',
+					href: `/b2b/entry?tab=attendance&organizationId=${data.selectedOrgId || ''}`,
 					active:
 						page.url.pathname.startsWith('/b2b/entry') &&
-						page.url.searchParams.get('tab') === 'staff'
+						(page.url.searchParams.get('tab') === 'attendance' || !page.url.searchParams.get('tab'))
 				},
 				{
-					label: 'Customer service desk',
-					href: `/b2b/entry?tab=service&organizationId=${data.selectedOrgId || ''}`,
+					label: 'Pre-Entry Check',
+					href: `/b2b/entry?tab=precheck&organizationId=${data.selectedOrgId || ''}`,
 					active:
 						page.url.pathname.startsWith('/b2b/entry') &&
-						(page.url.searchParams.get('tab') === 'service' || !page.url.searchParams.get('tab'))
+						page.url.searchParams.get('tab') === 'precheck'
+				},
+				{
+					label: 'Offline Barcodes',
+					href: `/b2b/entry?tab=offline&organizationId=${data.selectedOrgId || ''}`,
+					active:
+						page.url.pathname.startsWith('/b2b/entry') &&
+						page.url.searchParams.get('tab') === 'offline'
+				},
+				{
+					label: 'Ticket Rules',
+					href: `/b2b/entry?tab=rules&organizationId=${data.selectedOrgId || ''}`,
+					active:
+						page.url.pathname.startsWith('/b2b/entry') &&
+						page.url.searchParams.get('tab') === 'rules'
+				},
+				{
+					label: 'Scan Log Export',
+					href: `/b2b/entry?tab=export&organizationId=${data.selectedOrgId || ''}`,
+					active:
+						page.url.pathname.startsWith('/b2b/entry') &&
+						page.url.searchParams.get('tab') === 'export'
 				}
 			]
 		},
@@ -165,32 +213,60 @@
 			icon: IconChartBar,
 			items: [
 				{
-					label: 'Financial audits',
-					href: `/b2b/reports?tab=audits&organizationId=${data.selectedOrgId || ''}`,
+					label: 'Overview',
+					href: `/b2b/reports?tab=overview&organizationId=${data.selectedOrgId || ''}`,
 					active:
 						page.url.pathname.startsWith('/b2b/reports') &&
-						page.url.searchParams.get('tab') === 'audits'
+						(page.url.searchParams.get('tab') === 'overview' || !page.url.searchParams.get('tab'))
 				},
 				{
-					label: 'Settlement reports',
-					href: `/b2b/reports?tab=settlements&organizationId=${data.selectedOrgId || ''}`,
+					label: 'Sales Report',
+					href: `/b2b/reports?tab=sales-report&organizationId=${data.selectedOrgId || ''}`,
 					active:
 						page.url.pathname.startsWith('/b2b/reports') &&
-						page.url.searchParams.get('tab') === 'settlements'
+						page.url.searchParams.get('tab') === 'sales-report'
 				},
 				{
-					label: 'Payout tracking',
-					href: `/b2b/reports?tab=payouts&organizationId=${data.selectedOrgId || ''}`,
+					label: 'Inventory Status',
+					href: `/b2b/reports?tab=inventory-status&organizationId=${data.selectedOrgId || ''}`,
 					active:
 						page.url.pathname.startsWith('/b2b/reports') &&
-						page.url.searchParams.get('tab') === 'payouts'
+						page.url.searchParams.get('tab') === 'inventory-status'
 				},
 				{
-					label: 'Tax & Fees analysis',
-					href: `/b2b/reports?tab=tax&organizationId=${data.selectedOrgId || ''}`,
+					label: 'Sales Trends',
+					href: `/b2b/reports?tab=trends&organizationId=${data.selectedOrgId || ''}`,
 					active:
 						page.url.pathname.startsWith('/b2b/reports') &&
-						(page.url.searchParams.get('tab') === 'tax' || !page.url.searchParams.get('tab'))
+						page.url.searchParams.get('tab') === 'trends'
+				},
+				{
+					label: 'Demographics',
+					href: `/b2b/reports?tab=demographics&organizationId=${data.selectedOrgId || ''}`,
+					active:
+						page.url.pathname.startsWith('/b2b/reports') &&
+						page.url.searchParams.get('tab') === 'demographics'
+				},
+				{
+					label: 'Sales Comparison',
+					href: `/b2b/reports?tab=comparison&organizationId=${data.selectedOrgId || ''}`,
+					active:
+						page.url.pathname.startsWith('/b2b/reports') &&
+						page.url.searchParams.get('tab') === 'comparison'
+				},
+				{
+					label: 'Fans Expected',
+					href: `/b2b/reports?tab=expected&organizationId=${data.selectedOrgId || ''}`,
+					active:
+						page.url.pathname.startsWith('/b2b/reports') &&
+						page.url.searchParams.get('tab') === 'expected'
+				},
+				{
+					label: 'Custom Reports',
+					href: `/b2b/reports?tab=custom&organizationId=${data.selectedOrgId || ''}`,
+					active:
+						page.url.pathname.startsWith('/b2b/reports') &&
+						page.url.searchParams.get('tab') === 'custom'
 				}
 			]
 		},
@@ -201,38 +277,59 @@
 			icon: IconSpeakerphone,
 			items: [
 				{
-					label: 'Fan database (CRM)',
-					href: `/b2b/marketing?tab=crm&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/marketing') &&
-						page.url.searchParams.get('tab') === 'crm'
-				},
-				{
-					label: 'Campaign manager',
+					label: 'Campaigns',
 					href: `/b2b/marketing?tab=campaigns&organizationId=${data.selectedOrgId || ''}`,
 					active:
 						page.url.pathname.startsWith('/b2b/marketing') &&
-						page.url.searchParams.get('tab') === 'campaigns'
+						(page.url.searchParams.get('tab') === 'campaigns' || !page.url.searchParams.get('tab'))
 				},
 				{
-					label: 'Tracking pixels',
-					href: `/b2b/marketing?tab=pixels&organizationId=${data.selectedOrgId || ''}`,
+					label: 'Audience Segments',
+					href: `/b2b/marketing?tab=segments&organizationId=${data.selectedOrgId || ''}`,
 					active:
 						page.url.pathname.startsWith('/b2b/marketing') &&
-						page.url.searchParams.get('tab') === 'pixels'
+						page.url.searchParams.get('tab') === 'segments'
 				},
 				{
-					label: 'Affiliate & Partners',
-					href: `/b2b/marketing?tab=affiliates&organizationId=${data.selectedOrgId || ''}`,
+					label: 'Email',
+					href: `/b2b/marketing?tab=email&organizationId=${data.selectedOrgId || ''}`,
 					active:
 						page.url.pathname.startsWith('/b2b/marketing') &&
-						(page.url.searchParams.get('tab') === 'affiliates' || !page.url.searchParams.get('tab'))
+						page.url.searchParams.get('tab') === 'email'
+				},
+				{
+					label: 'Promoted Ads',
+					href: `/b2b/marketing?tab=ads&organizationId=${data.selectedOrgId || ''}`,
+					active:
+						page.url.pathname.startsWith('/b2b/marketing') &&
+						page.url.searchParams.get('tab') === 'ads'
+				},
+				{
+					label: 'Performance',
+					href: `/b2b/marketing?tab=performance&organizationId=${data.selectedOrgId || ''}`,
+					active:
+						page.url.pathname.startsWith('/b2b/marketing') &&
+						page.url.searchParams.get('tab') === 'performance'
 				}
 			]
 		}
 	]);
 
 	const activeOrg = $derived(data.organizations?.find((o: any) => o.id === data.selectedOrgId));
+
+	const activeCategory = $derived(categories.find((cat) => cat.items.some((item) => item.active)));
+	const activeItem = $derived(activeCategory?.items.find((item) => item.active));
+
+	const breadcrumbParent = $derived(
+		activeCategory?.label ||
+			(page.url.pathname.startsWith('/b2b/check-in') ? 'Entry' : '') ||
+			(page.url.pathname === '/b2b/schedule' ? 'Main' : 'Dashboard')
+	);
+	const breadcrumbChild = $derived(
+		activeItem?.label ||
+			(page.url.pathname.startsWith('/b2b/check-in') ? 'Check-In Gate Simulator' : '') ||
+			(page.url.pathname === '/b2b/schedule' ? 'Schedule' : 'Overview')
+	);
 
 	$effect(() => {
 		categories.forEach((cat) => {
@@ -401,29 +498,25 @@
 					<!-- Dashboard link -->
 					<a
 						href={`/b2b/dashboard?organizationId=${data.selectedOrgId || ''}`}
-						class="flex items-center gap-3.5 rounded-xl px-3 py-2 text-xs font-extrabold transition-all duration-200 {page.url.pathname.startsWith(
-							'/b2b/dashboard'
-						) &&
-						!page.url.searchParams.get('tab') &&
-						!page.url.searchParams.get('action')
+						class="flex items-center gap-3.5 rounded-xl px-3 py-2 text-xs font-extrabold transition-all duration-200 {page
+							.url.pathname === '/b2b/dashboard'
 							? 'bg-blue-50/50 text-blue-600'
 							: 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}"
 					>
-						<IconLayoutDashboard size={20} stroke={2} class="shrink-0" />
+						<IconLayoutDashboard size={20} stroke={1.8} class="shrink-0" />
 						<span class="truncate">Dashboard</span>
 					</a>
 
 					<!-- Schedule list link with 24 badge -->
 					<a
-						href={`/b2b/dashboard?tab=all&organizationId=${data.selectedOrgId || ''}`}
-						class="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-extrabold transition-all duration-200 {page.url.pathname.startsWith(
-							'/b2b/dashboard'
-						) && page.url.searchParams.get('tab') === 'all'
+						href={`/b2b/schedule?organizationId=${data.selectedOrgId || ''}`}
+						class="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-extrabold transition-all duration-200 {page
+							.url.pathname === '/b2b/schedule'
 							? 'bg-blue-50/50 text-blue-600'
 							: 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}"
 					>
 						<div class="flex min-w-0 items-center gap-3.5">
-							<IconCalendar size={20} stroke={2} class="shrink-0" />
+							<IconCalendar size={20} stroke={1.8} class="shrink-0" />
 							<span class="truncate">Schedule</span>
 						</div>
 						<span
@@ -440,7 +533,7 @@
 					</div>
 
 					{#each categories as cat (cat.id)}
-						{@const Icon = cat.icon}
+						{@const CategoryIcon = cat.icon}
 						<!-- Expanded Sidebar Category Folder -->
 						<div class="flex flex-col rounded-xl border border-slate-100 bg-slate-50/20 p-1">
 							<!-- Category Header Toggle Button -->
@@ -455,7 +548,7 @@
 											? 'text-blue-600'
 											: 'text-slate-400'}"
 									>
-										<Icon size={20} stroke={2} />
+										<CategoryIcon size={20} stroke={1.8} />
 									</div>
 									<span
 										class="text-xs font-extrabold tracking-tight transition-colors {cat.items.some(
@@ -566,25 +659,11 @@
 					<!-- Left: Breadcrumb / Active Context Path -->
 					<div class="flex items-center gap-2">
 						<span class="text-[10px] font-extrabold tracking-widest text-slate-400 uppercase">
-							{#if page.url.pathname.includes('/b2b/sales')}
-								Sales
-							{:else}
-								Events
-							{/if}
+							{breadcrumbParent}
 						</span>
 						<IconChevronRight size={12} stroke={2.5} class="text-slate-300" />
 						<span class="text-sm font-extrabold tracking-tight text-slate-900">
-							{#if page.url.pathname.includes('/b2b/sales')}
-								Sales
-							{:else if page.url.pathname.includes('/b2b/entry')}
-								Entry
-							{:else if page.url.pathname.includes('/b2b/reports')}
-								Reports
-							{:else if page.url.pathname.includes('/b2b/marketing')}
-								Marketing
-							{:else}
-								Dashboard
-							{/if}
+							{breadcrumbChild}
 						</span>
 					</div>
 
