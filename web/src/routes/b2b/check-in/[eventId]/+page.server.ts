@@ -31,7 +31,7 @@ export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 		};
 	} catch (err: any) {
 		console.error('[CHECK-IN LOAD ERROR]:', err);
-		throw redirect(303, '/b2b/dashboard');
+		throw redirect(303, '/b2b/events');
 	}
 };
 

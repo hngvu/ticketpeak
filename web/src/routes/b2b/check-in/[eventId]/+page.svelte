@@ -37,11 +37,11 @@
 	<!-- Top Bar header -->
 	<div class="flex flex-col gap-4 border-b border-hairline pb-6">
 		<a
-			href="/b2b/dashboard?organizationId={data.event.organizationId}"
+			href="/b2b/events?organizationId={data.event.organizationId}"
 			class="flex items-center gap-1.5 text-xs font-bold text-slate-400 transition hover:text-slate-600"
 		>
 			<span>←</span>
-			<span>Back to Dashboard</span>
+			<span>Back to Events</span>
 		</a>
 
 		<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
