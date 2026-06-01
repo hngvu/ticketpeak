@@ -38,7 +38,10 @@
 		<!-- Organization Switcher -->
 		{#if data.organizations && data.organizations.length > 0}
 			<div class="flex items-center gap-2">
-				<label for="org-select" class="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+				<label
+					for="org-select"
+					class="text-xs font-semibold tracking-wider text-slate-500 uppercase"
+				>
 					Organization:
 				</label>
 				<select
@@ -215,7 +218,10 @@
 			</div>
 
 			<div class="mt-4 border-t border-slate-100 pt-3">
-				<a href="/b2b/entry" class="text-xs font-semibold text-blue-600 transition hover:text-blue-700">
+				<a
+					href="/b2b/entry"
+					class="text-xs font-semibold text-blue-600 transition hover:text-blue-700"
+				>
 					View Check-In Settings →
 				</a>
 			</div>

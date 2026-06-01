@@ -67,7 +67,7 @@ export const actions: Actions = {
 		const startAtStr = data.get('startAt') as string;
 		const endAtStr = data.get('endAt') as string;
 		const timezone = (data.get('timezone') as string) || 'Asia/Ho_Chi_Minh';
-		
+
 		// Optional sales windows
 		const saleStartAtStr = data.get('saleStartAt') as string;
 		const saleEndAtStr = data.get('saleEndAt') as string;

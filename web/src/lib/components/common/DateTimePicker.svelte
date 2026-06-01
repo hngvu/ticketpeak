@@ -29,19 +29,41 @@
 	let viewMonth = $state(today.getMonth()); // 0-11
 
 	// Time state
-	let hour = $state('09');
+	let hour12 = $state('09');
 	let minute = $state('00');
+	let ampm = $state('AM');
+
+	const hour24 = $derived.by(() => {
+		const h = parseInt(hour12, 10);
+		if (ampm === 'PM') {
+			return h === 12 ? '12' : String(h + 12).padStart(2, '0');
+		} else {
+			return h === 12 ? '00' : String(h).padStart(2, '0');
+		}
+	});
 
 	// Selected Date representation
 	let selectedDate = $state<Date | null>(null);
 
 	// Month list
 	const months = [
-		'January', 'February', 'March', 'April', 'May', 'June',
-		'July', 'August', 'September', 'October', 'November', 'December'
+		'January',
+		'February',
+		'March',
+		'April',
+		'May',
+		'June',
+		'July',
+		'August',
+		'September',
+		'October',
+		'November',
+		'December'
 	];
 
 	const daysOfWeek = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+	const hours12 = Array.from({ length: 12 }, (_, i) => i + 1);
+	const minutes = Array.from({ length: 60 }, (_, i) => i);
 
 	// Initialize selected values from input string if provided
 	$effect(() => {
@@ -51,8 +73,17 @@
 				selectedDate = parsed;
 				viewYear = parsed.getFullYear();
 				viewMonth = parsed.getMonth();
-				hour = String(parsed.getHours()).padStart(2, '0');
+				const h24 = parsed.getHours();
 				minute = String(parsed.getMinutes()).padStart(2, '0');
+				if (h24 >= 12) {
+					ampm = 'PM';
+					const h12 = h24 === 12 ? 12 : h24 - 12;
+					hour12 = String(h12).padStart(2, '0');
+				} else {
+					ampm = 'AM';
+					const h12 = h24 === 0 ? 12 : h24;
+					hour12 = String(h12).padStart(2, '0');
+				}
 			}
 		}
 	});
@@ -113,7 +144,7 @@
 		const d = selectedDate.getDate();
 		const m = months[selectedDate.getMonth()].slice(0, 3);
 		const y = selectedDate.getFullYear();
-		return `${d} ${m} ${y}, ${hour}:${minute}`;
+		return `${d} ${m} ${y}, ${hour12}:${minute} ${ampm}`;
 	});
 
 	// Update raw bound string value (format: YYYY-MM-DDTHH:mm)
@@ -122,7 +153,7 @@
 		const y = selectedDate.getFullYear();
 		const m = String(selectedDate.getMonth() + 1).padStart(2, '0');
 		const d = String(selectedDate.getDate()).padStart(2, '0');
-		value = `${y}-${m}-${d}T${hour}:${minute}`;
+		value = `${y}-${m}-${d}T${hour24}:${minute}`;
 	}
 
 	function handlePrevMonth() {
@@ -195,20 +226,21 @@
 			<!-- Popover Header -->
 			<div class="mb-4 flex items-center justify-between">
 				<span class="text-sm font-semibold text-slate-800">
-					{months[viewMonth]} {viewYear}
+					{months[viewMonth]}
+					{viewYear}
 				</span>
 				<div class="flex items-center gap-1">
 					<button
 						type="button"
 						onclick={handlePrevMonth}
-						class="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-slate-50 text-slate-500 hover:text-slate-800 transition"
+						class="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
 					>
 						<IconChevronLeft size={16} stroke={2} />
 					</button>
 					<button
 						type="button"
 						onclick={handleNextMonth}
-						class="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-slate-50 text-slate-500 hover:text-slate-800 transition"
+						class="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
 					>
 						<IconChevronRight size={16} stroke={2} />
 					</button>
@@ -217,19 +249,21 @@
 
 			<!-- Weekdays Heading -->
 			<div class="mb-1.5 grid grid-cols-7 gap-y-1 text-center">
-				{#each daysOfWeek as day}
+				{#each daysOfWeek as day (day)}
 					<span class="text-[10px] font-bold text-slate-400 uppercase">{day}</span>
 				{/each}
 			</div>
 
 			<!-- Days Grid -->
 			<div class="grid grid-cols-7 gap-1">
-				{#each calendarCells as cell}
-					{@const isSelected = selectedDate &&
+				{#each calendarCells as cell, index (cell.date.getTime() + '-' + index)}
+					{@const isSelected =
+						selectedDate &&
 						selectedDate.getDate() === cell.day &&
 						selectedDate.getMonth() === cell.month &&
 						selectedDate.getFullYear() === cell.year}
-					{@const isToday = today.getDate() === cell.day &&
+					{@const isToday =
+						today.getDate() === cell.day &&
 						today.getMonth() === cell.month &&
 						today.getFullYear() === cell.year}
 
@@ -238,8 +272,8 @@
 						onclick={() => handleSelectCell(cell)}
 						class="flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-all
 							{cell.isCurrentMonth ? 'text-slate-700' : 'text-slate-300'}
-							{isSelected ? 'bg-blue-600 text-white font-bold' : 'hover:bg-slate-50'}
-							{isToday && !isSelected ? 'border border-blue-200 text-blue-600 bg-blue-50/20' : ''}
+							{isSelected ? 'bg-blue-600 font-bold text-white' : 'hover:bg-slate-50'}
+							{isToday && !isSelected ? 'border border-blue-200 bg-blue-50/20 text-blue-600' : ''}
 						"
 					>
 						{cell.day}
@@ -259,19 +293,19 @@
 				<div class="flex items-center gap-1">
 					<!-- Hour select -->
 					<select
-						value={hour}
+						value={hour12}
 						onchange={(e) => {
-							hour = (e.target as HTMLSelectElement).value;
+							hour12 = (e.target as HTMLSelectElement).value;
 							handleTimeChange();
 						}}
-						class="rounded-lg border border-slate-200 bg-slate-50/50 px-2 py-1 text-xs font-semibold text-slate-700 focus:border-blue-500 focus:outline-none"
+						class="appearance-none rounded-lg border border-slate-200 bg-slate-50/50 bg-none px-2.5 py-1 text-center text-xs font-semibold text-slate-700 focus:border-blue-500 focus:outline-none"
 					>
-						{#each Array(24) as _, i}
-							{@const formatted = String(i).padStart(2, '0')}
+						{#each hours12 as h (h)}
+							{@const formatted = String(h).padStart(2, '0')}
 							<option value={formatted}>{formatted}</option>
 						{/each}
 					</select>
-					<span class="text-slate-400 font-bold">:</span>
+					<span class="font-bold text-slate-400">:</span>
 					<!-- Minute select -->
 					<select
 						value={minute}
@@ -279,12 +313,24 @@
 							minute = (e.target as HTMLSelectElement).value;
 							handleTimeChange();
 						}}
-						class="rounded-lg border border-slate-200 bg-slate-50/50 px-2 py-1 text-xs font-semibold text-slate-700 focus:border-blue-500 focus:outline-none"
+						class="appearance-none rounded-lg border border-slate-200 bg-slate-50/50 bg-none px-2.5 py-1 text-center text-xs font-semibold text-slate-700 focus:border-blue-500 focus:outline-none"
 					>
-						{#each Array(60) as _, i}
-							{@const formatted = String(i).padStart(2, '0')}
+						{#each minutes as m (m)}
+							{@const formatted = String(m).padStart(2, '0')}
 							<option value={formatted}>{formatted}</option>
 						{/each}
+					</select>
+					<!-- AM/PM select -->
+					<select
+						value={ampm}
+						onchange={(e) => {
+							ampm = (e.target as HTMLSelectElement).value;
+							handleTimeChange();
+						}}
+						class="ml-1 appearance-none rounded-lg border border-slate-200 bg-slate-50/50 bg-none px-2.5 py-1 text-center text-xs font-semibold text-slate-700 focus:border-blue-500 focus:outline-none"
+					>
+						<option value="AM">AM</option>
+						<option value="PM">PM</option>
 					</select>
 				</div>
 			</div>
@@ -300,7 +346,7 @@
 						}
 						isOpen = false;
 					}}
-					class="rounded-lg bg-blue-600 px-3 py-1.5 text-[11px] font-bold text-white shadow-sm hover:bg-blue-700 transition active:scale-95"
+					class="rounded-lg bg-blue-600 px-3 py-1.5 text-[11px] font-bold text-white shadow-sm transition hover:bg-blue-700 active:scale-95"
 				>
 					Done
 				</button>
@@ -308,3 +354,18 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	select {
+		-webkit-appearance: none !important;
+		-moz-appearance: none !important;
+		appearance: none !important;
+		background-image: none !important;
+		background-position: unset !important;
+		background-size: unset !important;
+		background-repeat: unset !important;
+	}
+	select::-ms-expand {
+		display: none !important;
+	}
+</style>

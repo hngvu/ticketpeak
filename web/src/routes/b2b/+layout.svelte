@@ -370,7 +370,10 @@
 						</button>
 					</form>
 				{:else}
-					<a href="/b2b/login" class="text-sm font-semibold text-gray-300 transition hover:text-white">
+					<a
+						href="/b2b/login"
+						class="text-sm font-semibold text-gray-300 transition hover:text-white"
+					>
 						Sign In
 					</a>
 					<a
