@@ -18,7 +18,7 @@
 		IconScan,
 		IconChartBar,
 		IconLayoutDashboard,
-		IconCalendar
+		IconCalendarEvent
 	} from '@tabler/icons-svelte';
 
 	let { data, children }: { data: any; children: Snippet } = $props();
@@ -349,7 +349,7 @@
 				<a href="/business" class="flex items-center gap-2">
 					<img src="/logo.png" alt="Ticketpeak Logo" class="h-8 brightness-0 invert" />
 					<span
-						class="rounded-full bg-primary/20 px-2.5 py-0.5 text-xs font-bold tracking-wider text-primary uppercase"
+						class="rounded-full bg-primary/20 px-2.5 py-0.5 text-xs font-semibold tracking-wider text-primary uppercase"
 					>
 						for Business
 					</span>
@@ -358,24 +358,24 @@
 
 			<nav class="flex items-center gap-4">
 				{#if data.user && data.user.role === 'ORGANIZER'}
-					<a href="/b2b/dashboard" class="text-sm font-semibold transition hover:text-primary">
+					<a href="/b2b/dashboard" class="text-sm font-medium transition hover:text-primary">
 						Dashboard
 					</a>
 					<form method="POST" action="/logout">
 						<button
 							type="submit"
-							class="cursor-pointer rounded-full bg-slate-800 px-4.5 py-2 text-xs font-bold text-white transition hover:bg-slate-700"
+							class="cursor-pointer rounded-full bg-slate-800 px-4.5 py-2 text-xs font-semibold text-white transition hover:bg-slate-700"
 						>
 							Sign Out
 						</button>
 					</form>
 				{:else}
-					<a href="/b2b/login" class="text-sm font-bold text-gray-300 transition hover:text-white">
+					<a href="/b2b/login" class="text-sm font-semibold text-gray-300 transition hover:text-white">
 						Sign In
 					</a>
 					<a
 						href="/auth?tab=register&redirect=/b2b/dashboard"
-						class="hover:bg-primary-hover rounded-full bg-primary px-4.5 py-2 text-xs font-bold text-white transition active:scale-95"
+						class="hover:bg-primary-hover rounded-full bg-primary px-4.5 py-2 text-xs font-semibold text-white transition active:scale-95"
 					>
 						Get Started
 					</a>
@@ -397,15 +397,15 @@
 					<a href="/b2b/dashboard" class="flex min-w-0 items-center gap-2">
 						<!-- Blue TP Square Logo -->
 						<div
-							class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-base font-extrabold tracking-tighter text-white shadow-sm"
+							class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-base font-bold tracking-tighter text-white shadow-sm"
 						>
 							TP
 						</div>
 						<div class="flex min-w-0 flex-col">
-							<span class="text-sm leading-none font-bold tracking-tight text-slate-800"
+							<span class="text-sm leading-none font-semibold tracking-tight text-slate-800"
 								>Ticketpeak</span
 							>
-							<span class="mt-0.5 text-[9px] font-bold tracking-wider text-slate-400 uppercase"
+							<span class="mt-0.5 text-[9px] font-semibold tracking-wider text-slate-400 uppercase"
 								>Enterprise Platform</span
 							>
 						</div>
@@ -422,17 +422,17 @@
 						<div class="flex min-w-0 items-center gap-2.5">
 							<!-- LN Initials Rounded Square -->
 							<div
-								class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-blue-100 bg-blue-50 text-xs font-extrabold text-blue-600"
+								class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-blue-100 bg-blue-50 text-xs font-bold text-blue-600"
 							>
 								{activeOrg?.name?.[0]?.toUpperCase() || 'T'}{activeOrg?.name
 									?.split(' ')?.[1]?.[0]
 									?.toUpperCase() || 'P'}
 							</div>
 							<div class="flex min-w-0 flex-col">
-								<span class="truncate text-xs leading-tight font-bold text-slate-700">
+								<span class="truncate text-xs leading-tight font-semibold text-slate-700">
 									{activeOrg?.name || 'Live Nation APAC'}
 								</span>
-								<span class="mt-0.5 text-[9px] font-semibold text-slate-400"
+								<span class="mt-0.5 text-[9px] font-medium text-slate-400"
 									>Promoter · 12 venues</span
 								>
 							</div>
@@ -456,7 +456,7 @@
 							class="absolute top-full right-3 left-3 z-50 mt-1 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
 						>
 							<div class="mb-1.5 border-b border-slate-100 px-2 pb-1.5">
-								<p class="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+								<p class="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
 									Switch Organization
 								</p>
 							</div>
@@ -468,13 +468,13 @@
 											showOrgMenu = false;
 											window.location.href = `?organizationId=${org.id}`;
 										}}
-										class="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-xs font-semibold transition-all hover:bg-slate-50 {org.id ===
+										class="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-xs font-medium transition-all hover:bg-slate-50 {org.id ===
 										data.selectedOrgId
-											? 'bg-blue-50/55 font-bold text-blue-600'
+											? 'bg-blue-50/55 font-semibold text-blue-600'
 											: 'text-slate-600'}"
 									>
 										<span
-											class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-100 text-[10px] font-extrabold text-slate-500"
+											class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-100 text-[10px] font-bold text-slate-500"
 										>
 											{org.name?.[0]?.toUpperCase() || 'O'}
 										</span>
@@ -490,7 +490,7 @@
 				<div class="no-scrollbar flex flex-1 flex-col gap-1 overflow-y-auto p-3">
 					<!-- MAIN SECTION -->
 					<div class="px-3 pt-2 pb-1">
-						<span class="text-[9px] font-extrabold tracking-wider text-slate-400 uppercase"
+						<span class="text-[9px] font-semibold tracking-wider text-slate-400 uppercase"
 							>MAIN</span
 						>
 					</div>
@@ -498,7 +498,7 @@
 					<!-- Dashboard link -->
 					<a
 						href={`/b2b/dashboard?organizationId=${data.selectedOrgId || ''}`}
-						class="flex items-center gap-3.5 rounded-xl px-3 py-2 text-xs font-extrabold transition-all duration-200 {page
+						class="flex items-center gap-3.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all duration-200 {page
 							.url.pathname === '/b2b/dashboard'
 							? 'bg-blue-50/50 text-blue-600'
 							: 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}"
@@ -510,25 +510,25 @@
 					<!-- Schedule list link with 24 badge -->
 					<a
 						href={`/b2b/schedule?organizationId=${data.selectedOrgId || ''}`}
-						class="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-extrabold transition-all duration-200 {page
+						class="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold transition-all duration-200 {page
 							.url.pathname === '/b2b/schedule'
 							? 'bg-blue-50/50 text-blue-600'
 							: 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}"
 					>
 						<div class="flex min-w-0 items-center gap-3.5">
-							<IconCalendar size={20} stroke={1.8} class="shrink-0" />
+							<IconCalendarEvent size={20} stroke={1.8} class="shrink-0" />
 							<span class="truncate">Schedule</span>
 						</div>
 						<span
-							class="shrink-0 rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-600"
+							class="shrink-0 rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600"
 							>24</span
 						>
 					</a>
 
-					<!-- APPS SECTION -->
+					<!-- MODULES SECTION -->
 					<div class="px-3 pt-4 pb-1">
-						<span class="text-[9px] font-extrabold tracking-wider text-slate-400 uppercase"
-							>APPS</span
+						<span class="text-[9px] font-semibold tracking-wider text-slate-400 uppercase"
+							>MODULES</span
 						>
 					</div>
 
@@ -551,7 +551,7 @@
 										<CategoryIcon size={20} stroke={1.8} />
 									</div>
 									<span
-										class="text-xs font-extrabold tracking-tight transition-colors {cat.items.some(
+										class="text-xs font-semibold tracking-tight transition-colors {cat.items.some(
 											(i) => i.active
 										)
 											? 'text-blue-600'
@@ -573,8 +573,8 @@
 									{#each cat.items as item (item.label)}
 										<a
 											href={item.href}
-											class="flex items-center rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all duration-150 {item.active
-												? 'bg-blue-50/50 font-bold text-blue-600'
+											class="flex items-center rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 {item.active
+												? 'bg-blue-50/50 font-semibold text-blue-600'
 												: 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}"
 										>
 											<span class="truncate">{item.label}</span>
@@ -596,17 +596,17 @@
 						<div class="flex min-w-0 items-center gap-2.5">
 							<!-- Emerald Initials Circle -->
 							<div
-								class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 text-sm font-bold text-emerald-600"
+								class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 text-sm font-semibold text-emerald-600"
 							>
 								{data.user?.fullName?.[0]?.toUpperCase() || 'J'}{data.user?.fullName
 									?.split(' ')?.[1]?.[0]
 									?.toUpperCase() || 'D'}
 							</div>
 							<div class="flex min-w-0 flex-col">
-								<span class="truncate text-xs leading-tight font-bold text-slate-700">
+								<span class="truncate text-xs leading-tight font-semibold text-slate-700">
 									{data.user?.fullName || 'Jamie Dao'}
 								</span>
-								<span class="mt-0.5 truncate text-[9px] font-semibold text-slate-400"
+								<span class="mt-0.5 truncate text-[9px] font-medium text-slate-400"
 									>Box Office Manager</span
 								>
 							</div>
@@ -626,12 +626,12 @@
 							class="absolute right-3 bottom-full left-3 z-50 mb-1 rounded-xl border border-slate-200 bg-white p-2 text-slate-800 shadow-xl"
 						>
 							<div class="mb-1 border-b border-slate-100 px-3 py-2 select-none">
-								<p class="text-xs font-semibold text-slate-400">Signed in as</p>
-								<p class="truncate text-xs font-bold text-slate-900">{data.user?.email}</p>
+								<p class="text-xs font-medium text-slate-400">Signed in as</p>
+								<p class="truncate text-xs font-semibold text-slate-900">{data.user?.email}</p>
 							</div>
 							<a
 								href="/discover"
-								class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+								class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 transition hover:bg-slate-50"
 							>
 								<IconExternalLink size={16} stroke={2} class="text-slate-400" />
 								Buyer Portal
@@ -639,7 +639,7 @@
 							<form method="POST" action="/logout" class="w-full">
 								<button
 									type="submit"
-									class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-red-600 transition hover:bg-red-50 focus:outline-none"
+									class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-red-600 transition hover:bg-red-50 focus:outline-none"
 								>
 									<IconLogout size={16} stroke={2} />
 									Sign Out
@@ -658,11 +658,11 @@
 				>
 					<!-- Left: Breadcrumb / Active Context Path -->
 					<div class="flex items-center gap-2">
-						<span class="text-[10px] font-extrabold tracking-widest text-slate-400 uppercase">
+						<span class="text-[10px] font-semibold tracking-widest text-slate-400 uppercase">
 							{breadcrumbParent}
 						</span>
 						<IconChevronRight size={12} stroke={2.5} class="text-slate-300" />
-						<span class="text-sm font-extrabold tracking-tight text-slate-900">
+						<span class="text-sm font-bold tracking-tight text-slate-900">
 							{breadcrumbChild}
 						</span>
 					</div>
@@ -679,11 +679,11 @@
 							<input
 								type="text"
 								placeholder="Search events..."
-								class="w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pr-12 pl-9 text-xs font-semibold text-slate-800 placeholder-slate-400 transition-all focus:border-blue-500 focus:bg-white focus:outline-none"
+								class="w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pr-12 pl-9 text-xs font-medium text-slate-800 placeholder-slate-400 transition-all focus:border-blue-500 focus:bg-white focus:outline-none"
 							/>
 							<span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
 								<kbd
-									class="rounded border border-slate-200/80 bg-white px-1.5 text-[9px] font-bold text-slate-400 shadow-sm"
+									class="rounded border border-slate-200/80 bg-white px-1.5 text-[9px] font-semibold text-slate-400 shadow-sm"
 									>⌘K</kbd
 								>
 							</span>

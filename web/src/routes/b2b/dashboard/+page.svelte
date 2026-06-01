@@ -29,7 +29,7 @@
 	<!-- Top Bar / Organization Switcher -->
 	<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 		<div>
-			<h1 class="text-2xl font-extrabold text-slate-900 md:text-3xl">Promoter Dashboard</h1>
+			<h1 class="text-2xl font-bold text-slate-900 md:text-3xl">Promoter Dashboard</h1>
 			<p class="text-sm font-medium text-slate-500">
 				High-level business overview, sales intelligence, and system gateway.
 			</p>
@@ -38,7 +38,7 @@
 		<!-- Organization Switcher -->
 		{#if data.organizations && data.organizations.length > 0}
 			<div class="flex items-center gap-2">
-				<label for="org-select" class="text-xs font-bold tracking-wider text-slate-500 uppercase">
+				<label for="org-select" class="text-xs font-semibold tracking-wider text-slate-500 uppercase">
 					Organization:
 				</label>
 				<select
@@ -60,7 +60,7 @@
 		<!-- KPI 1 -->
 		<div class="rounded-xl border border-hairline bg-canvas p-5 shadow-xs transition hover:shadow">
 			<div class="flex items-center justify-between text-slate-400">
-				<span class="text-xs font-bold tracking-wider uppercase">Total Events</span>
+				<span class="text-xs font-semibold tracking-wider uppercase">Total Events</span>
 				<svg
 					class="h-5 w-5 text-slate-400"
 					fill="none"
@@ -76,7 +76,7 @@
 				</svg>
 			</div>
 			<div class="mt-2 flex items-baseline gap-2">
-				<span class="text-3xl font-extrabold text-slate-900">{totalEvents}</span>
+				<span class="text-3xl font-bold text-slate-900">{totalEvents}</span>
 				<span class="text-xs font-medium text-slate-500">hosted events</span>
 			</div>
 		</div>
@@ -84,11 +84,11 @@
 		<!-- KPI 2 -->
 		<div class="rounded-xl border border-hairline bg-canvas p-5 shadow-xs transition hover:shadow">
 			<div class="flex items-center justify-between text-slate-400">
-				<span class="text-xs font-bold tracking-wider uppercase">Active Ticket Sales</span>
+				<span class="text-xs font-semibold tracking-wider uppercase">Active Ticket Sales</span>
 				<span class="flex h-2.5 w-2.5 animate-pulse rounded-full bg-success"></span>
 			</div>
 			<div class="mt-2 flex items-baseline gap-2">
-				<span class="text-3xl font-extrabold text-slate-900">{activeEvents}</span>
+				<span class="text-3xl font-bold text-slate-900">{activeEvents}</span>
 				<span class="text-xs font-medium text-slate-500">active items</span>
 			</div>
 		</div>
@@ -96,7 +96,7 @@
 		<!-- KPI 3 -->
 		<div class="rounded-xl border border-hairline bg-canvas p-5 shadow-xs transition hover:shadow">
 			<div class="flex items-center justify-between text-slate-400">
-				<span class="text-xs font-bold tracking-wider uppercase">Estimated Revenue</span>
+				<span class="text-xs font-semibold tracking-wider uppercase">Estimated Revenue</span>
 				<svg
 					class="h-5 w-5 text-slate-400"
 					fill="none"
@@ -112,7 +112,7 @@
 				</svg>
 			</div>
 			<div class="mt-2 flex items-baseline gap-2">
-				<span class="text-3xl font-extrabold text-slate-900">450.0M</span>
+				<span class="text-3xl font-bold text-slate-900">450.0M</span>
 				<span class="text-xs font-semibold text-emerald-600">VND</span>
 			</div>
 		</div>
@@ -120,7 +120,7 @@
 		<!-- KPI 4 -->
 		<div class="rounded-xl border border-hairline bg-canvas p-5 shadow-xs transition hover:shadow">
 			<div class="flex items-center justify-between text-slate-400">
-				<span class="text-xs font-bold tracking-wider uppercase">Avg Check-In Rate</span>
+				<span class="text-xs font-semibold tracking-wider uppercase">Avg Check-In Rate</span>
 				<svg
 					class="h-5 w-5 text-slate-400"
 					fill="none"
@@ -136,7 +136,7 @@
 				</svg>
 			</div>
 			<div class="mt-2 flex items-baseline gap-2">
-				<span class="text-3xl font-extrabold text-slate-900">89.4%</span>
+				<span class="text-3xl font-bold text-slate-900">89.4%</span>
 				<span class="text-xs font-medium text-slate-500">check-in rate</span>
 			</div>
 		</div>
@@ -148,12 +148,12 @@
 		<div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-xs lg:col-span-2">
 			<div class="flex items-center justify-between">
 				<div>
-					<h2 class="text-base font-bold text-slate-900">Real-Time Ticket Checkout Velocity</h2>
+					<h2 class="text-base font-semibold text-slate-900">Real-Time Ticket Checkout Velocity</h2>
 					<p class="text-xs text-slate-400">
 						Hourly checkout counts and spikes in the last 24 hours.
 					</p>
 				</div>
-				<span class="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-600"
+				<span class="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-semibold text-blue-600"
 					>LIVE MONITORING</span
 				>
 			</div>
@@ -162,7 +162,7 @@
 				{#each [40, 25, 45, 60, 80, 55, 90, 70, 110, 85, 130, 95] as height, i (i)}
 					<div class="group relative flex flex-1 flex-col items-center">
 						<div
-							class="absolute bottom-full mb-1 scale-0 rounded bg-slate-900 px-2 py-1 text-[9px] font-bold text-white transition-all group-hover:scale-100"
+							class="absolute bottom-full mb-1 scale-0 rounded bg-slate-900 px-2 py-1 text-[9px] font-semibold text-white transition-all group-hover:scale-100"
 						>
 							{height} tix
 						</div>
@@ -174,7 +174,7 @@
 				{/each}
 			</div>
 
-			<div class="mt-3 flex justify-between text-[10px] font-extrabold text-slate-400 uppercase">
+			<div class="mt-3 flex justify-between text-[10px] font-semibold text-slate-400 uppercase">
 				<span>12 Hours Ago</span>
 				<span>6 Hours Ago</span>
 				<span>Just Now</span>
@@ -186,27 +186,27 @@
 			class="flex flex-col justify-between rounded-2xl border border-slate-100 bg-white p-6 shadow-xs"
 		>
 			<div>
-				<h2 class="text-base font-bold text-slate-900">Live Entrance Feed</h2>
+				<h2 class="text-base font-semibold text-slate-900">Live Entrance Feed</h2>
 				<p class="text-xs text-slate-400">Activity stream from smart QR check-in gates.</p>
 			</div>
 
 			<div class="mt-4 flex max-h-48 flex-1 flex-col gap-3 overflow-y-auto pr-1">
 				<div class="flex items-start gap-2.5 border-l-2 border-emerald-500 pl-3">
 					<div class="flex flex-col">
-						<span class="text-xs font-bold text-slate-800">Gate A - VIP check-in</span>
+						<span class="text-xs font-semibold text-slate-800">Gate A - VIP check-in</span>
 						<span class="text-[10px] text-slate-400">Nguyễn Hoàng Long check-in at VIP Seat A1</span
 						>
 					</div>
 				</div>
 				<div class="flex items-start gap-2.5 border-l-2 border-emerald-500 pl-3">
 					<div class="flex flex-col">
-						<span class="text-xs font-bold text-slate-800">Gate B - Standard check-in</span>
+						<span class="text-xs font-semibold text-slate-800">Gate B - Standard check-in</span>
 						<span class="text-[10px] text-slate-400">Phạm Minh Hưng check-in at GA Area</span>
 					</div>
 				</div>
 				<div class="flex items-start gap-2.5 border-l-2 border-purple-500 pl-3">
 					<div class="flex flex-col">
-						<span class="text-xs font-bold text-slate-800">Device Activated</span>
+						<span class="text-xs font-semibold text-slate-800">Device Activated</span>
 						<span class="text-[10px] text-slate-400"
 							>Scan Device TP-004 went online at Main Ingress</span
 						>
@@ -215,7 +215,7 @@
 			</div>
 
 			<div class="mt-4 border-t border-slate-100 pt-3">
-				<a href="/b2b/entry" class="text-xs font-bold text-blue-600 transition hover:text-blue-700">
+				<a href="/b2b/entry" class="text-xs font-semibold text-blue-600 transition hover:text-blue-700">
 					View Check-In Settings →
 				</a>
 			</div>
@@ -225,7 +225,7 @@
 	<!-- Module Gateway / Hub Links -->
 	<div>
 		<div class="mb-4">
-			<h2 class="text-base font-bold text-slate-900">Business Control Center</h2>
+			<h2 class="text-base font-semibold text-slate-900">Business Control Center</h2>
 			<p class="text-xs text-slate-400">Quick shortcuts to B2B Organizer Core modules.</p>
 		</div>
 
@@ -242,12 +242,12 @@
 						🎫
 					</span>
 					<div class="flex flex-col">
-						<span class="text-xs font-bold text-slate-800">Events Portal</span>
+						<span class="text-xs font-semibold text-slate-800">Events Portal</span>
 						<span class="text-[10px] text-slate-400">Catalog & Manifests</span>
 					</div>
 				</div>
 				<span
-					class="mt-4 inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 transition group-hover:translate-x-1"
+					class="mt-4 inline-flex items-center gap-1 text-[10px] font-semibold text-blue-600 transition group-hover:translate-x-1"
 				>
 					Manage Catalog <span>→</span>
 				</span>
@@ -265,12 +265,12 @@
 						💰
 					</span>
 					<div class="flex flex-col">
-						<span class="text-xs font-bold text-slate-800">Sales Office</span>
+						<span class="text-xs font-semibold text-slate-800">Sales Office</span>
 						<span class="text-[10px] text-slate-400">Offers & Pricing</span>
 					</div>
 				</div>
 				<span
-					class="mt-4 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 transition group-hover:translate-x-1"
+					class="mt-4 inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 transition group-hover:translate-x-1"
 				>
 					Adjust Pricing <span>→</span>
 				</span>
@@ -288,12 +288,12 @@
 						🚪
 					</span>
 					<div class="flex flex-col">
-						<span class="text-xs font-bold text-slate-800">Entry Gates</span>
+						<span class="text-xs font-semibold text-slate-800">Entry Gates</span>
 						<span class="text-[10px] text-slate-400">Scan & Check-In</span>
 					</div>
 				</div>
 				<span
-					class="mt-4 inline-flex items-center gap-1 text-[10px] font-bold text-purple-600 transition group-hover:translate-x-1"
+					class="mt-4 inline-flex items-center gap-1 text-[10px] font-semibold text-purple-600 transition group-hover:translate-x-1"
 				>
 					Manage Entry <span>→</span>
 				</span>
@@ -311,12 +311,12 @@
 						📊
 					</span>
 					<div class="flex flex-col">
-						<span class="text-xs font-bold text-slate-800">Financial Reports</span>
+						<span class="text-xs font-semibold text-slate-800">Financial Reports</span>
 						<span class="text-[10px] text-slate-400">Settlements & Audits</span>
 					</div>
 				</div>
 				<span
-					class="mt-4 inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 transition group-hover:translate-x-1"
+					class="mt-4 inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 transition group-hover:translate-x-1"
 				>
 					Audit Revenue <span>→</span>
 				</span>
