@@ -32,7 +32,7 @@ export const load: PageServerLoad = async ({ fetch, url, cookies }) => {
 		}
 
 		// 2. Fetch events, venues, classifications, attractions concurrently
-		const [eventsRes, venuesRes, classifications] = await Promise.all([
+		const [eventsRes, venuesRes, classifications, attractions] = await Promise.all([
 			apiFetch<PageResponse<any>>(
 				fetch,
 				`/api/partner/events?organizationId=${selectedOrgId}&size=50&sort=startAt,asc`,
@@ -45,7 +45,8 @@ export const load: PageServerLoad = async ({ fetch, url, cookies }) => {
 			apiFetch<PageResponse<any>>(fetch, '/api/venues?size=100').catch(
 				() => ({ content: [] }) as any
 			),
-			apiFetch<any[]>(fetch, '/api/classifications').catch(() => [])
+			apiFetch<any[]>(fetch, '/api/classifications').catch(() => []),
+			apiFetch<any[]>(fetch, '/api/attractions').catch(() => [])
 		]);
 
 		return {
@@ -53,7 +54,8 @@ export const load: PageServerLoad = async ({ fetch, url, cookies }) => {
 			selectedOrgId,
 			events: eventsRes?.content || [],
 			venues: venuesRes?.content || [],
-			classifications
+			classifications,
+			attractions
 		};
 	} catch (err: any) {
 		console.error('[B2B DASHBOARD LOAD ERROR]:', err);
@@ -63,6 +65,7 @@ export const load: PageServerLoad = async ({ fetch, url, cookies }) => {
 			events: [],
 			venues: [],
 			classifications: [],
+			attractions: [],
 			error: err.message || 'Failed to load dashboard data.'
 		};
 	}

@@ -3,12 +3,7 @@
 	/* eslint-disable @typescript-eslint/no-explicit-any */
 	import { enhance } from '$app/forms';
 	import DateTimePicker from '$lib/components/common/DateTimePicker.svelte';
-	import {
-		IconSpeakerphone,
-		IconShieldCheck,
-		IconInfoCircle,
-		IconChevronDown
-	} from '@tabler/icons-svelte';
+	import { IconInfoCircle, IconChevronDown } from '@tabler/icons-svelte';
 
 	let { data, form } = $props();
 
@@ -16,38 +11,97 @@
 	let selectedOrgId = $state(data.selectedOrgId);
 	let loading = $state(false);
 
+	let title = $state('');
+	let slug = $state('');
+	let isSlugManuallyEdited = $state(false);
+
 	let startAt = $state('');
 
-	// Policy Toggles
-	let restrictSingleSeat = $state(false);
-	let safeTixEnabled = $state(false);
-	let transferEnabled = $state(true);
-
 	// Custom Dropdowns states
-	let showClassDropdown = $state(false);
 	let showAttractionDropdown = $state(false);
 	let showVenueDropdown = $state(false);
 
-	let selectedClassIds = $state<string[]>([]);
+	let selectedClassIds = $state<string[]>(data.classifications?.map((c: any) => c.id) || []);
 	let selectedAttractionIds = $state<string[]>([]);
 	let selectedVenueId = $state('');
 
 	let attractionSearchQuery = $state('');
 	let venueSearchQuery = $state('');
 
+	function cleanVietnamese(text: string): string {
+		return text
+			.normalize('NFD')
+			.replace(/[\u0300-\u036f]/g, '')
+			.replace(/đ/g, 'd')
+			.replace(/Đ/g, 'd');
+	}
+
+	function slugify(text: string) {
+		return cleanVietnamese(text.toString())
+			.toLowerCase()
+			.replace(/\s+/g, '-') // Replace spaces with -
+			.replace(/[^\w-]+/g, '') // Remove all non-word chars
+			.replace(/--+/g, '-') // Replace multiple - with single -
+			.replace(/^-+/, '') // Trim - from start
+			.replace(/-+$/, ''); // Trim - from end
+	}
+
+	const citySlugMap: Record<string, string> = {
+		'ho chi minh': 'ho-chi-minh',
+		'tp. ho chi minh': 'ho-chi-minh',
+		tphcm: 'ho-chi-minh',
+		'ha noi': 'ha-noi',
+		'da nang': 'da-nang',
+		'hai phong': 'hai-phong'
+	};
+
+	function getCitySlug(city: string): string {
+		const clean = cleanVietnamese(city.trim().toLowerCase());
+		if (citySlugMap[clean]) {
+			return citySlugMap[clean];
+		}
+		return slugify(city);
+	}
+
+	$effect(() => {
+		if (!isSlugManuallyEdited) {
+			const slugParts = [];
+
+			const titleSlug = slugify(title);
+			if (titleSlug) slugParts.push(titleSlug);
+
+			if (selectedVenue && selectedVenue.city) {
+				const citySlug = getCitySlug(selectedVenue.city);
+				if (citySlug) slugParts.push(citySlug);
+			}
+
+			if (startAt) {
+				const parts = startAt.split('T')[0].split('-');
+				if (parts.length === 3) {
+					slugParts.push(`${parts[1]}-${parts[2]}-${parts[0]}`);
+				}
+			}
+
+			slug = slugParts.join('-');
+		}
+	});
+
 	// Derived states
 	const filteredAttractions = $derived(
-		data.attractions?.filter((a: any) =>
-			a.name.toLowerCase().includes(attractionSearchQuery.toLowerCase())
-		) || []
+		data.attractions?.filter((a: any) => {
+			const cleanName = cleanVietnamese(a.name.toLowerCase());
+			const cleanQuery = cleanVietnamese(attractionSearchQuery.toLowerCase());
+			return cleanName.includes(cleanQuery);
+		}) || []
 	);
 
 	const filteredVenues = $derived(
-		data.venues?.filter(
-			(v: any) =>
-				v.name.toLowerCase().includes(venueSearchQuery.toLowerCase()) ||
-				v.city.toLowerCase().includes(venueSearchQuery.toLowerCase())
-		) || []
+		data.venues?.filter((v: any) => {
+			const cleanName = cleanVietnamese(v.name.toLowerCase());
+			const cleanCity = cleanVietnamese(v.city.toLowerCase());
+			const cleanQuery = cleanVietnamese(venueSearchQuery.toLowerCase());
+			return cleanName.includes(cleanQuery) || cleanCity.includes(cleanQuery);
+		}) || []
 	);
 
 	const selectedVenue = $derived(data.venues?.find((v: any) => v.id === selectedVenueId));
@@ -57,7 +111,7 @@
 	<title>Create New Event — Ticketpeak for Business</title>
 </svelte:head>
 
-<div class="mx-auto w-full max-w-7xl flex-1 flex-col space-y-6 p-6">
+<div class="mx-auto w-full max-w-xl flex-1 flex-col space-y-10 px-6 py-12">
 	<!-- System notification banners -->
 	{#if form?.error}
 		<div
@@ -71,7 +125,6 @@
 		</div>
 	{/if}
 
-	<!-- Event Creation Layout (Balanced 2-Column Dashboard Grid) -->
 	<form
 		id="event-creation-form"
 		method="POST"
@@ -82,509 +135,297 @@
 				loading = false;
 			};
 		}}
-		class="grid grid-cols-1 gap-6 lg:grid-cols-3"
+		class="space-y-8"
 	>
-		<!-- Left Column: Core Event Details & Policies (Takes 2/3 width on desktop) -->
-		<div class="space-y-6 lg:col-span-2">
-			<!-- Section 1: Basic Information -->
-			<div class="space-y-5 rounded-xl border border-slate-200 bg-white p-6 shadow-xs">
-				<!-- Hidden organization input for form submission -->
-				<input type="hidden" name="organizationId" value={selectedOrgId} />
+		<!-- Hidden organization input for form submission -->
+		<input type="hidden" name="organizationId" value={selectedOrgId} />
+		<input type="hidden" name="safeTixEnabled" value="off" />
+		<input type="hidden" name="restrictSingleSeat" value="off" />
+		<input type="hidden" name="transferEnabled" value="on" />
+		<input type="hidden" name="maxTransferCount" value="5" />
 
-				<!-- Title & Slug Stack -->
-				<div class="space-y-5">
-					<!-- Event Title -->
-					<div class="space-y-1.5">
-						<label for="event-title" class="block text-xs font-semibold text-slate-700">
-							Event Title *
-						</label>
-						<input
-							type="text"
-							id="event-title"
-							name="title"
-							placeholder="e.g. Son Tung M-TP Live Session"
-							required
-							class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-						/>
-					</div>
+		<!-- Hidden inputs to submit multiple classificationIds via Svelte Action -->
+		{#each selectedClassIds as id (id)}
+			<input type="hidden" name="classificationIds" value={id} />
+		{/each}
 
-					<!-- Custom Slug -->
-					<div class="space-y-1.5">
-						<label for="event-slug" class="block text-xs font-semibold text-slate-700"> URL </label>
-						<input
-							type="text"
-							id="event-slug"
-							name="slug"
-							placeholder="son-tung-live"
-							class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-						/>
-					</div>
-				</div>
+		<div class="space-y-8 rounded-xl border border-slate-200 bg-white p-8 shadow-xs">
+			<!-- Field 1: Event Title -->
+			<div class="space-y-1.5">
+				<label for="event-title" class="block text-xs font-semibold text-slate-700">
+					Event Title *
+				</label>
+				<input
+					type="text"
+					id="event-title"
+					name="title"
+					bind:value={title}
+					placeholder="e.g. Son Tung M-TP Live Session"
+					required
+					class="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-normal text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+				/>
 			</div>
 
-			<!-- Section 2: Performers & Categorization -->
-			<div class="space-y-5 rounded-xl border border-slate-200 bg-white p-6 shadow-xs">
-				<div class="space-y-5">
-					<!-- Classifications -->
-					<div class="relative max-w-md space-y-1.5">
-						<span class="block text-xs font-semibold text-slate-700"> Classification </span>
-						<div
-							role="button"
-							tabindex="0"
-							onclick={() => (showClassDropdown = !showClassDropdown)}
-							onkeydown={(e) => {
-								if (e.key === 'Enter' || e.key === ' ') {
-									e.preventDefault();
-									showClassDropdown = !showClassDropdown;
-								}
-							}}
-							class="flex min-h-[38px] w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-1.5 text-left text-sm font-normal text-slate-900 transition-all duration-150 focus-within:border-blue-500 hover:border-slate-300"
-						>
-							<div class="flex flex-wrap gap-1">
-								{#each selectedClassIds as id (id)}
-									{@const cat = data.classifications.find((c: any) => c.id === id)}
-									{#if cat}
-										<span
-											class="inline-flex items-center gap-1 rounded border border-slate-200/50 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-800"
-										>
-											{cat.name}
-											<button
-												type="button"
-												onclick={(e) => {
-													e.stopPropagation();
-													selectedClassIds = selectedClassIds.filter((x) => x !== id);
-												}}
-												class="hover:text-slate-650 ml-0.5 cursor-pointer text-[10px] font-semibold text-slate-400"
-											>
-												✕
-											</button>
-										</span>
-									{/if}
-								{:else}
-									<span class="text-slate-400 px-1 text-xs">Select categories...</span>
-								{/each}
-							</div>
-							<IconChevronDown
-								size={14}
-								class="mr-1 shrink-0 text-slate-400 transition-transform {showClassDropdown
-									? 'rotate-180'
-									: ''}"
-							/>
-						</div>
-
-						<!-- Hidden inputs to submit multiple classificationIds via Svelte Action -->
-						{#each selectedClassIds as id (id)}
-							<input type="hidden" name="classificationIds" value={id} />
-						{/each}
-
-						{#if showClassDropdown}
-							<button
-								type="button"
-								class="fixed inset-0 z-45 bg-transparent"
-								onclick={() => (showClassDropdown = false)}
-								aria-label="Close classification dropdown"
-							></button>
-							<div
-								class="absolute left-0 z-50 mt-1 max-h-60 w-full space-y-0.5 overflow-y-auto rounded-lg border border-slate-200 bg-white p-1 shadow-lg"
-							>
-								{#each data.classifications as cat (cat.id)}
-									{@const isSelected = selectedClassIds.includes(cat.id)}
-									<button
-										type="button"
-										onclick={() => {
-											if (isSelected) {
-												selectedClassIds = selectedClassIds.filter((x) => x !== cat.id);
-											} else {
-												selectedClassIds = [...selectedClassIds, cat.id];
-											}
-										}}
-										class="flex w-full items-center justify-between rounded px-2.5 py-2 text-left text-xs font-medium transition-colors hover:bg-slate-50 {isSelected
-											? 'text-blue-650 bg-slate-50 font-semibold'
-											: 'text-slate-700'}"
-									>
-										<span>{cat.name}</span>
-										{#if isSelected}
-											<span class="text-blue-655 text-xs font-bold">✓</span>
-										{/if}
-									</button>
-								{/each}
-							</div>
-						{/if}
-					</div>
-
-					<!-- Attractions / Artists -->
-					<div class="relative space-y-1.5">
-						<span class="block text-xs font-semibold text-slate-700"> Attraction </span>
-						<div
-							role="button"
-							tabindex="0"
-							onclick={() => (showAttractionDropdown = !showAttractionDropdown)}
-							onkeydown={(e) => {
-								if (e.key === 'Enter' || e.key === ' ') {
-									e.preventDefault();
-									showAttractionDropdown = !showAttractionDropdown;
-								}
-							}}
-							class="flex min-h-[38px] w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-1.5 text-left text-sm font-normal text-slate-900 transition-all duration-150 focus-within:border-blue-500 hover:border-slate-300"
-						>
-							<div class="flex flex-wrap gap-1">
-								{#each selectedAttractionIds as id (id)}
-									{@const artist = data.attractions.find((a: any) => a.id === id)}
-									{#if artist}
-										<span
-											class="inline-flex items-center gap-1 rounded border border-slate-200/50 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-800"
-										>
-											{artist.name}
-											<button
-												type="button"
-												onclick={(e) => {
-													e.stopPropagation();
-													selectedAttractionIds = selectedAttractionIds.filter((x) => x !== id);
-												}}
-												class="hover:text-slate-650 ml-0.5 cursor-pointer text-[10px] font-semibold text-slate-400"
-											>
-												✕
-											</button>
-										</span>
-									{/if}
-								{:else}
-									<span class="text-slate-400 px-1 text-xs">Select artists...</span>
-								{/each}
-							</div>
-							<IconChevronDown
-								size={14}
-								class="mr-1 shrink-0 text-slate-400 transition-transform {showAttractionDropdown
-									? 'rotate-180'
-									: ''}"
-							/>
-						</div>
-
-						<!-- Hidden inputs to submit multiple attractionIds via Svelte Action -->
+			<!-- Field 3: Attraction / Artists -->
+			<div class="relative space-y-1.5">
+				<label for="attraction-select" class="block text-xs font-semibold text-slate-700">
+					Attraction
+				</label>
+				<div
+					role="button"
+					tabindex="0"
+					onclick={() => (showAttractionDropdown = !showAttractionDropdown)}
+					onkeydown={(e) => {
+						if (e.key === 'Enter' || e.key === ' ') {
+							e.preventDefault();
+							showAttractionDropdown = !showAttractionDropdown;
+						}
+					}}
+					class="flex min-h-[42px] w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-2 text-left text-sm font-normal text-slate-900 transition-all duration-150 focus-within:border-blue-500 hover:border-slate-300"
+				>
+					<div class="flex flex-wrap gap-1.5">
 						{#each selectedAttractionIds as id (id)}
-							<input type="hidden" name="attractionIds" value={id} />
-						{/each}
-
-						{#if showAttractionDropdown}
-							<button
-								type="button"
-								class="fixed inset-0 z-45 bg-transparent"
-								onclick={() => (showAttractionDropdown = false)}
-								aria-label="Close attraction dropdown"
-							></button>
-							<div
-								class="absolute left-0 z-50 mt-1 w-full space-y-1.5 rounded-lg border border-slate-200 bg-white p-2 shadow-lg"
-							>
-								<!-- Search query input inside dropdown -->
-								<div class="relative">
-									<input
-										type="text"
-										placeholder="Search artists..."
-										bind:value={attractionSearchQuery}
-										class="text-slate-850 w-full rounded border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-normal transition-all duration-150 focus:border-blue-500 focus:bg-white focus:outline-none"
+							{@const artist = data.attractions.find((a: any) => a.id === id)}
+							{#if artist}
+								<span
+									class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 py-0.5 pr-2 pl-1 text-xs font-medium text-slate-800"
+								>
+									<img
+										src={artist.imageUrl || '/placeholder-artist.jpg'}
+										alt={artist.name}
+										class="h-4 w-4 shrink-0 rounded-full object-cover"
 									/>
-								</div>
-
-								<div class="no-scrollbar max-h-48 space-y-0.5 overflow-y-auto">
-									{#each filteredAttractions as artist (artist.id)}
-										{@const isSelected = selectedAttractionIds.includes(artist.id)}
-										<button
-											type="button"
-											onclick={() => {
-												if (isSelected) {
-													selectedAttractionIds = selectedAttractionIds.filter(
-														(x) => x !== artist.id
-													);
-												} else {
-													selectedAttractionIds = [...selectedAttractionIds, artist.id];
-												}
-											}}
-											class="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs font-medium transition-colors hover:bg-slate-50 {isSelected
-												? 'text-blue-655 bg-slate-50 font-semibold'
-												: 'text-slate-700'}"
-										>
-											<span>{artist.name}</span>
-											{#if isSelected}
-												<span class="text-blue-655 text-xs font-bold">✓</span>
-											{/if}
-										</button>
-									{:else}
-										<p class="text-xs text-slate-400 py-3 text-center">No artists found.</p>
-									{/each}
-								</div>
-							</div>
-						{/if}
-					</div>
-				</div>
-			</div>
-
-			<!-- Section 3: Rules & Policies -->
-			<div class="space-y-5 rounded-xl border border-slate-200 bg-white p-6 shadow-xs">
-				<div>
-					<h2 class="text-sm font-semibold text-slate-900">Anti-Scalping & Ticket Policies</h2>
-					<p class="mt-0.5 text-xs text-slate-500">
-						Configure transaction safety parameters and distribution security.
-					</p>
-				</div>
-
-				<div class="divide-y divide-slate-100 border-t border-slate-100">
-					<!-- SafeTix Dynamic QR -->
-					<div class="flex items-center justify-between py-4">
-						<div class="space-y-0.5 pr-4">
-							<span class="text-slate-850 flex items-center gap-1.5 text-xs font-semibold">
-								<IconShieldCheck size={16} class="text-slate-450" />
-								SafeTix™ Dynamic QR
-							</span>
-							<p class="text-xs leading-relaxed font-normal text-slate-500">
-								Enforces secure rotating TOTP codes. Prevents screenshot ticket fraud and ticket
-								duplication.
-							</p>
-						</div>
-						<div class="flex shrink-0 items-center">
-							<button
-								type="button"
-								onclick={() => (safeTixEnabled = !safeTixEnabled)}
-								class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none {safeTixEnabled
-									? 'bg-blue-600'
-									: 'bg-slate-200'}"
-								aria-label="Toggle SafeTix Dynamic QR"
-							>
-								<span
-									class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out {safeTixEnabled
-										? 'translate-x-5'
-										: 'translate-x-0'}"
-								></span>
-							</button>
-						</div>
-						<input type="hidden" name="safeTixEnabled" value={safeTixEnabled ? 'on' : 'off'} />
-					</div>
-
-					<!-- Restrict Single Seat -->
-					<div class="flex items-center justify-between py-4">
-						<div class="space-y-0.5 pr-4">
-							<span class="text-slate-850 flex items-center gap-1.5 text-xs font-semibold">
-								<IconSpeakerphone size={16} class="text-slate-450" />
-								Restrict Single Seats
-							</span>
-							<p class="text-xs leading-relaxed font-normal text-slate-500">
-								Prevents ticketing selections that leave a single empty seat stranded on row
-								manifests.
-							</p>
-						</div>
-						<div class="flex shrink-0 items-center">
-							<button
-								type="button"
-								onclick={() => (restrictSingleSeat = !restrictSingleSeat)}
-								class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none {restrictSingleSeat
-									? 'bg-blue-600'
-									: 'bg-slate-200'}"
-								aria-label="Toggle Restrict Single Seats"
-							>
-								<span
-									class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out {restrictSingleSeat
-										? 'translate-x-5'
-										: 'translate-x-0'}"
-								></span>
-							</button>
-						</div>
-						<input
-							type="hidden"
-							name="restrictSingleSeat"
-							value={restrictSingleSeat ? 'on' : 'off'}
-						/>
-					</div>
-
-					<!-- Transfer Enabled Toggle -->
-					<div class="flex items-center justify-between py-4">
-						<div class="space-y-0.5 pr-4">
-							<span class="text-slate-850 flex items-center gap-1.5 text-xs font-semibold">
-								<IconShieldCheck size={16} class="text-slate-450" />
-								Ticket Transferring
-							</span>
-							<p class="text-xs leading-relaxed font-normal text-slate-500">
-								Allows original buyers to securely transfer tickets to other user accounts.
-							</p>
-						</div>
-						<div class="flex shrink-0 items-center">
-							<button
-								type="button"
-								onclick={() => (transferEnabled = !transferEnabled)}
-								class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none {transferEnabled
-									? 'bg-blue-600'
-									: 'bg-slate-200'}"
-								aria-label="Toggle Ticket Transferring"
-							>
-								<span
-									class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out {transferEnabled
-										? 'translate-x-5'
-										: 'translate-x-0'}"
-								></span>
-							</button>
-						</div>
-						<input type="hidden" name="transferEnabled" value={transferEnabled ? 'on' : 'off'} />
-					</div>
-				</div>
-			</div>
-		</div>
-
-		<!-- Right Column: Scheduling & Financials (Takes 1/3 width on desktop) -->
-		<div class="space-y-6">
-			<!-- Section 5: Schedule & Venue -->
-			<div class="space-y-5 rounded-xl border border-slate-200 bg-white p-6 shadow-xs">
-				<div>
-					<h2 class="text-sm font-semibold text-slate-900">Schedule & Venue</h2>
-					<p class="mt-0.5 text-xs text-slate-500">
-						Define showtime timestamps and select host location.
-					</p>
-				</div>
-
-				<!-- Venue Selector (Custom Searchable Combobox) -->
-				<div class="relative space-y-1.5">
-					<span class="block text-xs font-semibold text-slate-700"> Hosting Venue * </span>
-					<div
-						role="button"
-						tabindex="0"
-						onclick={() => (showVenueDropdown = !showVenueDropdown)}
-						onkeydown={(e) => {
-							if (e.key === 'Enter' || e.key === ' ') {
-								e.preventDefault();
-								showVenueDropdown = !showVenueDropdown;
-							}
-						}}
-						class="flex w-full cursor-pointer items-center justify-between rounded-lg border border-slate-200 bg-white p-2.5 text-left text-sm font-normal text-slate-900 transition-all duration-150 hover:border-slate-300 focus:border-blue-500"
-					>
-						{#if selectedVenue}
-							<span class="truncate text-xs font-medium text-slate-700">
-								{selectedVenue.name} ({selectedVenue.city})
-							</span>
-						{:else}
-							<span class="text-xs text-slate-400">Select Venue...</span>
-						{/if}
-						<IconChevronDown
-							size={14}
-							class="shrink-0 text-slate-400 transition-transform {showVenueDropdown
-								? 'rotate-180'
-								: ''}"
-						/>
-					</div>
-
-					<!-- Hidden input to submit selected venueId -->
-					<input type="hidden" name="venueId" value={selectedVenueId} required />
-
-					{#if showVenueDropdown}
-						<button
-							type="button"
-							class="fixed inset-0 z-45 bg-transparent"
-							onclick={() => (showVenueDropdown = false)}
-							aria-label="Close venue dropdown"
-						></button>
-						<div
-							class="absolute left-0 z-50 mt-1 w-full space-y-1.5 rounded-lg border border-slate-200 bg-white p-1.5 shadow-lg"
-						>
-							<!-- Search query input inside dropdown -->
-							<div class="relative">
-								<input
-									type="text"
-									placeholder="Search venues..."
-									bind:value={venueSearchQuery}
-									class="text-slate-855 w-full rounded border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-normal transition-all duration-150 focus:border-blue-500 focus:bg-white focus:outline-none"
-								/>
-							</div>
-
-							<div class="no-scrollbar max-h-48 space-y-0.5 overflow-y-auto">
-								{#each filteredVenues as venue (venue.id)}
-									{@const isSelected = selectedVenueId === venue.id}
+									<span>{artist.name}</span>
 									<button
 										type="button"
-										onclick={() => {
-											selectedVenueId = venue.id;
-											showVenueDropdown = false;
+										onclick={(e) => {
+											e.stopPropagation();
+											selectedAttractionIds = selectedAttractionIds.filter((x) => x !== id);
 										}}
-										class="flex w-full items-center justify-between rounded px-2.5 py-1.5 text-left text-xs font-medium transition-colors hover:bg-slate-50 {isSelected
-											? 'text-blue-655 bg-slate-50 font-semibold'
-											: 'text-slate-750'}"
+										class="hover:text-slate-650 ml-0.5 cursor-pointer text-[10px] font-semibold text-slate-400"
 									>
-										<div class="flex min-w-0 flex-col">
-											<span class="truncate">{venue.name}</span>
-											<span class="mt-0.5 text-[9px] text-slate-400"
-												>{venue.city}, {venue.countryCode}</span
-											>
-										</div>
-										{#if isSelected}
-											<span class="text-blue-655 text-xs font-bold">✓</span>
-										{/if}
+										✕
 									</button>
-								{:else}
-									<p class="text-xs text-slate-400 py-3 text-center">No venues found.</p>
-								{/each}
-							</div>
-						</div>
-					{/if}
+								</span>
+							{/if}
+						{:else}
+							<span class="text-slate-400 px-1.5 text-xs">Select artists...</span>
+						{/each}
+					</div>
+					<IconChevronDown
+						size={14}
+						class="mr-1 shrink-0 text-slate-400 transition-transform {showAttractionDropdown
+							? 'rotate-180'
+							: ''}"
+					/>
 				</div>
 
-				<!-- Timezone block -->
-				<div class="space-y-1.5">
-					<label for="event-tz" class="block text-xs font-semibold text-slate-700">
-						Timezone
-					</label>
+				<!-- Hidden inputs to submit multiple attractionIds via Svelte Action -->
+				{#each selectedAttractionIds as id (id)}
+					<input type="hidden" name="attractionIds" value={id} />
+				{/each}
+
+				{#if showAttractionDropdown}
+					<button
+						type="button"
+						class="fixed inset-0 z-45 bg-transparent"
+						onclick={() => (showAttractionDropdown = false)}
+						aria-label="Close attraction dropdown"
+					></button>
+					<div
+						class="absolute left-0 z-50 mt-1 w-full space-y-1.5 rounded-lg border border-slate-200 bg-white p-2 shadow-lg"
+					>
+						<!-- Search query input inside dropdown -->
+						<div class="relative">
+							<input
+								type="text"
+								placeholder="Search artists..."
+								bind:value={attractionSearchQuery}
+								class="text-slate-850 w-full rounded border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-normal transition-all duration-150 focus:border-blue-500 focus:bg-white focus:outline-none"
+							/>
+						</div>
+
+						<div class="no-scrollbar max-h-48 space-y-0.5 overflow-y-auto">
+							{#each filteredAttractions as artist (artist.id)}
+								{@const isSelected = selectedAttractionIds.includes(artist.id)}
+								<button
+									type="button"
+									onclick={() => {
+										if (isSelected) {
+											selectedAttractionIds = selectedAttractionIds.filter((x) => x !== artist.id);
+										} else {
+											selectedAttractionIds = [...selectedAttractionIds, artist.id];
+										}
+									}}
+									class="flex w-full items-center justify-between rounded px-2 py-1 text-left text-xs font-medium transition-colors hover:bg-slate-50 {isSelected
+										? 'text-blue-655 bg-slate-50 font-semibold'
+										: 'text-slate-700'}"
+								>
+									<div class="flex items-center gap-2">
+										<img
+											src={artist.imageUrl || '/placeholder-artist.jpg'}
+											alt={artist.name}
+											class="h-5 w-5 shrink-0 rounded-full object-cover"
+										/>
+										<span>{artist.name}</span>
+									</div>
+									{#if isSelected}
+										<span class="text-blue-655 text-xs font-bold">✓</span>
+									{/if}
+								</button>
+							{:else}
+								<p class="text-xs text-slate-400 py-3 text-center">No artists found.</p>
+							{/each}
+						</div>
+					</div>
+				{/if}
+			</div>
+
+			<!-- Field 4: Classification (Automatic/Read-Only) -->
+			<div class="space-y-2">
+				<label class="block text-xs font-semibold text-slate-700"> Classification </label>
+				<div class="flex flex-wrap gap-1.5 pt-1">
+					{#each data.classifications as cat (cat.id)}
+						<span
+							class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1 text-xs font-medium text-slate-600"
+						>
+							<span>{cat.name}</span>
+							<span class="text-[10px] font-bold text-slate-400">✓</span>
+						</span>
+					{/each}
+				</div>
+			</div>
+
+			<!-- Field 5: Hosting Venue -->
+			<div class="relative space-y-1.5">
+				<label for="venue-select" class="block text-xs font-semibold text-slate-700">
+					Hosting Venue *
+				</label>
+				<div
+					role="button"
+					tabindex="0"
+					onclick={() => (showVenueDropdown = !showVenueDropdown)}
+					onkeydown={(e) => {
+						if (e.key === 'Enter' || e.key === ' ') {
+							e.preventDefault();
+							showVenueDropdown = !showVenueDropdown;
+						}
+					}}
+					class="flex min-h-[42px] w-full cursor-pointer items-center justify-between rounded-lg border border-slate-200 bg-white p-2.5 text-left text-sm font-normal text-slate-900 transition-all duration-150 hover:border-slate-300 focus:border-blue-500"
+				>
+					{#if selectedVenue}
+						<span class="truncate text-xs font-medium text-slate-700">
+							{selectedVenue.name} ({selectedVenue.city})
+						</span>
+					{:else}
+						<span class="text-xs text-slate-400">Select Venue...</span>
+					{/if}
+					<IconChevronDown
+						size={14}
+						class="shrink-0 text-slate-400 transition-transform {showVenueDropdown
+							? 'rotate-180'
+							: ''}"
+					/>
+				</div>
+
+				<!-- Hidden input to submit selected venueId -->
+				<input type="hidden" name="venueId" value={selectedVenueId} required />
+
+				{#if showVenueDropdown}
+					<button
+						type="button"
+						class="fixed inset-0 z-45 bg-transparent"
+						onclick={() => (showVenueDropdown = false)}
+						aria-label="Close venue dropdown"
+					></button>
+					<div
+						class="absolute left-0 z-50 mt-1 w-full space-y-1.5 rounded-lg border border-slate-200 bg-white p-1.5 shadow-lg"
+					>
+						<!-- Search query input inside dropdown -->
+						<div class="relative">
+							<input
+								type="text"
+								placeholder="Search venues..."
+								bind:value={venueSearchQuery}
+								class="text-slate-855 w-full rounded border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-normal transition-all duration-150 focus:border-blue-500 focus:bg-white focus:outline-none"
+							/>
+						</div>
+
+						<div class="no-scrollbar max-h-48 space-y-0.5 overflow-y-auto">
+							{#each filteredVenues as venue (venue.id)}
+								{@const isSelected = selectedVenueId === venue.id}
+								<button
+									type="button"
+									onclick={() => {
+										selectedVenueId = venue.id;
+										showVenueDropdown = false;
+									}}
+									class="flex w-full items-center justify-between rounded px-2.5 py-1.5 text-left text-xs font-medium transition-colors hover:bg-slate-50 {isSelected
+										? 'text-blue-655 bg-slate-50 font-semibold'
+										: 'text-slate-750'}"
+								>
+									<div class="flex min-w-0 flex-col">
+										<span class="truncate">{venue.name}</span>
+										<span class="mt-0.5 text-[9px] text-slate-400"
+											>{venue.city}, {venue.countryCode}</span
+										>
+									</div>
+									{#if isSelected}
+										<span class="text-blue-655 text-xs font-bold">✓</span>
+									{/if}
+								</button>
+							{:else}
+								<p class="text-xs text-slate-400 py-3 text-center">No venues found.</p>
+							{/each}
+						</div>
+					</div>
+				{/if}
+			</div>
+
+			<!-- Field 6: Start Date -->
+			<div class="space-y-1.5">
+				<span class="block text-xs font-semibold text-slate-700"> Start Date * </span>
+				<DateTimePicker
+					name="startAt"
+					required={true}
+					placeholder="Select start"
+					bind:value={startAt}
+				/>
+			</div>
+
+			<!-- Field 7: Timezone (Automatic/Read-Only) -->
+			<div class="space-y-1.5">
+				<label for="event-tz" class="block text-xs font-semibold text-slate-700"> Timezone </label>
+				<input
+					type="text"
+					id="event-tz"
+					name="timezone"
+					value="Asia/Ho_Chi_Minh"
+					readonly
+					class="border-slate-150 w-full cursor-not-allowed rounded-lg border bg-slate-50 px-3.5 py-2.5 text-sm font-medium text-slate-400 outline-none"
+				/>
+			</div>
+
+			<!-- Field 2: Custom Slug (URL) -->
+			<div class="space-y-1.5">
+				<label for="event-slug" class="block text-xs font-semibold text-slate-700"> URL </label>
+				<div class="relative flex items-center">
+					<span class="absolute left-3.5 text-xs text-slate-400 select-none">ticketpeak.com/</span>
 					<input
 						type="text"
-						id="event-tz"
-						name="timezone"
-						value="Asia/Ho_Chi_Minh"
-						readonly
-						class="border-slate-150 text-slate-450 w-full cursor-not-allowed rounded-lg border bg-slate-50 px-3 py-2 text-sm font-medium outline-none"
+						id="event-slug"
+						name="slug"
+						bind:value={slug}
+						oninput={() => (isSlugManuallyEdited = true)}
+						placeholder="son-tung-live"
+						class="w-full rounded-lg border border-slate-200 bg-white py-2.5 pr-3.5 pl-[104px] text-sm font-normal text-slate-900 placeholder-slate-400 transition-all duration-150 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
 					/>
-				</div>
-
-				<!-- Divider -->
-				<div class="border-t border-slate-100"></div>
-
-				<!-- Showtimes -->
-				<div class="space-y-1.5">
-					<span class="block text-xs font-semibold text-slate-700"> Start Date * </span>
-					<DateTimePicker
-						name="startAt"
-						required={true}
-						placeholder="Select start"
-						bind:value={startAt}
-					/>
-				</div>
-			</div>
-
-			<!-- Section 6: Fees & Limits -->
-			<div class="space-y-5 rounded-xl border border-slate-200 bg-white p-6 shadow-xs">
-				<div>
-					<h2 class="text-sm font-semibold text-slate-900">Fees & Limits</h2>
-					<p class="mt-0.5 text-xs text-slate-500">
-						Configure ticket pricing commissions and transaction boundaries.
-					</p>
-				</div>
-
-				<div>
-					<!-- Max Transfer Limit (Conditional on Transfer Enabled) -->
-					{#if transferEnabled}
-						<div class="space-y-1.5">
-							<label for="max-transfers" class="block text-xs font-semibold text-slate-700">
-								Max Transfers
-							</label>
-							<input
-								type="number"
-								min="1"
-								id="max-transfers"
-								name="maxTransferCount"
-								value="5"
-								class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 transition-all duration-150 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-							/>
-						</div>
-					{/if}
 				</div>
 			</div>
 		</div>
 
-		<!-- Action bar at the bottom, spanning across the 3 columns of the grid -->
-		<div
-			class="mt-2 flex items-center justify-end gap-3 border-t border-slate-200 pt-6 lg:col-span-3"
-		>
+		<!-- Action bar -->
+		<div class="mt-4 flex items-center justify-end gap-3 border-t border-slate-200 pt-6">
 			<a
 				href="/b2b/events?organizationId={selectedOrgId}"
 				class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"

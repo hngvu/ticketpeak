@@ -14,24 +14,27 @@
 		IconExternalLink,
 		IconSpeakerphone,
 		IconTicket,
-		IconReportMoney,
 		IconScan,
 		IconChartBar,
-		IconLayoutDashboard,
-		IconCalendarEvent
+		IconCalendarEvent,
+		IconDots,
+		IconSparkles,
+		IconArrowLeft,
+		IconHelpCircle
 	} from '@tabler/icons-svelte';
 
 	let { data, children }: { data: any; children: Snippet } = $props();
 
 	let showAccountMenu = $state(false);
-	let showOrgMenu = $state(false);
 
 	let openFolders = $state<Record<string, boolean>>({
 		events: true,
 		sales: false,
 		entry: false,
 		reports: false,
-		marketing: false
+		marketing: false,
+		attractions: false,
+		tools: false
 	});
 
 	const isLoginPageOrLanding = $derived(page.url.pathname === '/b2b/login');
@@ -39,176 +42,42 @@
 	const categories = $derived([
 		{
 			id: 'events',
-			label: 'Events',
-			subtitle: 'Cấu hình & Hạ tầng',
-			icon: IconTicket,
+			label: 'EVENTS',
+			subtitle: 'Quản lý Sự kiện',
+			icon: IconCalendarEvent,
 			items: [
 				{
-					label: 'All Events',
-					href: `/b2b/events?tab=all&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/events') &&
-						page.url.searchParams.get('tab') === 'all'
+					label: 'Event Management',
+					href: `/b2b/events?organizationId=${data.selectedOrgId || ''}`,
+					active: page.url.pathname.startsWith('/b2b/events')
 				},
 				{
-					label: 'Create Event',
-					href: `/b2b/events/create?organizationId=${data.selectedOrgId || ''}`,
-					active: page.url.pathname === '/b2b/events/create'
+					label: 'Platinum Tool',
+					href: '#',
+					active: false
 				},
 				{
-					label: 'Event Groups',
-					href: `/b2b/events?tab=groups&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/events') &&
-						page.url.searchParams.get('tab') === 'groups'
+					label: 'Publish',
+					href: '#',
+					active: false
 				},
 				{
-					label: 'Bulk Edit',
-					href: `/b2b/events?tab=bulk&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/events') &&
-						page.url.searchParams.get('tab') === 'bulk'
-				},
-				{
-					label: 'Templates',
-					href: `/b2b/events?tab=templates&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/events') &&
-						page.url.searchParams.get('tab') === 'templates'
-				},
-				{
-					label: 'Offers & Presales',
-					href: `/b2b/events?tab=offers&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/events') &&
-						page.url.searchParams.get('tab') === 'offers'
-				},
-				{
-					label: 'Holds & Kills',
-					href: `/b2b/events?tab=holds&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/events') &&
-						page.url.searchParams.get('tab') === 'holds'
-				},
-				{
-					label: 'Seat Map',
-					href: `/b2b/events?tab=ism&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/events') &&
-						page.url.searchParams.get('tab') === 'ism'
-				},
-				{
-					label: 'Collaborators',
-					href: `/b2b/events?tab=collaborators&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/events') &&
-						page.url.searchParams.get('tab') === 'collaborators'
+					label: 'Scaling',
+					href: '#',
+					active: false
 				}
 			]
 		},
 		{
-			id: 'sales',
-			label: 'Sales',
-			subtitle: 'Thương mại & Kho vé',
-			icon: IconReportMoney,
-			items: [
-				{
-					label: 'Real-time Sales',
-					href: `/b2b/sales?tab=realtime&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/sales') &&
-						page.url.searchParams.get('tab') === 'realtime'
-				},
-				{
-					label: 'Inventory',
-					href: `/b2b/sales?tab=inventory&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/sales') &&
-						page.url.searchParams.get('tab') === 'inventory'
-				},
-				{
-					label: 'Price Management',
-					href: `/b2b/sales?tab=pricing&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/sales') &&
-						page.url.searchParams.get('tab') === 'pricing'
-				},
-				{
-					label: 'Orders',
-					href: `/b2b/sales?tab=orders&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/sales') &&
-						(page.url.searchParams.get('tab') === 'orders' || !page.url.searchParams.get('tab'))
-				},
-				{
-					label: 'Price Requests',
-					href: `/b2b/sales?tab=requests&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/sales') &&
-						page.url.searchParams.get('tab') === 'requests'
-				}
-			]
-		},
-		{
-			id: 'entry',
-			label: 'Entry',
-			subtitle: 'Vận hành & Kiểm soát',
-			icon: IconScan,
-			items: [
-				{
-					label: 'Entrances',
-					href: `/b2b/entry?tab=entrances&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/entry') &&
-						page.url.searchParams.get('tab') === 'entrances'
-				},
-				{
-					label: 'Scan Devices',
-					href: `/b2b/entry?tab=devices&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/entry') &&
-						page.url.searchParams.get('tab') === 'devices'
-				},
-				{
-					label: 'Attendance',
-					href: `/b2b/entry?tab=attendance&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/entry') &&
-						(page.url.searchParams.get('tab') === 'attendance' || !page.url.searchParams.get('tab'))
-				},
-				{
-					label: 'Pre-Entry Check',
-					href: `/b2b/entry?tab=precheck&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/entry') &&
-						page.url.searchParams.get('tab') === 'precheck'
-				},
-				{
-					label: 'Offline Barcodes',
-					href: `/b2b/entry?tab=offline&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/entry') &&
-						page.url.searchParams.get('tab') === 'offline'
-				},
-				{
-					label: 'Ticket Rules',
-					href: `/b2b/entry?tab=rules&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/entry') &&
-						page.url.searchParams.get('tab') === 'rules'
-				},
-				{
-					label: 'Scan Log Export',
-					href: `/b2b/entry?tab=export&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/entry') &&
-						page.url.searchParams.get('tab') === 'export'
-				}
-			]
+			id: 'attractions',
+			label: 'ATTRACTIONS',
+			subtitle: 'Nghệ sĩ & Diễn viên',
+			icon: IconSparkles,
+			items: []
 		},
 		{
 			id: 'reports',
-			label: 'Reports',
+			label: 'REPORTS',
 			subtitle: 'Kiểm toán & Đối soát',
 			icon: IconChartBar,
 			items: [
@@ -232,47 +101,12 @@
 					active:
 						page.url.pathname.startsWith('/b2b/reports') &&
 						page.url.searchParams.get('tab') === 'inventory-status'
-				},
-				{
-					label: 'Sales Trends',
-					href: `/b2b/reports?tab=trends&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/reports') &&
-						page.url.searchParams.get('tab') === 'trends'
-				},
-				{
-					label: 'Demographics',
-					href: `/b2b/reports?tab=demographics&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/reports') &&
-						page.url.searchParams.get('tab') === 'demographics'
-				},
-				{
-					label: 'Sales Comparison',
-					href: `/b2b/reports?tab=comparison&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/reports') &&
-						page.url.searchParams.get('tab') === 'comparison'
-				},
-				{
-					label: 'Fans Expected',
-					href: `/b2b/reports?tab=expected&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/reports') &&
-						page.url.searchParams.get('tab') === 'expected'
-				},
-				{
-					label: 'Custom Reports',
-					href: `/b2b/reports?tab=custom&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/reports') &&
-						page.url.searchParams.get('tab') === 'custom'
 				}
 			]
 		},
 		{
 			id: 'marketing',
-			label: 'Marketing',
+			label: 'MARKETING',
 			subtitle: 'Tiếp cận & Tối ưu hóa',
 			icon: IconSpeakerphone,
 			items: [
@@ -289,27 +123,49 @@
 					active:
 						page.url.pathname.startsWith('/b2b/marketing') &&
 						page.url.searchParams.get('tab') === 'segments'
+				}
+			]
+		},
+		{
+			id: 'sales',
+			label: 'SALES',
+			subtitle: 'Thương mại & Kho vé',
+			icon: IconTicket,
+			isExternal: true,
+			items: [
+				{
+					label: 'Real-time Sales',
+					href: `/b2b/sales?tab=realtime&organizationId=${data.selectedOrgId || ''}`,
+					active:
+						page.url.pathname.startsWith('/b2b/sales') &&
+						page.url.searchParams.get('tab') === 'realtime'
 				},
 				{
-					label: 'Email',
-					href: `/b2b/marketing?tab=email&organizationId=${data.selectedOrgId || ''}`,
+					label: 'Inventory',
+					href: `/b2b/sales?tab=inventory&organizationId=${data.selectedOrgId || ''}`,
 					active:
-						page.url.pathname.startsWith('/b2b/marketing') &&
-						page.url.searchParams.get('tab') === 'email'
+						page.url.pathname.startsWith('/b2b/sales') &&
+						page.url.searchParams.get('tab') === 'inventory'
 				},
 				{
-					label: 'Promoted Ads',
-					href: `/b2b/marketing?tab=ads&organizationId=${data.selectedOrgId || ''}`,
+					label: 'Price Management',
+					href: `/b2b/sales?tab=pricing&organizationId=${data.selectedOrgId || ''}`,
 					active:
-						page.url.pathname.startsWith('/b2b/marketing') &&
-						page.url.searchParams.get('tab') === 'ads'
-				},
+						page.url.pathname.startsWith('/b2b/sales') &&
+						page.url.searchParams.get('tab') === 'pricing'
+				}
+			]
+		},
+		{
+			id: 'tools',
+			label: 'TOOLS',
+			subtitle: 'Vận hành & Kiểm soát',
+			icon: IconScan,
+			items: [
 				{
-					label: 'Performance',
-					href: `/b2b/marketing?tab=performance&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/marketing') &&
-						page.url.searchParams.get('tab') === 'performance'
+					label: 'Gate Simulator',
+					href: `/b2b/entry?tab=entrances&organizationId=${data.selectedOrgId || ''}`,
+					active: page.url.pathname.startsWith('/b2b/entry')
 				}
 			]
 		}
@@ -397,7 +253,7 @@
 			>
 				<!-- Top Branding Block -->
 				<div class="flex shrink-0 items-center justify-between border-b border-slate-100 p-4">
-					<a href="/b2b/dashboard" class="flex min-w-0 items-center gap-2">
+					<a href="/b2b/events" class="flex min-w-0 items-center gap-2">
 						<!-- Blue TP Square Logo -->
 						<div
 							class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-base font-bold tracking-tighter text-white shadow-sm"
@@ -415,169 +271,61 @@
 					</a>
 				</div>
 
-				<!-- Promoter / Organization Selector Box -->
-				<div class="relative shrink-0 border-b border-slate-100/60 px-3 py-2">
-					<button
-						type="button"
-						onclick={() => (showOrgMenu = !showOrgMenu)}
-						class="flex w-full items-center justify-between rounded-xl border border-slate-200/70 bg-slate-50/50 p-2 text-left transition-all hover:bg-slate-50"
-					>
-						<div class="flex min-w-0 items-center gap-2.5">
-							<!-- LN Initials Rounded Square -->
-							<div
-								class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-blue-100 bg-blue-50 text-xs font-bold text-blue-600"
-							>
-								{activeOrg?.name?.[0]?.toUpperCase() || 'T'}{activeOrg?.name
-									?.split(' ')?.[1]?.[0]
-									?.toUpperCase() || 'P'}
-							</div>
-							<div class="flex min-w-0 flex-col">
-								<span class="truncate text-xs leading-tight font-semibold text-slate-700">
-									{activeOrg?.name || 'Live Nation APAC'}
-								</span>
-								<span class="mt-0.5 text-[9px] font-medium text-slate-400"
-									>Promoter · 12 venues</span
-								>
-							</div>
-						</div>
-						<IconChevronDown
-							size={14}
-							stroke={2.5}
-							class="shrink-0 text-slate-400 transition-transform {showOrgMenu ? 'rotate-180' : ''}"
-						/>
-					</button>
-
-					<!-- Floating Organization Dropdown -->
-					{#if showOrgMenu}
-						<button
-							type="button"
-							class="fixed inset-0 z-40 bg-transparent"
-							onclick={() => (showOrgMenu = false)}
-							aria-label="Close organization menu"
-						></button>
-						<div
-							class="absolute top-full right-3 left-3 z-50 mt-1 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
-						>
-							<div class="mb-1.5 border-b border-slate-100 px-2 pb-1.5">
-								<p class="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
-									Switch Organization
-								</p>
-							</div>
-							<div class="flex max-h-40 flex-col gap-0.5 overflow-y-auto">
-								{#each data.organizations || [] as org (org.id)}
-									<button
-										type="button"
-										onclick={() => {
-											showOrgMenu = false;
-											window.location.href = `?organizationId=${org.id}`;
-										}}
-										class="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-xs font-medium transition-all hover:bg-slate-50 {org.id ===
-										data.selectedOrgId
-											? 'bg-blue-50/55 font-semibold text-blue-600'
-											: 'text-slate-600'}"
-									>
-										<span
-											class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-100 text-[10px] font-bold text-slate-500"
-										>
-											{org.name?.[0]?.toUpperCase() || 'O'}
-										</span>
-										<span class="truncate">{org.name}</span>
-									</button>
-								{/each}
-							</div>
-						</div>
-					{/if}
-				</div>
-
 				<!-- Sidebar Scrollable Body -->
-				<div class="no-scrollbar flex flex-1 flex-col gap-1 overflow-y-auto p-3">
-					<!-- MAIN SECTION -->
-					<div class="px-3 pt-2 pb-1">
-						<span class="text-[9px] font-semibold tracking-wider text-slate-400 uppercase"
-							>MAIN</span
-						>
-					</div>
-
-					<!-- Dashboard link -->
-					<a
-						href={`/b2b/dashboard?organizationId=${data.selectedOrgId || ''}`}
-						class="flex items-center gap-3.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all duration-200 {page
-							.url.pathname === '/b2b/dashboard'
-							? 'bg-blue-50/50 text-blue-600'
-							: 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}"
-					>
-						<IconLayoutDashboard size={20} stroke={1.8} class="shrink-0" />
-						<span class="truncate">Dashboard</span>
-					</a>
-
-					<!-- Schedule list link with 24 badge -->
-					<a
-						href={`/b2b/schedule?organizationId=${data.selectedOrgId || ''}`}
-						class="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold transition-all duration-200 {page
-							.url.pathname === '/b2b/schedule'
-							? 'bg-blue-50/50 text-blue-600'
-							: 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}"
-					>
-						<div class="flex min-w-0 items-center gap-3.5">
-							<IconCalendarEvent size={20} stroke={1.8} class="shrink-0" />
-							<span class="truncate">Schedule</span>
-						</div>
-						<span
-							class="shrink-0 rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600"
-							>24</span
-						>
-					</a>
-
-					<!-- MODULES SECTION -->
-					<div class="px-3 pt-4 pb-1">
-						<span class="text-[9px] font-semibold tracking-wider text-slate-400 uppercase"
-							>MODULES</span
-						>
-					</div>
-
+				<div class="no-scrollbar flex flex-1 flex-col gap-1.5 overflow-y-auto p-3.5">
 					{#each categories as cat (cat.id)}
 						{@const CategoryIcon = cat.icon}
-						<!-- Expanded Sidebar Category Folder -->
-						<div class="flex flex-col rounded-xl border border-slate-100 bg-slate-50/20 p-1">
+						{@const hasActiveItem = cat.items.some((i) => i.active)}
+						<!-- Sidebar Category block (flat style, no borders or background) -->
+						<div class="flex flex-col">
 							<!-- Category Header Toggle Button -->
 							<button
 								type="button"
-								onclick={() => (openFolders[cat.id] = !openFolders[cat.id])}
-								class="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left transition-all hover:bg-slate-50"
+								onclick={() => {
+									if (cat.items.length > 0) {
+										openFolders[cat.id] = !openFolders[cat.id];
+									}
+								}}
+								class="flex w-full cursor-pointer items-center justify-between rounded-lg border-0 bg-transparent px-2.5 py-2 text-left transition-all hover:bg-slate-50"
 							>
-								<div class="flex items-center gap-3">
+								<div class="flex items-center gap-3.5">
+									<!-- Highlight icon in blue if there is an active submenu item, matching screenshot -->
 									<div
-										class="shrink-0 transition-colors {cat.items.some((i) => i.active)
+										class="shrink-0 transition-colors {hasActiveItem
 											? 'text-blue-600'
 											: 'text-slate-400'}"
 									>
-										<CategoryIcon size={20} stroke={1.8} />
+										<CategoryIcon size={18} stroke={hasActiveItem ? 2.2 : 1.8} />
 									</div>
 									<span
-										class="text-xs font-semibold tracking-tight transition-colors {cat.items.some(
-											(i) => i.active
-										)
-											? 'text-blue-600'
-											: 'text-slate-700'}">{cat.label}</span
+										class="text-[11px] font-bold tracking-wider uppercase transition-colors {hasActiveItem
+											? 'text-slate-900'
+											: 'text-slate-500'}"
 									>
+										{cat.label}
+									</span>
 								</div>
-								<IconChevronRight
-									size={14}
-									stroke={2.5}
-									class="text-slate-400 transition-transform duration-200 {openFolders[cat.id]
-										? 'rotate-90'
-										: ''}"
-								/>
+								{#if cat.items.length > 0}
+									<IconChevronDown
+										size={13}
+										stroke={2.5}
+										class="text-slate-400 transition-transform duration-200 {openFolders[cat.id]
+											? 'rotate-180'
+											: ''}"
+									/>
+								{:else if cat.isExternal}
+									<IconExternalLink size={13} stroke={2} class="text-slate-400" />
+								{/if}
 							</button>
 
 							<!-- Collapsible Submenus List -->
-							{#if openFolders[cat.id]}
-								<div class="mt-0.5 flex flex-col gap-0.5 pr-1 pb-1.5 pl-8">
+							{#if openFolders[cat.id] && cat.items.length > 0}
+								<div class="mt-0.5 flex flex-col gap-1 pr-1 pb-1.5 pl-9">
 									{#each cat.items as item (item.label)}
 										<a
 											href={item.href}
-											class="flex items-center rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 {item.active
-												? 'bg-blue-50/50 font-semibold text-blue-600'
+											class="flex items-center rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all duration-150 {item.active
+												? 'bg-blue-50/70 font-semibold text-blue-600'
 												: 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}"
 										>
 											<span class="truncate">{item.label}</span>
@@ -589,67 +337,93 @@
 					{/each}
 				</div>
 
-				<!-- Bottom User Profile Card -->
-				<div class="relative shrink-0 border-t border-slate-100 bg-white p-3">
-					<button
-						type="button"
-						onclick={() => (showAccountMenu = !showAccountMenu)}
-						class="flex w-full items-center justify-between rounded-xl p-1.5 text-left transition-all hover:bg-slate-50"
+				<!-- Bottom Actions and Profile Block -->
+				<div class="shrink-0 space-y-1 border-t border-slate-100 bg-white p-3.5">
+					<!-- Help Link -->
+					<a
+						href="#help"
+						class="flex items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-800"
 					>
-						<div class="flex min-w-0 items-center gap-2.5">
-							<!-- Emerald Initials Circle -->
-							<div
-								class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 text-sm font-semibold text-emerald-600"
-							>
-								{data.user?.fullName?.[0]?.toUpperCase() || 'J'}{data.user?.fullName
-									?.split(' ')?.[1]?.[0]
-									?.toUpperCase() || 'D'}
-							</div>
-							<div class="flex min-w-0 flex-col">
-								<span class="truncate text-xs leading-tight font-semibold text-slate-700">
-									{data.user?.fullName || 'Jamie Dao'}
-								</span>
-								<span class="mt-0.5 truncate text-[9px] font-medium text-slate-400"
-									>Box Office Manager</span
-								>
-							</div>
+						<div class="flex items-center gap-3">
+							<IconHelpCircle size={18} stroke={1.8} class="text-slate-400" />
+							<span>Help</span>
 						</div>
-						<IconChevronRight size={14} stroke={2.5} class="shrink-0 text-slate-400" />
-					</button>
+						<IconChevronRight size={12} stroke={2.5} class="text-slate-350" />
+					</a>
 
-					<!-- Floating Account / User Dropdown Menu -->
-					{#if showAccountMenu}
+					<!-- Profile Card -->
+					<div class="relative">
 						<button
 							type="button"
-							class="fixed inset-0 z-40 cursor-default bg-transparent"
-							onclick={() => (showAccountMenu = false)}
-							aria-label="Close user menu"
-						></button>
-						<div
-							class="absolute right-3 bottom-full left-3 z-50 mb-1 rounded-xl border border-slate-200 bg-white p-2 text-slate-800 shadow-xl"
+							onclick={() => (showAccountMenu = !showAccountMenu)}
+							class="flex w-full cursor-pointer items-center justify-between rounded-xl border-0 bg-transparent p-1.5 text-left transition-all hover:bg-slate-50"
 						>
-							<div class="mb-1 border-b border-slate-100 px-3 py-2 select-none">
-								<p class="text-xs font-medium text-slate-400">Signed in as</p>
-								<p class="truncate text-xs font-semibold text-slate-900">{data.user?.email}</p>
-							</div>
-							<a
-								href="/discover"
-								class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 transition hover:bg-slate-50"
-							>
-								<IconExternalLink size={16} stroke={2} class="text-slate-400" />
-								Buyer Portal
-							</a>
-							<form method="POST" action="/logout" class="w-full">
-								<button
-									type="submit"
-									class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-red-600 transition hover:bg-red-50 focus:outline-none"
+							<div class="flex min-w-0 items-center gap-2.5">
+								<!-- Slate Initials Rounded Square -->
+								<div
+									class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-700 uppercase"
 								>
-									<IconLogout size={16} stroke={2} />
-									Sign Out
-								</button>
-							</form>
-						</div>
-					{/if}
+									{data.user?.fullName?.[0]?.toUpperCase() || 'D'}{data.user?.fullName
+										?.split(' ')?.[1]?.[0]
+										?.toUpperCase() || 'Z'}
+								</div>
+								<div class="flex min-w-0 flex-col">
+									<span class="truncate text-xs leading-none font-bold text-slate-800 uppercase">
+										{data.user?.fullName || 'DANIELLE'}
+									</span>
+									<span
+										class="mt-1 truncate text-[9px] leading-none font-semibold text-slate-400 uppercase"
+									>
+										{activeOrg?.name || 'Default Organi...'}
+									</span>
+								</div>
+							</div>
+							<IconDots size={20} class="shrink-0 text-slate-400 hover:text-slate-700" />
+						</button>
+
+						<!-- Floating Account / User Dropdown Menu -->
+						{#if showAccountMenu}
+							<button
+								type="button"
+								class="fixed inset-0 z-45 cursor-default bg-transparent"
+								onclick={() => (showAccountMenu = false)}
+								aria-label="Close user menu"
+							></button>
+							<div
+								class="absolute right-0 bottom-full left-0 z-50 mb-1 rounded-xl border border-slate-200 bg-white p-2 text-slate-800 shadow-xl"
+							>
+								<div class="mb-1 border-b border-slate-100 px-3 py-2 select-none">
+									<p class="text-xs font-medium text-slate-400">Signed in as</p>
+									<p class="truncate text-xs font-semibold text-slate-900">{data.user?.email}</p>
+								</div>
+								<a
+									href="/discover"
+									class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+								>
+									<IconExternalLink size={16} stroke={2} class="text-slate-400" />
+									Buyer Portal
+								</a>
+								<form method="POST" action="/logout" class="w-full">
+									<button
+										type="submit"
+										class="flex w-full cursor-pointer items-center gap-2 rounded-lg border-0 bg-transparent px-3 py-2 text-left text-xs font-semibold text-red-600 transition hover:bg-red-50 focus:outline-none"
+									>
+										<IconLogout size={16} stroke={2} />
+										Sign Out
+									</button>
+								</form>
+							</div>
+						{/if}
+					</div>
+
+					<!-- Collapse Button -->
+					<button
+						type="button"
+						class="flex w-full cursor-pointer items-center gap-3 rounded-lg border-0 bg-transparent px-3 py-2 text-left text-xs font-semibold text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-800"
+					>
+						<IconArrowLeft size={18} stroke={1.8} class="text-slate-400" />
+						<span>Collapse</span>
+					</button>
 				</div>
 			</aside>
 
