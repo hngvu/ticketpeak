@@ -9,11 +9,48 @@
 
 	const events = $derived(data.events || []);
 	const organizations = $derived(data.organizations || []);
+	const classifications = $derived(data.classifications || []);
+	const attractions = $derived(data.attractions || []);
+
+	// Search and filter states
+	let classSearch = $state('');
+	let classLevelFilter = $state('all'); // 'all', '1', '2'
+
+	let attrSearch = $state('');
+	let attrTypeFilter = $state('all'); // 'all', 'ARTIST', 'VENUE', etc.
+
+	// Derived filtered lists
+	const filteredClassifications = $derived(
+		classifications.filter((cat: any) => {
+			const matchesSearch =
+				cat.name.toLowerCase().includes(classSearch.toLowerCase()) ||
+				(cat.slug || '').toLowerCase().includes(classSearch.toLowerCase()) ||
+				(cat.id || '').toLowerCase().includes(classSearch.toLowerCase());
+			const matchesLevel = classLevelFilter === 'all' || cat.level?.toString() === classLevelFilter;
+			return matchesSearch && matchesLevel;
+		})
+	);
+
+	const filteredAttractions = $derived(
+		attractions.filter((attr: any) => {
+			const matchesSearch =
+				attr.name.toLowerCase().includes(attrSearch.toLowerCase()) ||
+				(attr.slug || '').toLowerCase().includes(attrSearch.toLowerCase()) ||
+				(attr.description || '').toLowerCase().includes(attrSearch.toLowerCase());
+			const matchesType = attrTypeFilter === 'all' || attr.type === attrTypeFilter;
+			return matchesSearch && matchesType;
+		})
+	);
 
 	// Derive active tab from URL search parameters to keep in perfect sync with the layout sidebar
 	const activeTab = $derived(
-		(page.url.searchParams.get('tab') as 'events' | 'organizations' | 'settings' | 'logs') ||
-			'events'
+		(page.url.searchParams.get('tab') as
+			| 'events'
+			| 'classifications'
+			| 'organizations'
+			| 'attractions'
+			| 'settings'
+			| 'logs') || 'events'
 	);
 
 	// Local platform settings
@@ -22,10 +59,34 @@
 	let maxTransferCount = $state(5);
 	let settingsSaved = $state(false);
 
-	// Postpone modal state
+	// Modals toggling
 	let selectedEventId = $state<string | null>(null);
 	let postponeReason = $state('');
 	let showPostponeModal = $state(false);
+
+	let showAddClassificationModal = $state(false);
+	let showAddAttractionModal = $state(false);
+
+	// Classification form local binds
+	let editingClassificationId = $state<string | null>(null);
+	let className = $state('');
+	let classSlug = $state('');
+	let classParentId = $state('');
+
+	function openEditClassification(cat: any) {
+		editingClassificationId = cat.id;
+		className = cat.name;
+		classSlug = cat.slug;
+		classParentId = cat.parentId || '';
+		showAddClassificationModal = true;
+	}
+
+	// Attraction form local binds
+	let attrName = $state('');
+	let attrSlug = $state('');
+	let attrType = $state('ARTIST');
+	let attrImageUrl = $state('');
+	let attrDescription = $state('');
 
 	// Suspended organizations tracking
 	let suspendedOrgIds = $state<string[]>([]);
@@ -114,6 +175,25 @@
 			minute: '2-digit'
 		});
 	}
+
+	// Dynamic slug generation helpers
+	function cleanVietnamese(text: string): string {
+		return text
+			.normalize('NFD')
+			.replace(/[\u0300-\u036f]/g, '')
+			.replace(/đ/g, 'd')
+			.replace(/Đ/g, 'd');
+	}
+
+	function slugify(text: string) {
+		return cleanVietnamese(text.toString())
+			.toLowerCase()
+			.replace(/\s+/g, '-')
+			.replace(/[^\w-]+/g, '')
+			.replace(/--+/g, '-')
+			.replace(/^-+/, '')
+			.replace(/-+$/, '');
+	}
 </script>
 
 <svelte:head>
@@ -144,7 +224,8 @@
 				Operations Control
 			</h1>
 			<p class="mt-1.5 text-xs font-semibold text-slate-500">
-				Real-time moderation panel for global events, organizations, and platform settings.
+				Real-time moderation panel for global events, attractions, classifications, and platform
+				settings.
 			</p>
 		</div>
 	</div>
@@ -157,7 +238,7 @@
 		>
 			<div class="flex items-center justify-between">
 				<span class="text-slate-450 text-xs font-bold tracking-wider uppercase">Total Events</span>
-				<div class="rounded-lg bg-amber-50 p-2 text-amber-600">
+				<div class="rounded-lg bg-slate-100 p-2 text-slate-700">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						fill="none"
@@ -214,7 +295,9 @@
 			class="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-xs transition-all duration-300 hover:scale-[1.02] hover:shadow-sm"
 		>
 			<div class="flex items-center justify-between">
-				<span class="text-slate-455 text-xs font-bold tracking-wider uppercase">Revenue</span>
+				<span class="text-slate-455 text-xs font-bold tracking-wider uppercase"
+					>Classifications</span
+				>
 				<div class="rounded-lg bg-emerald-50 p-2 text-emerald-600">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -227,13 +310,23 @@
 						<path
 							stroke-linecap="round"
 							stroke-linejoin="round"
-							d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+							d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.674.509a8.948 8.948 0 0 0 3.54-2.54 8.948 8.948 0 0 0 2.54-3.54c.363-.894.19-1.975-.509-2.674l-9.581-9.581A2.25 2.25 0 0 0 9.568 3Z"
+						/>
+						<path
+							d="M6 6h.008v.008H6V6Z"
+							stroke-width="2.5"
+							stroke-linecap="round"
+							stroke-linejoin="round"
 						/>
 					</svg>
 				</div>
 			</div>
-			<p class="mt-4 font-mono text-3xl font-black font-extrabold text-emerald-600">12,450,000 ₫</p>
-			<p class="mt-1.5 text-[10px] font-bold text-slate-400 uppercase">5.0% commission share</p>
+			<p class="mt-4 font-mono text-3xl font-black text-slate-900">
+				{classifications.length}
+			</p>
+			<p class="mt-1.5 text-[10px] font-bold text-slate-400 uppercase">
+				Active genres & event categories
+			</p>
 		</div>
 
 		<!-- KPI 4 -->
@@ -241,7 +334,7 @@
 			class="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-xs transition-all duration-300 hover:scale-[1.02] hover:shadow-sm"
 		>
 			<div class="flex items-center justify-between">
-				<span class="text-slate-455 text-xs font-bold tracking-wider uppercase">System Users</span>
+				<span class="text-slate-455 text-xs font-bold tracking-wider uppercase">Attractions</span>
 				<div class="rounded-lg bg-purple-50 p-2 text-purple-600">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -259,47 +352,65 @@
 					</svg>
 				</div>
 			</div>
-			<p class="mt-4 font-mono text-3xl font-black text-slate-900">412</p>
+			<p class="mt-4 font-mono text-3xl font-black text-slate-900">{attractions.length}</p>
 			<p class="mt-1.5 text-[10px] font-bold text-slate-400 uppercase">
-				Registered buyers & sellers
+				Registered Artists & Performers
 			</p>
 		</div>
 	</div>
 
 	<!-- Secondary on-page Navigation Tabs (perfectly styled to match B2B) -->
-	<div class="mb-6 flex border-b border-slate-200">
+	<div class="no-scrollbar mb-6 flex overflow-x-auto border-b border-slate-200">
 		<button
 			onclick={() => goto('/ops/dashboard?tab=events')}
-			class="cursor-pointer border-b-2 px-6 py-3 font-sans text-xs font-extrabold tracking-wider uppercase transition-all outline-none
+			class="shrink-0 cursor-pointer border-b-2 px-6 py-3 font-sans text-xs font-extrabold tracking-wider uppercase transition-all outline-none
 				{activeTab === 'events'
-				? 'border-amber-500 font-extrabold text-slate-950'
+				? 'border-slate-950 font-extrabold text-slate-950'
 				: 'border-transparent text-slate-400 hover:text-slate-700'}"
 		>
 			📢 Event Moderation
 		</button>
 		<button
+			onclick={() => goto('/ops/dashboard?tab=classifications')}
+			class="shrink-0 cursor-pointer border-b-2 px-6 py-3 font-sans text-xs font-extrabold tracking-wider uppercase transition-all outline-none
+				{activeTab === 'classifications'
+				? 'border-slate-950 font-extrabold text-slate-950'
+				: 'border-transparent text-slate-400 hover:text-slate-700'}"
+		>
+			🏷️ Classifications
+		</button>
+		<button
 			onclick={() => goto('/ops/dashboard?tab=organizations')}
-			class="cursor-pointer border-b-2 px-6 py-3 font-sans text-xs font-extrabold tracking-wider uppercase transition-all outline-none
+			class="shrink-0 cursor-pointer border-b-2 px-6 py-3 font-sans text-xs font-extrabold tracking-wider uppercase transition-all outline-none
 				{activeTab === 'organizations'
-				? 'border-amber-500 font-extrabold text-slate-950'
+				? 'border-slate-950 font-extrabold text-slate-950'
 				: 'border-transparent text-slate-400 hover:text-slate-700'}"
 		>
 			🏢 Organizations
 		</button>
 		<button
+			onclick={() => goto('/ops/dashboard?tab=attractions')}
+			class="shrink-0 cursor-pointer border-b-2 px-6 py-3 font-sans text-xs font-extrabold tracking-wider uppercase transition-all outline-none
+				{activeTab === 'attractions'
+				? 'border-slate-950 font-extrabold text-slate-950'
+				: 'border-transparent text-slate-400 hover:text-slate-700'}"
+		>
+			🎭 Attractions
+		</button>
+		<button
 			onclick={() => goto('/ops/dashboard?tab=settings')}
-			class="cursor-pointer border-b-2 px-6 py-3 font-sans text-xs font-extrabold tracking-wider uppercase transition-all outline-none
+			class="shrink-0 cursor-pointer border-b-2 px-6 py-3 font-sans text-xs font-extrabold tracking-wider uppercase transition-all outline-none
 				{activeTab === 'settings'
-				? 'border-amber-500 font-extrabold text-slate-950'
+				? 'border-slate-950 font-extrabold text-slate-950'
 				: 'border-transparent text-slate-400 hover:text-slate-700'}"
 		>
 			⚙️ Platform Settings
 		</button>
 		<button
 			onclick={() => goto('/ops/dashboard?tab=logs')}
-			class="cursor-pointer border-b-2 px-6 py-3 font-sans text-xs font-extrabold tracking-wider uppercase transition-all outline-none
+			class="shrink-0 cursor-pointer border-b-2 px-6 py-3 font-sans text-xs font-extrabold tracking-wider uppercase transition-all outline-none
 				{activeTab === 'logs'
-				? 'border-amber-500 font-extrabold text-slate-950'
+				? 'border-slate-950 font-extrabold text-slate-950'
 				: 'border-transparent text-slate-400 hover:text-slate-700'}"
 		>
 			📋 Audit Logs
@@ -461,6 +572,148 @@
 		</div>
 	{/if}
 
+	<!-- TAB CONTENT: CLASSIFICATIONS -->
+	{#if activeTab === 'classifications'}
+		<div
+			class="animate-fade-in overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs"
+		>
+			<div
+				class="flex flex-col gap-4 border-b border-slate-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between"
+			>
+				<!-- Search and Filter controls -->
+				<div class="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+					<!-- Search Input -->
+					<div class="relative w-full max-w-xs">
+						<span
+							class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"
+						>
+							<svg
+								class="h-4 w-4"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
+								stroke-width="2"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+								/>
+							</svg>
+						</span>
+						<input
+							type="text"
+							placeholder="Search classifications..."
+							bind:value={classSearch}
+							class="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pr-4 pl-9 text-xs font-semibold text-slate-800 placeholder-slate-400 transition outline-none focus:border-slate-400 focus:bg-white"
+						/>
+					</div>
+
+					<!-- Filter dropdown -->
+					<div class="flex items-center gap-2">
+						<select
+							bind:value={classLevelFilter}
+							class="text-slate-650 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold transition outline-none focus:border-slate-400 focus:bg-white"
+						>
+							<option value="all">All Levels</option>
+							<option value="1">Root Categories</option>
+							<option value="2">Subcategories</option>
+						</select>
+					</div>
+				</div>
+
+				<!-- Create button -->
+				<button
+					type="button"
+					onclick={() => {
+						editingClassificationId = null;
+						className = '';
+						classSlug = '';
+						classParentId = '';
+						showAddClassificationModal = true;
+					}}
+					class="cursor-pointer rounded-lg border border-slate-900 bg-slate-900 px-4 py-2 text-center text-xs font-extrabold text-white shadow-xs transition-all hover:border-slate-800 hover:bg-slate-800 active:scale-95"
+				>
+					Create
+				</button>
+			</div>
+			<div class="overflow-x-auto">
+				<table class="w-full border-collapse text-left">
+					<tbody class="divide-y divide-slate-100 font-sans text-xs font-semibold text-slate-600">
+						{#each filteredClassifications as cat (cat.id)}
+							<tr class="transition-colors hover:bg-slate-50/50">
+								<td class="px-6 py-4">
+									<button
+										type="button"
+										onclick={() => openEditClassification(cat)}
+										class="cursor-pointer border-0 bg-transparent p-0 text-left text-sm font-extrabold text-slate-900 transition-colors hover:text-slate-700 hover:underline focus:outline-none"
+									>
+										{cat.name}
+									</button>
+								</td>
+								<td class="px-6 py-4 font-mono text-slate-500">{cat.slug}</td>
+								<td class="px-6 py-4">
+									{#if cat.parentId}
+										{@const parent = classifications.find((c: any) => c.id === cat.parentId)}
+										<span class="text-xs font-semibold text-slate-700">
+											{parent ? parent.name : '-'}
+										</span>
+									{:else}
+										<span class="text-xs font-semibold text-slate-400">-</span>
+									{/if}
+								</td>
+								<td class="px-6 py-4">
+									<div class="flex items-center justify-between gap-4">
+										{#if cat.isActive}
+											<span
+												class="inline-block rounded-md bg-emerald-50 px-2.5 py-0.5 text-[9px] font-extrabold tracking-wider text-emerald-600 uppercase select-none"
+											>
+												Active
+											</span>
+										{:else}
+											<span
+												class="inline-block rounded-md bg-rose-50 px-2.5 py-0.5 text-[9px] font-extrabold tracking-wider text-rose-600 uppercase select-none"
+											>
+												Inactive
+											</span>
+										{/if}
+
+										<form method="POST" action="?/toggleClassificationStatus" use:enhance>
+											<input type="hidden" name="id" value={cat.id} />
+											<input type="hidden" name="name" value={cat.name} />
+											<input type="hidden" name="slug" value={cat.slug} />
+											<input type="hidden" name="parentId" value={cat.parentId || ''} />
+											<input
+												type="hidden"
+												name="isActive"
+												value={cat.isActive ? 'true' : 'false'}
+											/>
+											<button
+												type="submit"
+												class="cursor-pointer rounded-lg border px-3 py-1 text-xs font-bold transition-all active:scale-95
+													{cat.isActive
+													? 'border-rose-100 bg-rose-50/50 text-rose-600 hover:bg-rose-600 hover:text-white'
+													: 'border-emerald-100 bg-emerald-50/50 text-emerald-600 hover:bg-emerald-600 hover:text-white'}"
+											>
+												{cat.isActive ? 'Deactivate' : 'Activate'}
+											</button>
+										</form>
+									</div>
+								</td>
+							</tr>
+						{:else}
+							<tr>
+								<td colspan="4" class="p-12 text-center text-slate-400 font-medium">
+									No classifications found matching your search criteria.
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	{/if}
+
 	<!-- TAB CONTENT: ORGANIZATIONS -->
 	{#if activeTab === 'organizations'}
 		<div
@@ -539,6 +792,123 @@
 		</div>
 	{/if}
 
+	<!-- TAB CONTENT: ATTRACTIONS -->
+	{#if activeTab === 'attractions'}
+		<div
+			class="animate-fade-in overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs"
+		>
+			<div
+				class="flex flex-col gap-4 border-b border-slate-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between"
+			>
+				<!-- Search and Filter controls -->
+				<div class="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+					<!-- Search Input -->
+					<div class="relative w-full max-w-xs">
+						<span
+							class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"
+						>
+							<svg
+								class="h-4 w-4"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
+								stroke-width="2"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+								/>
+							</svg>
+						</span>
+						<input
+							type="text"
+							placeholder="Search attractions..."
+							bind:value={attrSearch}
+							class="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pr-4 pl-9 text-xs font-semibold text-slate-800 placeholder-slate-400 transition outline-none focus:border-slate-400 focus:bg-white"
+						/>
+					</div>
+
+					<!-- Filter dropdown -->
+					<div class="flex items-center gap-2">
+						<select
+							bind:value={attrTypeFilter}
+							class="text-slate-650 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold transition outline-none focus:border-slate-400 focus:bg-white"
+						>
+							<option value="all">All Types</option>
+							<option value="ARTIST">Artist / Performer</option>
+							<option value="VENUE">Venue / Host</option>
+							<option value="OTHER">Other Type</option>
+						</select>
+					</div>
+				</div>
+
+				<!-- Create button -->
+				<button
+					type="button"
+					onclick={() => {
+						attrName = '';
+						attrSlug = '';
+						attrType = 'ARTIST';
+						attrImageUrl = '';
+						attrDescription = '';
+						showAddAttractionModal = true;
+					}}
+					class="cursor-pointer rounded-lg border border-slate-900 bg-slate-900 px-4 py-2 text-center text-xs font-extrabold text-white shadow-xs transition-all hover:border-slate-800 hover:bg-slate-800 active:scale-95"
+				>
+					Create
+				</button>
+			</div>
+			<div class="overflow-x-auto">
+				<table class="w-full border-collapse text-left">
+					<tbody class="divide-y divide-slate-100 font-sans text-xs font-semibold text-slate-600">
+						{#each filteredAttractions as attr (attr.id)}
+							<tr class="transition-colors hover:bg-slate-50/50">
+								<td class="px-6 py-4">
+									<div class="flex items-center gap-3">
+										{#if attr.imageUrl}
+											<img
+												src={attr.imageUrl}
+												alt={attr.name}
+												class="h-8 w-8 rounded-full border object-cover"
+											/>
+										{:else}
+											<div
+												class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-500"
+											>
+												{attr.name[0]?.toUpperCase()}
+											</div>
+										{/if}
+										<div>
+											<p class="text-sm font-extrabold text-slate-900">{attr.name}</p>
+										</div>
+									</div>
+								</td>
+								<td class="px-6 py-4 font-mono text-slate-500">{attr.slug}</td>
+								<td class="px-6 py-4">
+									<span
+										class="rounded bg-slate-100 px-2.5 py-0.5 text-[9px] font-extrabold tracking-wider text-slate-500 uppercase"
+									>
+										{attr.type}
+									</span>
+								</td>
+								<td class="text-slate-450 max-w-sm truncate px-6 py-4 font-normal">
+									{attr.description || 'No description provided.'}
+								</td>
+							</tr>
+						{:else}
+							<tr>
+								<td colspan="4" class="p-12 text-center text-slate-400 font-medium">
+									No attractions found matching your search criteria.
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	{/if}
+
 	<!-- TAB CONTENT: PLATFORM SETTINGS -->
 	{#if activeTab === 'settings'}
 		<div
@@ -553,7 +923,7 @@
 				<div class="space-y-2">
 					<div class="flex items-center justify-between text-xs font-bold text-slate-500 uppercase">
 						<span>Platform Commission Fee</span>
-						<span class="font-mono text-sm font-extrabold text-amber-600"
+						<span class="font-mono text-sm font-extrabold text-slate-900"
 							>{platformCommission}%</span
 						>
 					</div>
@@ -563,7 +933,7 @@
 						max="15"
 						step="0.5"
 						bind:value={platformCommission}
-						class="h-1.5 w-full cursor-pointer rounded-lg bg-slate-100 accent-amber-500"
+						class="h-1.5 w-full cursor-pointer rounded-lg bg-slate-100 accent-slate-900"
 					/>
 					<p class="text-[10px] font-bold text-slate-400">
 						Service charge taken from organizer payouts automatically upon transaction clearance.
@@ -574,7 +944,7 @@
 				<div class="space-y-2">
 					<div class="flex items-center justify-between text-xs font-bold text-slate-500 uppercase">
 						<span>Anti-Scalping Resale Price Cap</span>
-						<span class="font-mono text-sm font-extrabold text-amber-600">{antiScalpCap}%</span>
+						<span class="font-mono text-sm font-extrabold text-slate-900">{antiScalpCap}%</span>
 					</div>
 					<input
 						type="range"
@@ -582,7 +952,7 @@
 						max="200"
 						step="5"
 						bind:value={antiScalpCap}
-						class="h-1.5 w-full cursor-pointer rounded-lg bg-slate-100 accent-amber-500"
+						class="h-1.5 w-full cursor-pointer rounded-lg bg-slate-100 accent-slate-900"
 					/>
 					<p class="text-[10px] font-bold text-slate-400">
 						Maximum percentage above face value secondary ticket listings are capped at.
@@ -593,7 +963,7 @@
 				<div class="space-y-2">
 					<div class="flex items-center justify-between text-xs font-bold text-slate-500 uppercase">
 						<span>Max Ticket Transfers Limit</span>
-						<span class="font-mono text-sm font-extrabold text-amber-600"
+						<span class="font-mono text-sm font-extrabold text-slate-900"
 							>{maxTransferCount} times</span
 						>
 					</div>
@@ -602,7 +972,7 @@
 						min="1"
 						max="10"
 						bind:value={maxTransferCount}
-						class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 font-sans text-sm font-semibold text-slate-800 outline-none focus:border-amber-500 focus:bg-white"
+						class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 font-sans text-sm font-semibold text-slate-800 outline-none focus:border-slate-950 focus:bg-white"
 					/>
 					<p class="text-[10px] font-bold text-slate-400">
 						Maximum threshold for one-tap ticket transfers before lock-up.
@@ -621,7 +991,7 @@
 				<!-- Submit Button -->
 				<button
 					onclick={saveSettings}
-					class="cursor-pointer rounded-full bg-amber-500 px-6 py-2.5 font-sans text-xs font-bold text-black shadow-xs transition-all hover:bg-amber-400 active:scale-95"
+					class="cursor-pointer rounded-lg border border-slate-900 bg-slate-900 px-6 py-2.5 text-center font-sans text-xs font-extrabold text-white shadow-xs transition-all hover:border-slate-800 hover:bg-slate-800 active:scale-95"
 				>
 					Save Settings
 				</button>
@@ -650,7 +1020,7 @@
 					<div
 						class="flex items-start gap-4 border-b border-slate-100 pb-3 last:border-0 last:pb-0"
 					>
-						<span class="shrink-0 font-bold text-amber-600">{log.time}</span>
+						<span class="shrink-0 font-bold text-slate-950">{log.time}</span>
 						<div class="space-y-1">
 							<p class="text-[11px] font-bold text-slate-900">
 								[{log.action}] by <span class="font-semibold text-blue-600">{log.user}</span>
@@ -663,6 +1033,253 @@
 		</div>
 	{/if}
 </div>
+
+<!-- ======================== ADD CLASSIFICATION DIALOG MODAL ======================== -->
+{#if showAddClassificationModal}
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-xs"
+	>
+		<div
+			class="animate-scale-up w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-2xl select-none"
+		>
+			<h3 class="text-lg font-black tracking-tight text-slate-900 uppercase">
+				{editingClassificationId ? 'Edit Classification' : 'Add Classification'}
+			</h3>
+			<p class="mt-1 text-xs text-slate-500">
+				{editingClassificationId
+					? 'Modify details for this event classification.'
+					: 'Create a root category or a sub-genre for events ticketing.'}
+			</p>
+
+			<form
+				method="POST"
+				action={editingClassificationId ? '?/updateClassification' : '?/createClassification'}
+				use:enhance={() => {
+					return ({ result }) => {
+						if (result.type === 'success') {
+							addLog(
+								editingClassificationId ? 'CLASSIFICATION_UPDATE' : 'CLASSIFICATION_CREATE',
+								`Classification "${className}" (${classSlug}) ${editingClassificationId ? 'updated' : 'created'} successfully.`
+							);
+							showAddClassificationModal = false;
+						}
+					};
+				}}
+				class="mt-4 space-y-4"
+			>
+				{#if editingClassificationId}
+					<input type="hidden" name="id" value={editingClassificationId} />
+				{/if}
+				<div class="space-y-1">
+					<label
+						for="class-name"
+						class="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Name *</label
+					>
+					<input
+						type="text"
+						id="class-name"
+						name="name"
+						bind:value={className}
+						oninput={() => {
+							classSlug = slugify(className);
+						}}
+						required
+						placeholder="e.g. Pop Music"
+						class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 font-sans text-xs text-slate-800 outline-none focus:border-slate-900 focus:bg-white"
+					/>
+				</div>
+
+				<div class="space-y-1">
+					<label
+						for="class-slug"
+						class="text-[10px] font-bold tracking-wider text-slate-500 uppercase">URL Slug *</label
+					>
+					<input
+						type="text"
+						id="class-slug"
+						name="slug"
+						bind:value={classSlug}
+						required
+						placeholder="pop-music"
+						class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 font-sans text-xs text-slate-800 outline-none focus:border-slate-900 focus:bg-white"
+					/>
+				</div>
+
+				<div class="space-y-1">
+					<label
+						for="class-parent"
+						class="text-[10px] font-bold tracking-wider text-slate-500 uppercase"
+						>Parent Category (Optional)</label
+					>
+					<select
+						id="class-parent"
+						name="parentId"
+						bind:value={classParentId}
+						class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 font-sans text-xs text-slate-800 outline-none focus:border-slate-900 focus:bg-white"
+					>
+						<option value="">None (Level 1 Root Category)</option>
+						{#each classifications.filter((c: any) => c.level === 1 && c.id !== editingClassificationId) as rootCat (rootCat.id)}
+							<option value={rootCat.id}>{rootCat.name}</option>
+						{/each}
+					</select>
+					<p class="pt-1 text-[9px] leading-normal text-slate-400">
+						Leave blank to create a main root category, or select a parent to create a sub-genre.
+					</p>
+				</div>
+
+				<div class="flex items-center justify-end gap-3 pt-2">
+					<button
+						type="button"
+						onclick={() => (showAddClassificationModal = false)}
+						class="cursor-pointer rounded-lg border border-slate-200 bg-transparent px-5 py-2 text-xs font-bold text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-800"
+					>
+						Cancel
+					</button>
+					<button
+						type="submit"
+						class="hover:bg-slate-850 hover:border-slate-850 cursor-pointer rounded-lg border border-slate-900 bg-slate-900 px-5 py-2 text-xs font-extrabold text-white transition-all active:scale-95"
+					>
+						Create
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+{/if}
+
+<!-- ======================== ADD ATTRACTION DIALOG MODAL ======================== -->
+{#if showAddAttractionModal}
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-xs"
+	>
+		<div
+			class="animate-scale-up w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-2xl select-none"
+		>
+			<h3 class="text-lg font-black tracking-tight text-slate-900 uppercase">Add Attraction</h3>
+			<p class="mt-1 text-xs text-slate-500">
+				Register a new featured artist, band, team, or performing group.
+			</p>
+
+			<form
+				method="POST"
+				action="?/createAttraction"
+				use:enhance={() => {
+					return ({ result }) => {
+						if (result.type === 'success') {
+							addLog(
+								'ATTRACTION_CREATE',
+								`Attraction "${attrName}" (${attrSlug}) created successfully.`
+							);
+							showAddAttractionModal = false;
+						}
+					};
+				}}
+				class="mt-4 space-y-4"
+			>
+				<div class="space-y-1">
+					<label
+						for="attr-name"
+						class="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Name *</label
+					>
+					<input
+						type="text"
+						id="attr-name"
+						name="name"
+						bind:value={attrName}
+						oninput={() => {
+							attrSlug = slugify(attrName);
+						}}
+						required
+						placeholder="e.g. Son Tung M-TP"
+						class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 font-sans text-xs text-slate-800 outline-none focus:border-slate-900 focus:bg-white"
+					/>
+				</div>
+
+				<div class="space-y-1">
+					<label
+						for="attr-slug"
+						class="text-[10px] font-bold tracking-wider text-slate-500 uppercase">URL Slug *</label
+					>
+					<input
+						type="text"
+						id="attr-slug"
+						name="slug"
+						bind:value={attrSlug}
+						required
+						placeholder="son-tung-mtp"
+						class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 font-sans text-xs text-slate-800 outline-none focus:border-slate-900 focus:bg-white"
+					/>
+				</div>
+
+				<div class="space-y-1">
+					<label
+						for="attr-type"
+						class="text-[10px] font-bold tracking-wider text-slate-500 uppercase"
+						>Performer Type</label
+					>
+					<select
+						id="attr-type"
+						name="type"
+						bind:value={attrType}
+						class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 font-sans text-xs text-slate-800 outline-none focus:border-slate-900 focus:bg-white"
+					>
+						<option value="ARTIST">ARTIST (Singer, Musician, etc.)</option>
+						<option value="TEAM">TEAM (Sports Club/Group)</option>
+						<option value="SHOW_CREW">SHOW CREW (Theater / Performing Group)</option>
+					</select>
+				</div>
+
+				<div class="space-y-1">
+					<label
+						for="attr-image"
+						class="text-[10px] font-bold tracking-wider text-slate-500 uppercase"
+						>Image URL (Optional)</label
+					>
+					<input
+						type="url"
+						id="attr-image"
+						name="imageUrl"
+						bind:value={attrImageUrl}
+						placeholder="https://example.com/avatar.jpg"
+						class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 font-sans text-xs text-slate-800 outline-none focus:border-slate-900 focus:bg-white"
+					/>
+				</div>
+
+				<div class="space-y-1">
+					<label
+						for="attr-desc"
+						class="text-[10px] font-bold tracking-wider text-slate-500 uppercase"
+						>Description (Optional)</label
+					>
+					<textarea
+						id="attr-desc"
+						name="description"
+						bind:value={attrDescription}
+						rows="2"
+						placeholder="Brief biography or details..."
+						class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 font-sans text-xs text-slate-800 outline-none focus:border-slate-900 focus:bg-white"
+					></textarea>
+				</div>
+
+				<div class="flex items-center justify-end gap-3 pt-2">
+					<button
+						type="button"
+						onclick={() => (showAddAttractionModal = false)}
+						class="cursor-pointer rounded-lg border border-slate-200 bg-transparent px-5 py-2 text-xs font-bold text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-800"
+					>
+						Cancel
+					</button>
+					<button
+						type="submit"
+						class="hover:bg-slate-850 hover:border-slate-850 cursor-pointer rounded-lg border border-slate-900 bg-slate-900 px-5 py-2 text-xs font-extrabold text-white transition-all active:scale-95"
+					>
+						Create
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+{/if}
 
 <!-- POSTPONE DIALOG MODAL -->
 {#if showPostponeModal}
@@ -706,7 +1323,7 @@
 						required
 						rows="3"
 						placeholder="e.g. Unavoidable structural delays at military venue."
-						class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 font-sans text-xs text-slate-800 outline-none focus:border-amber-500 focus:bg-white"
+						class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 font-sans text-xs text-slate-800 outline-none focus:border-slate-900 focus:bg-white"
 					></textarea>
 				</div>
 
@@ -714,13 +1331,13 @@
 					<button
 						type="button"
 						onclick={() => (showPostponeModal = false)}
-						class="cursor-pointer rounded-full border border-slate-200 bg-transparent px-5 py-2 text-xs font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+						class="cursor-pointer rounded-lg border border-slate-200 bg-transparent px-5 py-2 text-xs font-bold text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-800"
 					>
 						Cancel
 					</button>
 					<button
 						type="submit"
-						class="cursor-pointer rounded-full bg-amber-500 px-5 py-2 text-xs font-bold text-black hover:bg-amber-400 active:scale-95"
+						class="hover:bg-slate-850 hover:border-slate-850 cursor-pointer rounded-lg border border-slate-900 bg-slate-900 px-5 py-2 text-xs font-extrabold text-white transition-all active:scale-95"
 					>
 						Confirm Postpone
 					</button>

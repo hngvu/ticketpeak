@@ -10,8 +10,8 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	}
 
 	try {
-		// Fetch global events and organizations concurrently from admin APIs
-		const [eventsRes, orgsRes] = await Promise.all([
+		// Fetch global events, organizations, classifications, and attractions concurrently
+		const [eventsRes, orgsRes, classifications, attractions] = await Promise.all([
 			apiFetch<PageResponse<any>>(fetch, '/api/ops/events?size=100&sort=startAt,asc', {
 				headers: {
 					Authorization: `Bearer ${accessToken}`
@@ -21,18 +21,24 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 				headers: {
 					Authorization: `Bearer ${accessToken}`
 				}
-			}).catch(() => ({ content: [] }) as any)
+			}).catch(() => ({ content: [] }) as any),
+			apiFetch<any[]>(fetch, '/api/classifications').catch(() => []),
+			apiFetch<any[]>(fetch, '/api/attractions').catch(() => [])
 		]);
 
 		return {
 			events: eventsRes?.content || [],
-			organizations: orgsRes?.content || []
+			organizations: orgsRes?.content || [],
+			classifications: classifications || [],
+			attractions: attractions || []
 		};
 	} catch (err: any) {
 		console.error('[OPS DASHBOARD LOAD ERROR]:', err);
 		return {
 			events: [],
 			organizations: [],
+			classifications: [],
+			attractions: [],
 			error: err.message || 'Failed to load platform operations data.'
 		};
 	}
@@ -158,6 +164,134 @@ export const actions: Actions = {
 			return { success: true, message: 'Organization updated successfully.' };
 		} catch (err: any) {
 			return fail(400, { error: err.message || 'Failed to update organization.' });
+		}
+	},
+
+	createClassification: async ({ request, cookies, fetch }) => {
+		const accessToken = cookies.get('ops_access_token');
+		if (!accessToken) throw redirect(303, '/ops/login');
+
+		const data = await request.formData();
+		const name = data.get('name') as string;
+		const slug = data.get('slug') as string;
+		const parentId = data.get('parentId') as string;
+
+		try {
+			await apiFetch<any>(fetch, '/api/ops/classifications', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${accessToken}`
+				},
+				body: JSON.stringify({
+					name,
+					slug,
+					level: parentId ? 2 : 1,
+					parentId: parentId || null,
+					isActive: true
+				})
+			});
+			return { success: true, message: 'Classification created successfully.' };
+		} catch (err: any) {
+			return fail(400, { error: err.message || 'Failed to create classification.' });
+		}
+	},
+
+	createAttraction: async ({ request, cookies, fetch }) => {
+		const accessToken = cookies.get('ops_access_token');
+		if (!accessToken) throw redirect(303, '/ops/login');
+
+		const data = await request.formData();
+		const name = data.get('name') as string;
+		const slug = data.get('slug') as string;
+		const type = data.get('type') as string;
+		const imageUrl = data.get('imageUrl') as string;
+		const description = data.get('description') as string;
+
+		try {
+			await apiFetch<any>(fetch, '/api/ops/attractions', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${accessToken}`
+				},
+				body: JSON.stringify({
+					name,
+					slug,
+					type,
+					imageUrl,
+					description
+				})
+			});
+			return { success: true, message: 'Attraction created successfully.' };
+		} catch (err: any) {
+			return fail(400, { error: err.message || 'Failed to create attraction.' });
+		}
+	},
+
+	updateClassification: async ({ request, cookies, fetch }) => {
+		const accessToken = cookies.get('ops_access_token');
+		if (!accessToken) throw redirect(303, '/ops/login');
+
+		const data = await request.formData();
+		const id = data.get('id') as string;
+		const name = data.get('name') as string;
+		const slug = data.get('slug') as string;
+		const parentId = data.get('parentId') as string;
+
+		try {
+			await apiFetch<any>(fetch, `/api/ops/classifications/${id}`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${accessToken}`
+				},
+				body: JSON.stringify({
+					name,
+					slug,
+					level: parentId ? 2 : 1,
+					parentId: parentId || null,
+					isActive: true
+				})
+			});
+			return { success: true, message: 'Classification updated successfully.' };
+		} catch (err: any) {
+			return fail(400, { error: err.message || 'Failed to update classification.' });
+		}
+	},
+
+	toggleClassificationStatus: async ({ request, cookies, fetch }) => {
+		const accessToken = cookies.get('ops_access_token');
+		if (!accessToken) throw redirect(303, '/ops/login');
+
+		const data = await request.formData();
+		const id = data.get('id') as string;
+		const name = data.get('name') as string;
+		const slug = data.get('slug') as string;
+		const parentId = data.get('parentId') as string;
+		const isActive = data.get('isActive') === 'true';
+
+		try {
+			await apiFetch<any>(fetch, `/api/ops/classifications/${id}`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${accessToken}`
+				},
+				body: JSON.stringify({
+					name,
+					slug,
+					level: parentId ? 2 : 1,
+					parentId: parentId || null,
+					isActive: !isActive
+				})
+			});
+			return {
+				success: true,
+				message: `Classification ${!isActive ? 'activated' : 'deactivated'} successfully.`
+			};
+		} catch (err: any) {
+			return fail(400, { error: err.message || 'Failed to toggle classification status.' });
 		}
 	}
 };

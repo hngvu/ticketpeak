@@ -38,6 +38,11 @@
 					label: 'Event Moderation',
 					href: '/ops/dashboard?tab=events',
 					active: !page.url.searchParams.get('tab') || page.url.searchParams.get('tab') === 'events'
+				},
+				{
+					label: 'Classifications',
+					href: '/ops/dashboard?tab=classifications',
+					active: page.url.searchParams.get('tab') === 'classifications'
 				}
 			]
 		},
@@ -50,6 +55,11 @@
 					label: 'Organizations',
 					href: '/ops/dashboard?tab=organizations',
 					active: page.url.searchParams.get('tab') === 'organizations'
+				},
+				{
+					label: 'Attractions',
+					href: '/ops/dashboard?tab=attractions',
+					active: page.url.searchParams.get('tab') === 'attractions'
 				}
 			]
 		},
@@ -90,7 +100,7 @@
 				<a href="/ops/dashboard" class="flex min-w-0 items-center gap-2">
 					<!-- Amber OP Square Logo -->
 					<div
-						class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500 text-base font-bold tracking-tighter text-black shadow-sm select-none"
+						class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-base font-bold tracking-tighter text-white shadow-sm select-none"
 					>
 						OP
 					</div>
@@ -98,7 +108,7 @@
 						<span class="text-sm leading-none font-semibold tracking-tight text-slate-800"
 							>Ticketpeak</span
 						>
-						<span class="mt-0.5 text-[9px] font-semibold tracking-wider text-amber-600 uppercase"
+						<span class="mt-0.5 text-[9px] font-semibold tracking-wider text-slate-500 uppercase"
 							>Operations Portal</span
 						>
 					</div>
@@ -122,7 +132,7 @@
 							<div class="flex items-center gap-2.5">
 								<div
 									class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-all duration-200 {hasActiveItem
-										? 'bg-amber-500 text-black shadow-xs'
+										? 'bg-slate-950 text-white shadow-xs'
 										: 'text-slate-400'}"
 								>
 									<CategoryIcon size={hasActiveItem ? 14 : 18} stroke={hasActiveItem ? 2.2 : 1.8} />
@@ -151,7 +161,7 @@
 									<a
 										href={item.href}
 										class="relative flex items-center border-l-[3px] py-1.5 pr-3.5 pl-9 text-xs font-semibold transition-all duration-150 {item.active
-											? 'rounded-r-lg border-amber-500 bg-amber-50/50 text-amber-700'
+											? 'rounded-r-lg border-slate-950 bg-slate-100/70 text-slate-950'
 											: 'border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800'}"
 									>
 										<span class="truncate">{item.label}</span>
@@ -187,7 +197,7 @@
 						<div class="flex min-w-0 items-center gap-2.5">
 							<!-- Amber Initials Rounded Square -->
 							<div
-								class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-xs font-bold text-amber-700 uppercase"
+								class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-700 uppercase"
 							>
 								AD
 							</div>
@@ -296,7 +306,7 @@
 					>
 						<IconBell size={20} stroke={2} />
 						<span
-							class="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-amber-500 ring-2 ring-white"
+							class="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-slate-950 ring-2 ring-white"
 						></span>
 					</button>
 
