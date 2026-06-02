@@ -529,15 +529,17 @@
 	</div>
 
 	<!-- TWO-COLUMN GRID VIEW -->
-	<div class="grid grid-cols-1 items-start gap-8 border-t border-slate-100 pt-6 lg:grid-cols-4">
-		<!-- Left area: takes 3 columns (75% width) -->
-		<div class="space-y-6 lg:col-span-3 lg:border-r lg:border-slate-200 lg:pr-8">
+	<div
+		class="grid grid-cols-1 items-start gap-8 border-t border-slate-100 pt-6 lg:grid-cols-4 xl:grid-cols-5"
+	>
+		<!-- Left area: takes 3 columns (75% width) or 4 columns (80% width) on xl+ screens -->
+		<div class="space-y-6 lg:col-span-3 lg:border-r lg:border-slate-200 lg:pr-8 xl:col-span-4">
 			<!-- TAB PANEL: INDIVIDUAL EVENTS -->
 			{#if eventsTab === 'individual'}
 				<div class="animate-fade-in space-y-6">
 					<!-- Search & Filters Row -->
 					<div
-						class="grid grid-cols-1 gap-4 border-b border-slate-100 pb-4 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end"
+						class="grid grid-cols-1 gap-4 border-b border-slate-100 pb-4 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end xl:flex-nowrap"
 					>
 						<!-- Search Input -->
 						<div class="space-y-1.5 sm:col-span-2 lg:min-w-[280px] lg:flex-1">
@@ -694,7 +696,7 @@
 									<div
 										class="flex items-center justify-between px-2 py-4 transition-colors hover:bg-slate-50/40"
 									>
-										<div class="flex min-w-0 items-center gap-4">
+										<div class="flex min-w-0 flex-1 items-center gap-4">
 											<!-- Select Checkbox -->
 											<input
 												type="checkbox"
@@ -976,8 +978,8 @@
 			{/if}
 		</div>
 
-		<!-- Right: Templates Sidebar (1/4 width) -->
-		<div class="pl-2 lg:col-span-1">
+		<!-- Right: Templates Sidebar (1/4 width on lg, 1/5 width on xl+) -->
+		<div class="pl-2 lg:col-span-1 xl:col-span-1">
 			<div class="space-y-4 bg-white">
 				<div class="mb-4 flex items-center justify-between border-b border-slate-100 pb-2">
 					<h2 class="text-sm font-bold tracking-wide text-slate-800 uppercase select-none">

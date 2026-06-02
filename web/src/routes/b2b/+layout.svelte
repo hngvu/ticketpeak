@@ -288,14 +288,17 @@
 								}}
 								class="flex w-full cursor-pointer items-center justify-between rounded-lg border-0 bg-transparent px-2.5 py-2 text-left transition-all hover:bg-slate-50"
 							>
-								<div class="flex items-center gap-3.5">
-									<!-- Highlight icon in blue if there is an active submenu item, matching screenshot -->
+								<div class="flex items-center gap-2.5">
+									<!-- Highlight icon in blue with circular bg if active submenu item is present -->
 									<div
-										class="shrink-0 transition-colors {hasActiveItem
-											? 'text-blue-600'
+										class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-all duration-200 {hasActiveItem
+											? 'bg-blue-600 text-white shadow-xs'
 											: 'text-slate-400'}"
 									>
-										<CategoryIcon size={18} stroke={hasActiveItem ? 2.2 : 1.8} />
+										<CategoryIcon
+											size={hasActiveItem ? 14 : 18}
+											stroke={hasActiveItem ? 2.2 : 1.8}
+										/>
 									</div>
 									<span
 										class="text-[11px] font-bold tracking-wider uppercase transition-colors {hasActiveItem
@@ -320,13 +323,13 @@
 
 							<!-- Collapsible Submenus List -->
 							{#if openFolders[cat.id] && cat.items.length > 0}
-								<div class="mt-0.5 flex flex-col gap-1 pr-1 pb-1.5 pl-9">
+								<div class="mt-0.5 flex flex-col gap-1 pr-1 pb-1.5 pl-2">
 									{#each cat.items as item (item.label)}
 										<a
 											href={item.href}
-											class="flex items-center rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all duration-150 {item.active
-												? 'bg-blue-50/70 font-semibold text-blue-600'
-												: 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}"
+											class="relative flex items-center border-l-[3px] py-1.5 pr-3.5 pl-9 text-xs font-semibold transition-all duration-150 {item.active
+												? 'rounded-r-lg border-blue-600 bg-blue-50/70 text-blue-600'
+												: 'border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800'}"
 										>
 											<span class="truncate">{item.label}</span>
 										</a>
