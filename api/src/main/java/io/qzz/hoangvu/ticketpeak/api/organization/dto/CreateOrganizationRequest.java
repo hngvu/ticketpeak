@@ -1,12 +1,11 @@
 package io.qzz.hoangvu.ticketpeak.api.organization.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import java.util.UUID;
+import jakarta.validation.constraints.Email;
 
 public record CreateOrganizationRequest(
         @NotBlank String name,
-        @NotNull UUID ownerAccountId,
+        @NotBlank @Email String ownerEmail,
         String bio,
         String logoUrl,
         String websiteUrl,

@@ -9,6 +9,7 @@ import io.qzz.hoangvu.ticketpeak.api.account.model.Gender;
 import io.qzz.hoangvu.ticketpeak.api.account.repository.AccountRepository;
 import io.qzz.hoangvu.ticketpeak.api.account.exception.AccountException;
 import io.qzz.hoangvu.ticketpeak.api.iam.model.Role;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -94,6 +95,14 @@ public class AccountService {
 
     public boolean existsByEmail(String email) {
         return accountRepository.existsByEmailIgnoreCase(normalizeEmail(email));
+    }
+
+    public java.util.List<AccountResponse> listAccounts(String q, Role role) {
+        String normalizedQ = (q == null || q.isBlank()) ? null : q.trim();
+        PageRequest pr = PageRequest.of(0, 20);
+        return accountRepository.listAccounts(normalizedQ, role, pr).stream()
+                .map(AccountResponse::from)
+                .toList();
     }
 
     private Gender parseGender(String value) {

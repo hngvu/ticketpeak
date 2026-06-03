@@ -97,7 +97,7 @@ class OrganizationControllerIT {
     @Test
     void admin_can_create_organization() throws Exception {
         CreateOrganizationRequest request = new CreateOrganizationRequest(
-                "Peak Events", ownerAccount.getId(), "Bio", null, null, null, null, null, null
+                "Peak Events", ownerAccount.getEmail(), "Bio", null, null, null, null, null, null
         );
 
         mockMvc.perform(post("/api/ops/organizations")
@@ -114,7 +114,7 @@ class OrganizationControllerIT {
     @Test
     void non_admin_cannot_create_organization() throws Exception {
         CreateOrganizationRequest request = new CreateOrganizationRequest(
-                "Peak Events", ownerAccount.getId(), null, null, null, null, null, null, null
+                "Peak Events", ownerAccount.getEmail(), null, null, null, null, null, null, null
         );
 
         mockMvc.perform(post("/api/ops/organizations")
@@ -127,10 +127,10 @@ class OrganizationControllerIT {
     @Test
     void slug_collision_handled() throws Exception {
         CreateOrganizationRequest request1 = new CreateOrganizationRequest(
-                "Test Org", ownerAccount.getId(), null, null, null, null, null, null, null
+                "Test Org", ownerAccount.getEmail(), null, null, null, null, null, null, null
         );
         CreateOrganizationRequest request2 = new CreateOrganizationRequest(
-                "Test Org", ownerAccount.getId(), null, null, null, null, null, null, null
+                "Test Org", ownerAccount.getEmail(), null, null, null, null, null, null, null
         );
 
         mockMvc.perform(post("/api/ops/organizations")

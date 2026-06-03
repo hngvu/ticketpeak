@@ -20,7 +20,7 @@ public interface OrganizationRepository extends JpaRepository<Organization, UUID
     java.util.List<Organization> findByOwnerAccountId(UUID ownerAccountId);
 
     @Query("SELECT o FROM Organization o WHERE " +
-           "(:name IS NULL OR LOWER(o.name) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
+           "(CAST(:name AS string) IS NULL OR LOWER(o.name) LIKE LOWER(CONCAT('%', CAST(:name AS string), '%'))) AND " +
            "(:status IS NULL OR o.status = :status)")
     Page<Organization> searchOrganizations(
             @Param("name") String name,

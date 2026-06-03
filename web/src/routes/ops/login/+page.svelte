@@ -12,33 +12,27 @@
 </svelte:head>
 
 <div
-	class="flex min-h-screen flex-1 flex-col items-center justify-center bg-[#303841] p-6 text-white select-none"
+	class="relative flex min-h-screen flex-1 flex-col items-center justify-center overflow-hidden bg-slate-50 p-6 text-slate-900 select-none"
 >
-	<div class="flex w-full max-w-md flex-col items-center space-y-8">
+	<!-- Ambient Glow Backgrounds -->
+	<div
+		class="pointer-events-none absolute -top-48 -left-48 h-96 w-96 rounded-full bg-primary/5 blur-[120px]"
+	></div>
+	<div
+		class="pointer-events-none absolute -right-48 -bottom-48 h-96 w-96 rounded-full bg-primary/5 blur-[120px]"
+	></div>
+
+	<div class="relative z-10 flex w-full max-w-md flex-col items-center space-y-8">
 		<!-- Header Logo -->
-		<div class="space-y-2 text-center">
-			<img src="/logo.png" alt="Ticketpeak Logo" class="mx-auto h-10 brightness-0 invert" />
-			<div class="text-xs font-extrabold tracking-widest text-gray-400 uppercase">
-				Internal Platform Tools
-			</div>
+		<div class="text-center">
+			<img src="/logo.png" alt="Ticketpeak Logo" class="mx-auto h-12" />
 		</div>
 
-		<!-- Obsidian dark card container -->
-		<AuthCard
-			title="Sign In"
-			subtitle="Please enter your platform admin credentials to proceed."
-			darkVariant={true}
-		>
+		<!-- White card container -->
+		<AuthCard title="Sign In" darkVariant={false}>
 			<AuthErrorBanner message={form?.error || null} />
 
-			<LoginForm actionUrl="?/login" {loading} darkVariant={true} />
+			<LoginForm actionUrl="?/login" {loading} darkVariant={false} showArrow={false} />
 		</AuthCard>
-
-		<!-- Footer caption only -->
-		<div class="text-center">
-			<span class="text-xs font-bold tracking-wider text-gray-500 uppercase">
-				Authorized Access Only
-			</span>
-		</div>
 	</div>
 </div>

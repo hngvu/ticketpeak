@@ -53,7 +53,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/auth/login", "/api/auth/refresh", "/api/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/accounts/register").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/accounts/exists").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/accounts/exists", "/api/accounts/lookup", "/api/accounts/search").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/events", "/api/events/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/event-groups", "/api/event-groups/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/resale/listings", "/api/resale/listings/**").permitAll()

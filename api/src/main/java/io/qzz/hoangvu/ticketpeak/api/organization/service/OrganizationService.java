@@ -51,7 +51,7 @@ public class OrganizationService {
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public OrganizationResponse createOrganization(CreateOrganizationRequest request) {
-        Account owner = accountRepository.findById(request.ownerAccountId())
+        Account owner = accountRepository.findByEmailIgnoreCase(request.ownerEmail())
                 .orElseThrow(AccountException::notFound);
 
         if (owner.getRole() != Role.ORGANIZER && owner.getRole() != Role.ADMIN) {
