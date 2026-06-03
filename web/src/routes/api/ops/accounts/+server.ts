@@ -11,7 +11,7 @@ export const GET: RequestHandler = async ({ url, fetch, cookies }) => {
 	if (q) params.set('q', q);
 	if (role) params.set('role', role);
 
-	const accessToken = cookies.get('access_token');
+	const accessToken = cookies.get('ops_access_token') || cookies.get('access_token');
 
 	try {
 		const results = await apiFetch<any[]>(fetch, `/api/ops/accounts?${params.toString()}`, {

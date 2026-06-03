@@ -64,13 +64,13 @@
 				},
 				{
 					label: 'Organizers Review',
-					href: '/ops/dashboard?tab=organizations',
-					active: page.url.searchParams.get('tab') === 'organizations'
+					href: '/ops/organizations',
+					active: page.url.pathname === '/ops/organizations'
 				},
 				{
 					label: 'Attractions',
-					href: '/ops/dashboard?tab=attractions',
-					active: page.url.searchParams.get('tab') === 'attractions'
+					href: '/ops/attractions',
+					active: page.url.pathname === '/ops/attractions'
 				},
 				{
 					label: 'Venues & Manifests',

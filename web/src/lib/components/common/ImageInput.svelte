@@ -1,9 +1,14 @@
 <script lang="ts">
 	import { uploadFileDirect } from '$lib/storage';
 
-	let { value = $bindable(''), name = '' } = $props<{
+	let {
+		value = $bindable(''),
+		name = '',
+		square = false
+	} = $props<{
 		value?: string;
 		name?: string;
+		square?: boolean;
 	}>();
 
 	let isUploading = $state(false);
@@ -57,10 +62,16 @@
 <!-- Hidden Inputs for HTML Form Submission -->
 <input type="hidden {name ? '' : 'hidden'}" {name} {value} />
 
-<div class="w-full">
+<div
+	class={square ? 'w-[160px]' : 'w-full'}
+	style={square ? 'width: 160px; min-width: 160px;' : ''}
+>
 	{#if isUploading}
 		<div
-			class="flex min-h-[140px] flex-col items-center justify-center gap-2.5 rounded-xl border border-[#E4E4E7] bg-[#FAFAFA]"
+			class={square
+				? 'flex flex-col items-center justify-center gap-2 rounded-xl border border-[#E4E4E7] bg-[#FAFAFA] p-3'
+				: 'flex min-h-[140px] flex-col items-center justify-center gap-2.5 rounded-xl border border-[#E4E4E7] bg-[#FAFAFA]'}
+			style={square ? 'width: 160px; height: 160px; min-height: 160px; max-height: 160px;' : ''}
 		>
 			<svg class="h-6 w-6 animate-spin text-[#71717A]" fill="none" viewBox="0 0 24 24">
 				<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
@@ -71,60 +82,82 @@
 					d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 				></path>
 			</svg>
-			<span class="text-xs font-semibold text-[#71717A]">Uploading image...</span>
+			<span class="text-xs font-semibold text-[#71717A]">Uploading...</span>
 		</div>
 	{:else if value}
 		<div
-			class="group relative flex max-h-[220px] min-h-[140px] items-center justify-center overflow-hidden rounded-xl border border-[#E4E4E7] bg-[#FAFAFA]"
+			class={square
+				? 'group relative flex items-center justify-center overflow-hidden rounded-xl border border-[#E4E4E7] bg-[#FAFAFA]'
+				: 'group relative flex max-h-[220px] min-h-[140px] items-center justify-center overflow-hidden rounded-xl border border-[#E4E4E7] bg-[#FAFAFA]'}
+			style={square ? 'width: 160px; height: 160px; min-height: 160px; max-height: 160px;' : ''}
 		>
-			<img src={value} alt="Preview" class="max-h-[210px] max-w-full object-contain p-2" />
+			<img
+				src={value}
+				alt="Preview"
+				class={square
+					? 'h-full w-full object-cover'
+					: 'max-h-[210px] max-w-full object-contain p-2'}
+			/>
 			<!-- Hover Overlay with Actions -->
 			<div
-				class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+				class="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/60 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
 			>
 				<button
 					type="button"
 					onclick={triggerFileInput}
-					class="cursor-pointer rounded-md bg-white px-3.5 py-1.5 text-xs font-bold text-slate-800 transition hover:bg-slate-100"
+					class="cursor-pointer rounded bg-white text-slate-800 transition hover:bg-slate-100 {square
+						? 'px-2 py-1 text-xs font-bold'
+						: 'px-3.5 py-1.5 text-xs font-bold'}"
 				>
-					Upload another image
+					{square ? 'Upload' : 'Upload another image'}
 				</button>
 				<button
 					type="button"
 					onclick={openUrlModal}
-					class="cursor-pointer rounded-md bg-white px-3.5 py-1.5 text-xs font-bold text-slate-800 transition hover:bg-slate-100"
+					class="cursor-pointer rounded bg-white text-slate-800 transition hover:bg-slate-100 {square
+						? 'px-2 py-1 text-xs font-bold'
+						: 'px-3.5 py-1.5 text-xs font-bold'}"
 				>
-					Change URL
+					{square ? 'URL' : 'Change URL'}
 				</button>
 				<button
 					type="button"
 					onclick={() => (value = '')}
-					class="cursor-pointer rounded-md bg-rose-600 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-rose-700"
+					class="cursor-pointer rounded bg-rose-600 text-white transition hover:bg-rose-700 {square
+						? 'px-2 py-1 text-xs font-bold'
+						: 'px-3.5 py-1.5 text-xs font-bold'}"
 				>
-					Remove image
+					{square ? 'Remove' : 'Remove image'}
 				</button>
 			</div>
 		</div>
 	{:else}
 		<!-- Dashed Box Matching Design 1 -->
 		<div
-			class="flex min-h-[140px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#E4E4E7] bg-blue-50/5 p-6 text-center transition hover:border-[#026CDF] hover:bg-blue-50/10"
+			class={square
+				? 'flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#E4E4E7] bg-blue-50/5 p-4 text-center transition hover:border-[#026CDF] hover:bg-blue-50/10'
+				: 'flex min-h-[140px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#E4E4E7] bg-blue-50/5 p-6 text-center transition hover:border-[#026CDF] hover:bg-blue-50/10'}
+			style={square ? 'width: 160px; height: 160px; min-height: 160px; max-height: 160px;' : ''}
 		>
 			<div class="flex flex-col items-center gap-2 select-none">
 				<button
 					type="button"
 					onclick={triggerFileInput}
-					class="cursor-pointer text-sm font-bold text-[#026CDF] hover:underline"
+					class="cursor-pointer font-bold text-[#026CDF] hover:underline {square
+						? 'text-sm'
+						: 'text-sm'}"
 				>
-					Add image
+					{square ? 'Add Image' : 'Add image'}
 				</button>
-				<span class="text-xs font-medium text-[#71717A]">or</span>
+				<span class="font-medium text-[#71717A] {square ? 'text-xs' : 'text-xs'}">or</span>
 				<button
 					type="button"
 					onclick={openUrlModal}
-					class="cursor-pointer text-sm font-bold text-[#026CDF] hover:underline"
+					class="cursor-pointer font-bold text-[#026CDF] hover:underline {square
+						? 'text-sm'
+						: 'text-sm'}"
 				>
-					Add from URL
+					{square ? 'From URL' : 'Add from URL'}
 				</button>
 			</div>
 		</div>

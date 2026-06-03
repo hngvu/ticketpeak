@@ -10,27 +10,25 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	}
 
 	try {
-		// Fetch global events, organizations, classifications, and attractions concurrently
-		const [eventsRes, orgsRes, classifications, attractions] = await Promise.all([
+		// Fetch global events, classifications, and organizations concurrently
+		const [eventsRes, classifications, organizationsRes] = await Promise.all([
 			apiFetch<PageResponse<any>>(fetch, '/api/ops/events?size=100&sort=startAt,asc', {
 				headers: {
 					Authorization: `Bearer ${accessToken}`
 				}
 			}).catch(() => ({ content: [] }) as any),
+			apiFetch<any[]>(fetch, '/api/classifications').catch(() => []),
 			apiFetch<PageResponse<any>>(fetch, '/api/ops/organizations?size=100', {
 				headers: {
 					Authorization: `Bearer ${accessToken}`
 				}
-			}).catch(() => ({ content: [] }) as any),
-			apiFetch<any[]>(fetch, '/api/classifications').catch(() => []),
-			apiFetch<any[]>(fetch, '/api/attractions').catch(() => [])
+			}).catch(() => ({ content: [] }) as any)
 		]);
 
 		return {
 			events: eventsRes?.content || [],
-			organizations: orgsRes?.content || [],
-			classifications: classifications || [],
-			attractions: attractions || []
+			organizations: organizationsRes?.content || [],
+			classifications: classifications || []
 		};
 	} catch (err: any) {
 		console.error('[OPS DASHBOARD LOAD ERROR]:', err);
@@ -38,7 +36,6 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 			events: [],
 			organizations: [],
 			classifications: [],
-			attractions: [],
 			error: err.message || 'Failed to load platform operations data.'
 		};
 	}
@@ -128,45 +125,6 @@ export const actions: Actions = {
 		}
 	},
 
-	updateOrganization: async ({ request, cookies, fetch }) => {
-		const accessToken = cookies.get('ops_access_token');
-		if (!accessToken) throw redirect(303, '/ops/login');
-
-		const data = await request.formData();
-		const id = data.get('id') as string;
-		const name = data.get('name') as string;
-		const bio = data.get('bio') as string;
-		const logoUrl = data.get('logoUrl') as string;
-		const websiteUrl = data.get('websiteUrl') as string;
-		const email = data.get('email') as string;
-		const phone = data.get('phone') as string;
-		const cityId = data.get('cityId') as string;
-		const countryCode = data.get('countryCode') as string;
-
-		try {
-			await apiFetch<any>(fetch, `/api/ops/organizations/${id}`, {
-				method: 'PUT',
-				headers: {
-					'Content-Type': 'application/json',
-					Authorization: `Bearer ${accessToken}`
-				},
-				body: JSON.stringify({
-					name,
-					bio,
-					logoUrl,
-					websiteUrl,
-					email,
-					phone,
-					cityId,
-					countryCode
-				})
-			});
-			return { success: true, message: 'Organization updated successfully.' };
-		} catch (err: any) {
-			return fail(400, { error: err.message || 'Failed to update organization.' });
-		}
-	},
-
 	createClassification: async ({ request, cookies, fetch }) => {
 		const accessToken = cookies.get('ops_access_token');
 		if (!accessToken) throw redirect(303, '/ops/login');
@@ -197,77 +155,6 @@ export const actions: Actions = {
 		}
 	},
 
-	createAttraction: async ({ request, cookies, fetch }) => {
-		const accessToken = cookies.get('ops_access_token');
-		if (!accessToken) throw redirect(303, '/ops/login');
-
-		const data = await request.formData();
-		const name = data.get('name') as string;
-		const slug = data.get('slug') as string;
-		const type = data.get('type') as string;
-		const imageUrl = data.get('imageUrl') as string;
-		const description = data.get('description') as string;
-
-		try {
-			await apiFetch<any>(fetch, '/api/ops/attractions', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					Authorization: `Bearer ${accessToken}`
-				},
-				body: JSON.stringify({
-					name,
-					slug,
-					type,
-					imageUrl,
-					description
-				})
-			});
-			return { success: true, message: 'Attraction created successfully.' };
-		} catch (err: any) {
-			return fail(400, { error: err.message || 'Failed to create attraction.' });
-		}
-	},
-
-	createOrganization: async ({ request, cookies, fetch }) => {
-		const accessToken = cookies.get('ops_access_token');
-		if (!accessToken) throw redirect(303, '/ops/login');
-
-		const data = await request.formData();
-		const name = data.get('name') as string;
-		const ownerEmail = data.get('ownerEmail') as string;
-		const bio = data.get('bio') as string;
-		const logoUrl = data.get('logoUrl') as string;
-		const websiteUrl = data.get('websiteUrl') as string;
-		const email = data.get('email') as string;
-		const phone = data.get('phone') as string;
-		const cityId = data.get('cityId') as string;
-		const countryCode = data.get('countryCode') as string;
-
-		try {
-			await apiFetch<any>(fetch, '/api/ops/organizations', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					Authorization: `Bearer ${accessToken}`
-				},
-				body: JSON.stringify({
-					name,
-					ownerEmail,
-					bio: bio || null,
-					logoUrl: logoUrl || null,
-					websiteUrl: websiteUrl || null,
-					email: email || null,
-					phone: phone || null,
-					cityId: cityId ? parseInt(cityId, 10) : null,
-					countryCode: countryCode || null
-				})
-			});
-			return { success: true, message: 'Organization created successfully.' };
-		} catch (err: any) {
-			return fail(400, { error: err.message || 'Failed to create organization.' });
-		}
-	},
 
 	updateClassification: async ({ request, cookies, fetch }) => {
 		const accessToken = cookies.get('ops_access_token');
