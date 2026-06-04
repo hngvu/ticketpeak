@@ -9,10 +9,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 	let accessKey = 'access_token';
 	let refreshKey = 'refresh_token';
 
-	if (pathname.startsWith('/b2b')) {
+	if (pathname.startsWith('/b2b') || pathname.startsWith('/api/b2b')) {
 		accessKey = 'b2b_access_token';
 		refreshKey = 'b2b_refresh_token';
-	} else if (pathname.startsWith('/ops')) {
+	} else if (pathname.startsWith('/ops') || pathname.startsWith('/api/ops')) {
 		accessKey = 'ops_access_token';
 		refreshKey = 'ops_refresh_token';
 	}

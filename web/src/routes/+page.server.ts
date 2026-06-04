@@ -1,9 +1,23 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { PageServerLoad } from './$types';
-import { MOCK_EVENTS, MOCK_VENUES } from '$lib/server/mockData';
+import { apiFetch } from '$lib/server/api';
 
-export const load: PageServerLoad = async () => {
-	return {
-		featuredEvents: MOCK_EVENTS.slice(0, 6),
-		featuredVenues: MOCK_VENUES.slice(0, 4)
-	};
+export const load: PageServerLoad = async ({ fetch }) => {
+	try {
+		const [eventsPage, venuesPage] = await Promise.all([
+			apiFetch<any>(fetch, '/api/events?size=6').catch(() => ({ content: [] })),
+			apiFetch<any>(fetch, '/api/venues?size=4').catch(() => ({ content: [] }))
+		]);
+
+		return {
+			featuredEvents: eventsPage?.content || [],
+			featuredVenues: venuesPage?.content || []
+		};
+	} catch (err) {
+		console.error('[Home Load Error]:', err);
+		return {
+			featuredEvents: [],
+			featuredVenues: []
+		};
+	}
 };

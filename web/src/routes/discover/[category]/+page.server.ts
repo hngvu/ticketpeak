@@ -3,7 +3,6 @@
 import type { PageServerLoad } from './$types';
 import { apiFetch, type PageResponse } from '$lib/server/api';
 import { error } from '@sveltejs/kit';
-import { MOCK_CLASSIFICATIONS, MOCK_EVENTS } from '$lib/server/mockData';
 
 export const load: PageServerLoad = async ({ fetch, params, url }) => {
 	const category = params.category.toLowerCase(); // e.g. concerts, sports, arts, family
@@ -26,7 +25,7 @@ export const load: PageServerLoad = async ({ fetch, params, url }) => {
 
 	let activeSegment: any = null;
 	let subGenres: any[] = [];
-	let classifications = MOCK_CLASSIFICATIONS;
+	let classifications: any[] = [];
 
 	try {
 		// Fetch categories
@@ -34,8 +33,8 @@ export const load: PageServerLoad = async ({ fetch, params, url }) => {
 		if (apiClassifications && apiClassifications.length > 0) {
 			classifications = apiClassifications;
 		}
-	} catch {
-		// fallback to mock
+	} catch (err) {
+		console.error('[Discover Category Classifications Load Error]:', err);
 	}
 
 	// Find Level 1 Category (e.g., Concerts)
@@ -72,80 +71,33 @@ export const load: PageServerLoad = async ({ fetch, params, url }) => {
 		empty: true
 	};
 
-	let isBackendAvailable = false;
-
 	if (targetId) {
 		try {
 			eventsData = await apiFetch<PageResponse<any>>(
 				fetch,
 				`/api/events?classificationId=${targetId}&page=${pageNum}&size=12&sort=startAt,asc`
 			);
-			isBackendAvailable = true;
-		} catch {
-			// ignore, fallback below
+		} catch (err) {
+			console.error('[Discover Category Events Load Error]:', err);
 		}
-	}
-
-	// If classifications not seeded or no targetId, fallback to fetching all events matching text query
-	if (!isBackendAvailable || eventsData.content.length === 0) {
+	} else {
 		try {
 			eventsData = await apiFetch<PageResponse<any>>(
 				fetch,
 				`/api/events?page=${pageNum}&size=12&sort=startAt,asc`
 			);
-			if (eventsData.content && eventsData.content.length > 0) {
-				isBackendAvailable = true;
-			}
-		} catch {
-			// ignore
+		} catch (err) {
+			console.error('[Discover Category All Events Load Error]:', err);
 		}
-	}
-
-	// Fallback to high-fidelity mock data if database is empty/offline
-	let finalEvents = eventsData.content || [];
-	let finalTotalPages = eventsData.totalPages || 0;
-	let finalCurrentPage = eventsData.number || 0;
-
-	if (!isBackendAvailable || finalEvents.length === 0) {
-		// Filter mock events matching category
-		const matchKeyword = category.slice(0, 4);
-		finalEvents = MOCK_EVENTS.filter((e) => {
-			const classSlug = e.classifications?.[0]?.slug || '';
-			const matchesCategory =
-				classSlug.includes(matchKeyword) ||
-				(category === 'concerts' &&
-					(classSlug.includes('pop') ||
-						classSlug.includes('indie') ||
-						classSlug.includes('edm'))) ||
-				(category === 'sports' && (classSlug.includes('foot') || classSlug.includes('basket'))) ||
-				(category === 'arts' &&
-					(classSlug.includes('music') ||
-						classSlug.includes('comedy') ||
-						classSlug.includes('dance')));
-
-			// If classificationId query param is active, narrow down to that specific sub-genre
-			if (classificationId) {
-				// e.g. genre-pop
-				return (
-					matchesCategory &&
-					(classificationId.includes(classSlug) ||
-						classSlug.includes(classificationId.replace('genre-', '')))
-				);
-			}
-			return matchesCategory;
-		});
-
-		finalTotalPages = Math.ceil(finalEvents.length / 12);
-		finalCurrentPage = 0;
 	}
 
 	return {
 		category,
 		activeSegment,
 		subGenres,
-		events: finalEvents,
-		currentPage: finalCurrentPage,
-		totalPages: finalTotalPages,
+		events: eventsData.content || [],
+		currentPage: eventsData.number || 0,
+		totalPages: eventsData.totalPages || 0,
 		classificationId
 	};
 };

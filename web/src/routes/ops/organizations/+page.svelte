@@ -100,7 +100,7 @@
 	// Suspended organizations tracking
 	let suspendedOrgIds = $state<string[]>([]);
 
-	function toggleOrgSuspend(orgId: string, orgName: string) {
+	function toggleOrgSuspend(orgId: string) {
 		if (suspendedOrgIds.includes(orgId)) {
 			suspendedOrgIds = suspendedOrgIds.filter((id) => id !== orgId);
 		} else {
@@ -146,37 +146,45 @@
 		</div>
 		<div class="overflow-x-auto">
 			<table class="w-full border-collapse text-left">
-				<thead>
-					<tr
-						class="border-b border-[#E4E4E7] bg-white text-xs font-semibold tracking-wider text-[#71717A] uppercase"
-					>
-						<th class="px-6 py-3.5">Organization Name</th>
-						<th class="px-6 py-3.5">Contact Details</th>
-						<th class="px-6 py-3.5">Website</th>
-						<th class="px-6 py-3.5">Status</th>
-						<th class="px-6 py-3.5 text-right font-bold">Actions</th>
-					</tr>
-				</thead>
 				<tbody class="divide-y divide-slate-100 font-sans text-xs font-semibold text-[#71717A]">
 					{#each organizations as org (org.id)}
 						{@const isSuspended = suspendedOrgIds.includes(org.id)}
 						<tr class="transition-colors hover:bg-[#FAFAFA]">
 							<td class="px-6 py-4">
-								<p class="text-sm font-bold text-[#111111]">{org.name}</p>
-								<p class="mt-0.5 text-[10px] text-[#71717A]">Slug: {org.slug}</p>
-							</td>
-							<td class="px-6 py-4">
-								<p class="font-medium text-[#111111]">{org.email || 'No email'}</p>
-								<p class="mt-0.5 font-normal text-[#71717A]">{org.phone || 'No phone'}</p>
-							</td>
-							<td class="px-6 py-4 text-blue-600 hover:underline">
-								{#if org.websiteUrl}
-									<a href={org.websiteUrl} target="_blank" rel="noopener noreferrer"
-										>{org.websiteUrl}</a
-									>
-								{:else}
-									<span class="font-normal text-[#71717A]">N/A</span>
-								{/if}
+								<div class="flex items-center gap-3">
+									{#if org.logoUrl}
+										<img
+											src={org.logoUrl}
+											alt={org.name}
+											class="h-10 w-10 rounded-full border border-[#E4E4E7] object-cover"
+										/>
+									{:else}
+										<div
+											class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-700 uppercase"
+										>
+											{org.name?.[0] || 'O'}
+										</div>
+									{/if}
+									<div class="flex min-w-0 flex-col">
+										<p class="text-sm font-bold text-[#111111]">{org.name}</p>
+										<p class="mt-0.5 text-[10px] font-medium text-[#71717A]">
+											{#if org.email}
+												{org.email}
+											{/if}
+											{#if org.email && org.websiteUrl}
+												·
+											{/if}
+											{#if org.websiteUrl}
+												<a
+													href={org.websiteUrl}
+													target="_blank"
+													rel="noopener noreferrer"
+													class="text-blue-600 hover:underline">{org.websiteUrl}</a
+												>
+											{/if}
+										</p>
+									</div>
+								</div>
 							</td>
 							<td class="px-6 py-4">
 								{#if isSuspended}
@@ -195,7 +203,7 @@
 							</td>
 							<td class="px-6 py-4 text-right">
 								<button
-									onclick={() => toggleOrgSuspend(org.id, org.name)}
+									onclick={() => toggleOrgSuspend(org.id)}
 									class="cursor-pointer rounded-md border px-3 py-1 text-xs font-bold transition-all active:scale-95
 										{isSuspended
 										? 'border-emerald-100 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white'
@@ -256,8 +264,10 @@
 					<div class="relative">
 						{#if searchedOwner}
 							<!-- Selected state styled like the input -->
-							<div class="flex w-full items-center justify-between rounded-lg border border-[#E4E4E7] bg-[#FAFAFA] px-3.5 py-2.5 font-sans text-xs text-[#111111] select-none">
-								<div class="flex items-center gap-2 min-w-0">
+							<div
+								class="flex w-full items-center justify-between rounded-lg border border-[#E4E4E7] bg-[#FAFAFA] px-3.5 py-2.5 font-sans text-xs text-[#111111] select-none"
+							>
+								<div class="flex min-w-0 items-center gap-2">
 									{#if searchedOwner.avatarUrl}
 										<img
 											src={searchedOwner.avatarUrl}
@@ -265,7 +275,9 @@
 											class="h-5 w-5 rounded-full border border-[#E4E4E7] object-cover"
 										/>
 									{:else}
-										<div class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[9px] font-bold text-slate-700 uppercase">
+										<div
+											class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[9px] font-bold text-slate-700 uppercase"
+										>
 											{searchedOwner.firstName?.[0] || searchedOwner.email?.[0] || 'O'}
 										</div>
 									{/if}
@@ -281,10 +293,16 @@
 										searchResults = [];
 										showSuggestions = false;
 									}}
-									class="ml-2 flex h-5 w-5 items-center justify-center rounded-full text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition-colors"
+									class="ml-2 flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-600"
 									aria-label="Remove owner"
 								>
-									<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+									<svg
+										class="h-3 w-3"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke="currentColor"
+										stroke-width="2.5"
+									>
 										<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
 									</svg>
 								</button>
@@ -301,7 +319,7 @@
 								class="w-full rounded-lg border border-[#E4E4E7] bg-[#FAFAFA] px-3.5 py-2.5 font-sans text-xs text-[#111111] placeholder-[#71717A] outline-none focus:border-[#71717A] focus:bg-white"
 								bind:this={ownerInput}
 								onfocus={() => {
-									if (searchResults.length > 0) showSuggestions = true;
+									showSuggestions = true;
 								}}
 							/>
 
@@ -309,7 +327,8 @@
 							{#if showSuggestions && searchResults.length > 0}
 								<div
 									bind:this={suggestionsContainer}
-									class="absolute right-0 left-0 z-55 mt-1 max-h-48 overflow-y-auto rounded-lg border border-[#E4E4E7] bg-white shadow-lg"
+									class="absolute right-0 left-0 mt-1 max-h-48 overflow-y-auto rounded-lg border border-[#E4E4E7] bg-white shadow-lg"
+									style="z-index: 60;"
 								>
 									{#each searchResults as account (account.id)}
 										<button

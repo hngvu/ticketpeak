@@ -155,7 +155,6 @@ export const actions: Actions = {
 		}
 	},
 
-
 	updateClassification: async ({ request, cookies, fetch }) => {
 		const accessToken = cookies.get('ops_access_token');
 		if (!accessToken) throw redirect(303, '/ops/login');

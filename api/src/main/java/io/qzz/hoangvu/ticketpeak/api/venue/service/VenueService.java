@@ -237,6 +237,7 @@ public class VenueService {
                             .seatRow(newRow)
                             .name(seat.getName())
                             .positionX(seat.getPositionX())
+                            .positionY(seat.getPositionY())
                             .status(SeatStatus.AVAILABLE)
                             .accessibility(seat.getAccessibility())
                             .obstructedView(seat.getObstructedView())

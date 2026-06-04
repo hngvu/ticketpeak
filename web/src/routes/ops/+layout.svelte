@@ -1,5 +1,5 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve */
+	/* eslint-disable svelte/no-navigation-without-resolve, @typescript-eslint/no-explicit-any */
 	import type { Snippet } from 'svelte';
 	import '../../routes/layout.css';
 	import { page } from '$app/state';
@@ -17,7 +17,8 @@
 		IconUsers,
 		IconReceipt,
 		IconSettings,
-		IconFileText
+		IconFileText,
+		IconPresentation
 	} from '@tabler/icons-svelte';
 
 	let { children }: { children: Snippet } = $props();
@@ -35,22 +36,21 @@
 
 	const categories = $derived([
 		{
-			id: 'overview',
-			label: 'Overview',
+			id: 'dashboard',
+			label: 'Dashboard',
 			icon: IconLayoutGrid,
-			items: [
-				{
-					label: 'Dashboard',
-					href: '/ops/dashboard?tab=dashboard',
-					active:
-						!page.url.searchParams.get('tab') || page.url.searchParams.get('tab') === 'dashboard'
-				},
-				{
-					label: 'Reports & Analytics',
-					href: '/ops/dashboard?tab=analytics',
-					active: page.url.searchParams.get('tab') === 'analytics'
-				}
-			]
+			href: '/ops/dashboard',
+			active:
+				page.url.pathname === '/ops/dashboard' &&
+				(!page.url.searchParams.get('tab') || page.url.searchParams.get('tab') === 'dashboard')
+		},
+		{
+			id: 'analytics',
+			label: 'Reports & Analytics',
+			icon: IconPresentation,
+			href: '/ops/dashboard?tab=analytics',
+			active:
+				page.url.pathname === '/ops/dashboard' && page.url.searchParams.get('tab') === 'analytics'
 		},
 		{
 			id: 'moderation',
@@ -63,7 +63,7 @@
 					active: page.url.searchParams.get('tab') === 'events'
 				},
 				{
-					label: 'Organizers Review',
+					label: 'Organizations',
 					href: '/ops/organizations',
 					active: page.url.pathname === '/ops/organizations'
 				},
@@ -73,9 +73,9 @@
 					active: page.url.pathname === '/ops/attractions'
 				},
 				{
-					label: 'Venues & Manifests',
-					href: '/ops/dashboard?tab=venues',
-					active: page.url.searchParams.get('tab') === 'venues'
+					label: 'Venues',
+					href: '/ops/venues',
+					active: page.url.pathname === '/ops/venues'
 				}
 			]
 		},
@@ -86,8 +86,8 @@
 			items: [
 				{
 					label: 'Platform Users',
-					href: '/ops/dashboard?tab=users',
-					active: page.url.searchParams.get('tab') === 'users'
+					href: '/ops/users',
+					active: page.url.pathname === '/ops/users'
 				},
 				{
 					label: 'Roles & Permissions',
@@ -129,9 +129,9 @@
 			icon: IconFileText,
 			items: [
 				{
-					label: 'Categories & Tags',
-					href: '/ops/dashboard?tab=classifications',
-					active: page.url.searchParams.get('tab') === 'classifications'
+					label: 'Classifications',
+					href: '/ops/classifications',
+					active: page.url.pathname === '/ops/classifications'
 				},
 				{
 					label: 'Content / CMS',
@@ -169,11 +169,13 @@
 		}
 	]);
 
-	const activeCategory = $derived(categories.find((cat) => cat.items.some((item) => item.active)));
-	const activeItem = $derived(activeCategory?.items.find((item) => item.active));
+	const activeCategory = $derived(
+		categories.find((cat) => (cat.items ? cat.items.some((item) => item.active) : cat.active))
+	);
+	const activeItem = $derived(activeCategory?.items?.find((item) => item.active));
 
 	const breadcrumbParent = $derived(activeCategory?.label || 'Overview');
-	const breadcrumbChild = $derived(activeItem?.label || 'Dashboard');
+	const breadcrumbChild = $derived(activeItem?.label || '');
 
 	const isLoginPage = $derived(page.url.pathname === '/ops/login');
 </script>
@@ -213,55 +215,80 @@
 				<div class="no-scrollbar flex flex-1 flex-col gap-1.5 overflow-y-auto p-3.5">
 					{#each categories as cat (cat.id)}
 						{@const CategoryIcon = cat.icon}
-						{@const hasActiveItem = cat.items.some((i) => i.active)}
+						{@const hasActiveItem = cat.items ? cat.items.some((i: any) => i.active) : cat.active}
 						<div class="flex flex-col">
-							<!-- Category Header Button -->
-							<button
-								type="button"
-								onclick={() => {
-									openFolders[cat.id] = !openFolders[cat.id];
-								}}
-								class="group flex w-full cursor-pointer items-center justify-between rounded-lg border-0 bg-transparent px-2.5 py-2 text-left transition-all hover:bg-[#FAFAFA]"
-							>
-								<div class="flex items-center gap-2.5">
-									<div
-										class="flex h-7 w-7 shrink-0 items-center justify-center text-[#71717A] transition-colors group-hover:text-[#111111] {hasActiveItem
-											? 'text-[#111111]'
+							{#if cat.items && cat.items.length > 0}
+								<!-- Category Header Button -->
+								<button
+									type="button"
+									onclick={() => {
+										openFolders[cat.id] = !openFolders[cat.id];
+									}}
+									class="group flex w-full cursor-pointer items-center justify-between rounded-lg border-0 bg-transparent px-2.5 py-2 text-left transition-all hover:bg-[#FAFAFA]"
+								>
+									<div class="flex items-center gap-2.5">
+										<div
+											class="flex h-7 w-7 shrink-0 items-center justify-center text-[#71717A] transition-colors group-hover:text-[#111111] {hasActiveItem
+												? 'text-[#111111]'
+												: ''}"
+										>
+											<CategoryIcon size={18} stroke={1.8} />
+										</div>
+										<span
+											class="text-[11px] font-bold tracking-wider transition-colors {hasActiveItem
+												? 'text-[#111111]'
+												: 'text-[#71717A]'}"
+										>
+											{cat.label}
+										</span>
+									</div>
+									<IconChevronDown
+										size={13}
+										stroke={2.5}
+										class="text-[#71717A] transition-transform duration-200 {openFolders[cat.id]
+											? 'rotate-180'
 											: ''}"
+									/>
+								</button>
+
+								<!-- Collapsible Submenus List -->
+								{#if openFolders[cat.id]}
+									<div class="mt-0.5 flex flex-col gap-1 pr-1 pb-1.5 pl-2">
+										{#each cat.items as item (item.label)}
+											<a
+												href={item.href}
+												class="relative flex items-center border-l-[3px] py-1.5 pr-3.5 pl-9 text-xs font-semibold transition-all duration-150 {item.active
+													? 'rounded-r-lg border-[#111111] bg-[#F4F4F5] text-[#111111]'
+													: 'border-transparent text-[#71717A] hover:bg-[#FAFAFA] hover:text-[#111111]'}"
+											>
+												<span class="truncate">{item.label}</span>
+											</a>
+										{/each}
+									</div>
+								{/if}
+							{:else}
+								<!-- Direct Link Item -->
+								<a
+									href={cat.href}
+									class="group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-all hover:bg-[#FAFAFA] {cat.active
+										? 'bg-[#F4F4F5] text-[#111111]'
+										: 'text-[#71717A] hover:text-[#111111]'}"
+								>
+									<div
+										class="flex h-7 w-7 shrink-0 items-center justify-center transition-colors {cat.active
+											? 'text-[#111111]'
+											: 'text-[#71717A] group-hover:text-[#111111]'}"
 									>
 										<CategoryIcon size={18} stroke={1.8} />
 									</div>
 									<span
-										class="text-[11px] font-bold tracking-wider transition-colors {hasActiveItem
+										class="text-[11px] font-bold tracking-wider transition-colors {cat.active
 											? 'text-[#111111]'
-											: 'text-[#71717A]'}"
+											: 'text-[#71717A] group-hover:text-[#111111]'}"
 									>
 										{cat.label}
 									</span>
-								</div>
-								<IconChevronDown
-									size={13}
-									stroke={2.5}
-									class="text-[#71717A] transition-transform duration-200 {openFolders[cat.id]
-										? 'rotate-180'
-										: ''}"
-								/>
-							</button>
-
-							<!-- Collapsible Submenus List -->
-							{#if openFolders[cat.id]}
-								<div class="mt-0.5 flex flex-col gap-1 pr-1 pb-1.5 pl-2">
-									{#each cat.items as item (item.label)}
-										<a
-											href={item.href}
-											class="relative flex items-center border-l-[3px] py-1.5 pr-3.5 pl-9 text-xs font-semibold transition-all duration-150 {item.active
-												? 'rounded-r-lg border-[#111111] bg-[#F4F4F5] text-[#111111]'
-												: 'border-transparent text-[#71717A] hover:bg-[#FAFAFA] hover:text-[#111111]'}"
-										>
-											<span class="truncate">{item.label}</span>
-										</a>
-									{/each}
-								</div>
+								</a>
 							{/if}
 						</div>
 					{/each}
@@ -349,13 +376,19 @@
 				>
 					<!-- Left: Breadcrumb Path -->
 					<div class="flex items-center gap-2">
-						<span class="text-xs font-medium text-[#71717A]">
-							{breadcrumbParent}
-						</span>
-						<IconChevronRight size={12} stroke={2.5} class="text-[#71717A]" />
-						<span class="text-sm font-semibold tracking-tight text-[#111111]">
-							{breadcrumbChild}
-						</span>
+						{#if activeItem}
+							<span class="text-xs font-medium text-[#71717A]">
+								{breadcrumbParent}
+							</span>
+							<IconChevronRight size={12} stroke={2.5} class="text-[#71717A]" />
+							<span class="text-sm font-semibold tracking-tight text-[#111111]">
+								{breadcrumbChild}
+							</span>
+						{:else}
+							<span class="text-sm font-semibold tracking-tight text-[#111111]">
+								{breadcrumbParent}
+							</span>
+						{/if}
 					</div>
 
 					<!-- Right: Notifications, Apps -->

@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { PageServerLoad } from './$types';
 import { apiFetch, type PageResponse } from '$lib/server/api';
-import { MOCK_EVENTS } from '$lib/server/mockData';
 
 export const load: PageServerLoad = async ({ fetch, url }) => {
 	const query = url.searchParams.get('q') || '';
@@ -71,62 +70,11 @@ export const load: PageServerLoad = async ({ fetch, url }) => {
 		empty: true
 	};
 
-	let isBackendAvailable = false;
-
 	try {
 		const apiPath = `/api/events?${apiParams.toString()}`;
 		searchResults = await apiFetch<PageResponse<any>>(fetch, apiPath);
-		if (searchResults.content && searchResults.content.length > 0) {
-			isBackendAvailable = true;
-		}
-	} catch {
-		// ignore, fallback to mock search below
-	}
-
-	let finalResults = searchResults.content || [];
-	let finalTotalResults = searchResults.totalElements || 0;
-	let finalTotalPages = searchResults.totalPages || 0;
-	let finalCurrentPage = searchResults.number || 0;
-
-	// Fallback to high-fidelity mock search if database is empty/offline
-	if (!isBackendAvailable || finalResults.length === 0) {
-		const qLower = query.toLowerCase().trim();
-		const cityLower = city.toLowerCase().trim();
-
-		finalResults = MOCK_EVENTS.filter((e) => {
-			// Query keyword match
-			const matchesQuery =
-				!qLower ||
-				e.title.toLowerCase().includes(qLower) ||
-				(e.venueName && e.venueName.toLowerCase().includes(qLower)) ||
-				e.classifications?.[0]?.name.toLowerCase().includes(qLower);
-
-			// Location match
-			const matchesLocation =
-				!cityLower ||
-				e.cityName.toLowerCase().includes(cityLower) ||
-				(e.venueName && e.venueName.toLowerCase().includes(cityLower));
-
-			// Date match
-			let matchesDate = true;
-			if (startDateParam) {
-				const startLimit = new Date(startDateParam);
-				const eventDate = new Date(e.startAt);
-				matchesDate = matchesDate && eventDate >= startLimit;
-			}
-			if (endDateParam) {
-				const endLimit = new Date(endDateParam);
-				endLimit.setHours(23, 59, 59, 999);
-				const eventDate = new Date(e.startAt);
-				matchesDate = matchesDate && eventDate <= endLimit;
-			}
-
-			return matchesQuery && matchesLocation && matchesDate;
-		});
-
-		finalTotalResults = finalResults.length;
-		finalTotalPages = Math.ceil(finalResults.length / 12);
-		finalCurrentPage = 0;
+	} catch (err) {
+		console.error('[Search Load Error]:', err);
 	}
 
 	return {
@@ -134,9 +82,9 @@ export const load: PageServerLoad = async ({ fetch, url }) => {
 		location: city,
 		startDate: startDateParam,
 		endDate: endDateParam,
-		results: finalResults,
-		totalResults: finalTotalResults,
-		currentPage: finalCurrentPage,
-		totalPages: finalTotalPages
+		results: searchResults.content || [],
+		totalResults: searchResults.totalElements || 0,
+		currentPage: searchResults.number || 0,
+		totalPages: searchResults.totalPages || 0
 	};
 };

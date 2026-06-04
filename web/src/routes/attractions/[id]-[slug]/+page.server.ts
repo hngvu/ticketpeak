@@ -1,9 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any, no-useless-assignment */
 
 import type { PageServerLoad } from './$types';
 import { apiFetch, type PageResponse } from '$lib/server/api';
 import { error } from '@sveltejs/kit';
-import { MOCK_ATTRACTIONS, MOCK_EVENTS } from '$lib/server/mockData';
 
 export const load: PageServerLoad = async ({ fetch, params, url }) => {
 	const paramString = params.id || '';
@@ -15,11 +14,9 @@ export const load: PageServerLoad = async ({ fetch, params, url }) => {
 		attractionId = paramString.slice(0, 36);
 	}
 
-	// Validate UUID format or mock format
+	// Validate UUID format
 	const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-	const isMockId = attractionId.startsWith('artist-') || attractionId.startsWith('team-');
-
-	if (!uuidRegex.test(attractionId) && !isMockId) {
+	if (!uuidRegex.test(attractionId)) {
 		throw error(404, 'Invalid Attraction ID');
 	}
 
@@ -33,20 +30,12 @@ export const load: PageServerLoad = async ({ fetch, params, url }) => {
 	}
 
 	let attraction: any = null;
-	let isBackendAvailable = false;
-
 	try {
 		// Fetch Attraction Info
 		attraction = await apiFetch<any>(fetch, `/api/attractions/${attractionId}`);
-		isBackendAvailable = true;
-	} catch {
-		// fallback to mock
-		attraction = MOCK_ATTRACTIONS.find((a) => a.id === attractionId);
-		if (!attraction) {
-			// fallback to first mock if slug matched but id was random
-			const slugMatched = MOCK_ATTRACTIONS.find((a) => paramString.includes(a.slug));
-			attraction = slugMatched || MOCK_ATTRACTIONS[0];
-		}
+	} catch (err) {
+		console.error('[Attraction Load Error]:', err);
+		throw error(404, 'Attraction not found');
 	}
 
 	let showsResponse: PageResponse<any> = {
@@ -70,38 +59,21 @@ export const load: PageServerLoad = async ({ fetch, params, url }) => {
 		empty: true
 	};
 
-	if (isBackendAvailable) {
-		try {
-			// Fetch attraction upcoming events
-			showsResponse = await apiFetch<PageResponse<any>>(
-				fetch,
-				`/api/events?attractionId=${attractionId}&page=${pageNum}&size=12&sort=startAt,asc`
-			);
-		} catch {
-			// ignore
-		}
-	}
-
-	let finalShows = showsResponse.content || [];
-	let finalTotalShows = showsResponse.totalElements || 0;
-	let finalTotalPages = showsResponse.totalPages || 0;
-	let finalCurrentPage = showsResponse.number || 0;
-
-	if (finalShows.length === 0) {
-		// Filter mock events matching this attraction
-		finalShows = MOCK_EVENTS.filter((e) =>
-			e.attractions.some((a) => a.id === attraction.id || a.slug === attraction.slug)
+	try {
+		// Fetch attraction upcoming events
+		showsResponse = await apiFetch<PageResponse<any>>(
+			fetch,
+			`/api/events?attractionId=${attractionId}&page=${pageNum}&size=12&sort=startAt,asc`
 		);
-		finalTotalShows = finalShows.length;
-		finalTotalPages = Math.ceil(finalShows.length / 12);
-		finalCurrentPage = 0;
+	} catch (err) {
+		console.error('[Attraction Events Load Error]:', err);
 	}
 
 	return {
 		attraction,
-		shows: finalShows,
-		totalShows: finalTotalShows,
-		currentPage: finalCurrentPage,
-		totalPages: finalTotalPages
+		shows: showsResponse.content || [],
+		totalShows: showsResponse.totalElements || 0,
+		currentPage: showsResponse.number || 0,
+		totalPages: showsResponse.totalPages || 0
 	};
 };

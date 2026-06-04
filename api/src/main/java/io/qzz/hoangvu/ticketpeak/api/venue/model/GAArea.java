@@ -29,4 +29,12 @@ public class GAArea {
     @Column(nullable = false)
     Integer capacity;
 
+    Integer x;
+
+    Integer y;
+
+    Integer width;
+
+    Integer height;
+
 }

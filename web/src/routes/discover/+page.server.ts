@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { PageServerLoad } from './$types';
 import { apiFetch, type PageResponse } from '$lib/server/api';
-import { MOCK_EVENTS, MOCK_VENUES, MOCK_CLASSIFICATIONS } from '$lib/server/mockData';
 
 export const load: PageServerLoad = async ({ fetch, parent }) => {
 	const { preferredCity } = await parent();
@@ -24,8 +23,8 @@ export const load: PageServerLoad = async ({ fetch, parent }) => {
 	const startAfter = day === 5 || day === 6 || day === 0 ? now.toISOString() : fri.toISOString();
 	const startBefore = sun.toISOString();
 
-	let classifications = MOCK_CLASSIFICATIONS;
-	let concertsSegmentId: string | undefined = 'segment-concerts';
+	let classifications: any[] = [];
+	let concertsSegmentId: string | undefined;
 
 	try {
 		// Fetch categories to dynamically map segment names
@@ -37,8 +36,8 @@ export const load: PageServerLoad = async ({ fetch, parent }) => {
 			);
 			concertsSegmentId = concertsSegment?.id;
 		}
-	} catch {
-		// fallback to mock
+	} catch (err) {
+		console.error('[Discover Classifications Load Error]:', err);
 	}
 
 	// Prepare parallel promises
@@ -71,41 +70,11 @@ export const load: PageServerLoad = async ({ fetch, parent }) => {
 		venuesPromise
 	]);
 
-	// Extract active lists
-	let trendingEvents = trendingData.content || [];
-	let weekendEvents = weekendData.content || [];
-	let concertEvents = concertsData.content || [];
-	let venues = venuesData.content || [];
-
-	// Fallback to high-fidelity mock data if database is empty/unseeded
-	if (trendingEvents.length === 0) {
-		trendingEvents = MOCK_EVENTS.slice(0, 12);
-	}
-	if (weekendEvents.length === 0) {
-		// Filter events that fall on the weekend (Saturday or Sunday)
-		weekendEvents = MOCK_EVENTS.filter((e) => {
-			const d = new Date(e.startAt);
-			return d.getDay() === 0 || d.getDay() === 6 || d.getDay() === 5;
-		});
-	}
-	if (concertEvents.length === 0) {
-		const activeCityLabel = preferredCity === 'ho-chi-minh' ? 'Hồ Chí Minh' : 'Hà Nội';
-		concertEvents = MOCK_EVENTS.filter(
-			(e) =>
-				e.classifications?.[0]?.slug.includes('pop') ||
-				e.classifications?.[0]?.slug.includes('indie') ||
-				e.cityName === activeCityLabel
-		);
-	}
-	if (venues.length === 0) {
-		venues = MOCK_VENUES;
-	}
-
 	return {
-		trendingEvents,
-		weekendEvents,
-		concertEvents,
-		venues,
+		trendingEvents: trendingData.content || [],
+		weekendEvents: weekendData.content || [],
+		concertEvents: concertsData.content || [],
+		venues: venuesData.content || [],
 		classifications
 	};
 };

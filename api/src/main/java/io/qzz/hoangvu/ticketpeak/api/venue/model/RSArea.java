@@ -26,4 +26,12 @@ public class RSArea {
     @Column(name = "price_level_id", nullable = false)
     String priceLevelId;
 
+    Integer x;
+
+    Integer y;
+
+    Integer width;
+
+    Integer height;
+
 }

@@ -273,33 +273,6 @@
 		}
 	]);
 
-	let venuesList = $state([
-		{
-			id: 'ven-601',
-			name: 'My Dinh National Stadium',
-			location: 'Le Duc Tho, Hanoi',
-			capacity: 40000,
-			layoutCount: 3,
-			status: 'ACTIVE'
-		},
-		{
-			id: 'ven-602',
-			name: 'Quan Ngua Sports Palace',
-			location: 'Van Cao, Hanoi',
-			capacity: 5000,
-			layoutCount: 1,
-			status: 'ACTIVE'
-		},
-		{
-			id: 'ven-603',
-			name: 'Saigon Exhibition & Convention Center',
-			location: 'District 7, HCMC',
-			capacity: 10000,
-			layoutCount: 2,
-			status: 'ACTIVE'
-		}
-	]);
-
 	// Search and filter states for new lists
 	let userSearch = $state('');
 	let userRoleFilter = $state('all');
@@ -312,9 +285,6 @@
 
 	let resaleSearch = $state('');
 	let resaleStatusFilter = $state('all');
-
-	let venueSearch = $state('');
-	let venueStatusFilter = $state('all');
 
 	// Derived filtered lists for new databases
 	const filteredUsers = $derived(
@@ -355,16 +325,6 @@
 				r.sellerName.toLowerCase().includes(resaleSearch.toLowerCase()) ||
 				r.eventTitle.toLowerCase().includes(resaleSearch.toLowerCase());
 			const matchesStatus = resaleStatusFilter === 'all' || r.status === resaleStatusFilter;
-			return matchesSearch && matchesStatus;
-		})
-	);
-
-	const filteredVenues = $derived(
-		venuesList.filter((v) => {
-			const matchesSearch =
-				v.name.toLowerCase().includes(venueSearch.toLowerCase()) ||
-				v.location.toLowerCase().includes(venueSearch.toLowerCase());
-			const matchesStatus = venueStatusFilter === 'all' || v.status === venueStatusFilter;
 			return matchesSearch && matchesStatus;
 		})
 	);
@@ -540,14 +500,6 @@
 		if (b) {
 			b.status = b.status === 'ACTIVE' ? 'DRAFT' : 'ACTIVE';
 			addLog('CMS_BANNER_STATUS', `CMS banner "${b.title}" visibility toggled to ${b.status}`);
-		}
-	}
-
-	function toggleVenueStatus(id: string) {
-		const v = venuesList.find((vn) => vn.id === id);
-		if (v) {
-			v.status = v.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-			addLog('VENUE_STATUS', `Venue "${v.name}" status toggled to ${v.status}`);
 		}
 	}
 
@@ -1067,107 +1019,6 @@
 	{/if}
 
 	<!-- ======================== TAB 5: ATTRACTIONS ======================== -->
-
-
-	<!-- ======================== TAB 6: VENUES & MANIFESTS ======================== -->
-	{#if activeTab === 'venues'}
-		<div class="animate-fade-in overflow-hidden rounded-lg border border-[#E4E4E7] bg-white">
-			<div
-				class="flex flex-col gap-4 border-b border-[#F4F4F5] px-6 py-4 sm:flex-row sm:items-center sm:justify-between"
-			>
-				<div class="flex flex-1 items-center gap-3">
-					<div class="relative w-full max-w-xs">
-						<span
-							class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-[#71717A]"
-						>
-							<svg
-								class="h-4 w-4"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-								stroke-width="2"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-								/>
-							</svg>
-						</span>
-						<input
-							type="text"
-							placeholder="Search venues..."
-							bind:value={venueSearch}
-							class="w-full rounded-lg border border-[#E4E4E7] bg-[#FAFAFA] py-2 pr-4 pl-9 text-xs font-semibold text-[#111111] placeholder-[#71717A] transition outline-none focus:border-[#71717A] focus:bg-white"
-						/>
-					</div>
-					<select
-						bind:value={venueStatusFilter}
-						class="rounded-lg border border-[#E4E4E7] bg-[#FAFAFA] px-3 py-2 text-xs font-semibold text-[#111111] transition outline-none focus:border-[#71717A] focus:bg-white"
-					>
-						<option value="all">All Status</option>
-						<option value="ACTIVE">Active</option>
-						<option value="INACTIVE">Inactive</option>
-					</select>
-				</div>
-			</div>
-			<div class="overflow-x-auto">
-				<table class="w-full border-collapse text-left text-xs font-semibold text-[#71717A]">
-					<thead>
-						<tr
-							class="border-b border-[#E4E4E7] bg-[#FAFAFA] text-[10px] text-[#71717A] uppercase select-none"
-						>
-							<th class="px-6 py-3.5">Venue Name</th>
-							<th class="px-6 py-3.5">Location</th>
-							<th class="px-6 py-3.5">Physical Capacity</th>
-							<th class="px-6 py-3.5">Active Manifests</th>
-							<th class="px-6 py-3.5">Status</th>
-							<th class="px-6 py-3.5 text-right">Actions</th>
-						</tr>
-					</thead>
-					<tbody class="divide-y divide-[#F4F4F5] bg-white text-[#111111]">
-						{#each filteredVenues as ven (ven.id)}
-							<tr class="hover:bg-[#FAFAFA]">
-								<td class="px-6 py-4 font-bold">{ven.name}</td>
-								<td class="px-6 py-4 font-medium text-[#71717A]">{ven.location}</td>
-								<td class="px-6 py-4 font-mono font-bold text-[#111111]"
-									>{ven.capacity.toLocaleString()} seats</td
-								>
-								<td class="px-6 py-4 font-mono text-[#71717A]">{ven.layoutCount} layouts</td>
-								<td class="px-6 py-4">
-									<span
-										class="inline-block rounded-md px-2.5 py-0.5 text-[9px] font-bold uppercase select-none {ven.status ===
-										'ACTIVE'
-											? 'bg-emerald-50 text-emerald-600'
-											: 'bg-rose-50 text-rose-600'}"
-									>
-										{ven.status}
-									</span>
-								</td>
-								<td class="px-6 py-4 text-right">
-									<button
-										onclick={() => toggleVenueStatus(ven.id)}
-										class="cursor-pointer rounded-md border px-3 py-1 text-xs font-bold transition-all active:scale-95 {ven.status ===
-										'ACTIVE'
-											? 'border-rose-100 bg-rose-50/50 text-rose-600 hover:bg-rose-600 hover:text-white'
-											: 'border-emerald-100 bg-emerald-50/50 text-emerald-600 hover:bg-emerald-600 hover:text-white'}"
-									>
-										{ven.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
-									</button>
-								</td>
-							</tr>
-						{:else}
-							<tr>
-								<td colspan="6" class="p-12 text-center text-[#71717A] font-medium"
-									>No venues registered in this platform.</td
-								>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-		</div>
-	{/if}
 
 	<!-- ======================== TAB 7: PLATFORM USERS ======================== -->
 	{#if activeTab === 'users'}
@@ -2353,8 +2204,6 @@
 		</div>
 	</div>
 {/if}
-
-
 
 <!-- POSTPONE DIALOG MODAL -->
 {#if showPostponeModal}

@@ -26,6 +26,10 @@ public class Seat {
     @Column(name = "position_x")
     Integer positionX;
 
+    @Column(name = "position_y", nullable = false)
+    Integer positionY;
+
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     SeatStatus status;
