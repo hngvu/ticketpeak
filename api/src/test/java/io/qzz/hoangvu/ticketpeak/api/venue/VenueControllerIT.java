@@ -131,14 +131,14 @@ class VenueControllerIT {
         mockMvc.perform(post("/api/ops/venues/" + venueId + "/manifests")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateManifestRequest("M001", "Layout A", 1000))))
+                        .content(objectMapper.writeValueAsString(new CreateManifestRequest("M001", "Layout A", 1000, null))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.status").value("DRAFT"));
 
         mockMvc.perform(post("/api/ops/venues/" + venueId + "/manifests")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateManifestRequest("M002", "Layout B", 500))))
+                        .content(objectMapper.writeValueAsString(new CreateManifestRequest("M002", "Layout B", 500, null))))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(post("/api/ops/venues/manifests/M001/publish")
@@ -168,7 +168,7 @@ class VenueControllerIT {
         mockMvc.perform(post("/api/ops/venues/" + venueId + "/manifests")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateManifestRequest("M003", "L", 100))))
+                        .content(objectMapper.writeValueAsString(new CreateManifestRequest("M003", "L", 100, null))))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(post("/api/ops/venues/manifests/M003/publish")
@@ -195,7 +195,7 @@ class VenueControllerIT {
         mockMvc.perform(post("/api/ops/venues/" + venueId + "/manifests")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateManifestRequest("M004", "L", 100))))
+                        .content(objectMapper.writeValueAsString(new CreateManifestRequest("M004", "L", 100, null))))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(put("/api/ops/venues/manifests/M004/levels")
@@ -223,11 +223,11 @@ class VenueControllerIT {
 
         mockMvc.perform(post("/api/ops/venues/" + venueId + "/manifests").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateManifestRequest("M005", "L", 100))))
+                        .content(objectMapper.writeValueAsString(new CreateManifestRequest("M005", "L", 100, null))))
                 .andExpect(status().isCreated());
                 mockMvc.perform(post("/api/ops/venues/manifests/M005/rs-areas").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateRSAreaRequest("RA001", "L1", "S1", "P1", null, null, null, null))))
+                        .content(objectMapper.writeValueAsString(new CreateRSAreaRequest("RA001", "L1", null, null, null, null))))
                 .andExpect(status().isCreated());
         mockMvc.perform(post("/api/ops/venues/rs-areas/RA001/rows").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -236,12 +236,12 @@ class VenueControllerIT {
 
                 mockMvc.perform(post("/api/ops/venues/rows/ROW001/seats").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateSeatRequest("S001", "1", null, null, null, null, null))))
+                        .content(objectMapper.writeValueAsString(new CreateSeatRequest("S001", "1", null, null, null, null, null, null, null, null))))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(post("/api/ops/venues/rows/ROW001/seats").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateSeatRequest("S002", "1", null, null, null, null, null))))
+                        .content(objectMapper.writeValueAsString(new CreateSeatRequest("S002", "1", null, null, null, null, null, null, null, null))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("SEAT_NAME_DUPLICATE"));
     }
@@ -258,11 +258,11 @@ class VenueControllerIT {
 
         mockMvc.perform(post("/api/ops/venues/" + venueId + "/manifests").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateManifestRequest("M005-Row", "L", 100))))
+                        .content(objectMapper.writeValueAsString(new CreateManifestRequest("M005-Row", "L", 100, null))))
                 .andExpect(status().isCreated());
         mockMvc.perform(post("/api/ops/venues/manifests/M005-Row/rs-areas").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateRSAreaRequest("RA001-Row", "L1", "S1", "P1", null, null, null, null))))
+                        .content(objectMapper.writeValueAsString(new CreateRSAreaRequest("RA001-Row", "L1", null, null, null, null))))
                 .andExpect(status().isCreated());
         
         mockMvc.perform(post("/api/ops/venues/rs-areas/RA001-Row/rows").header("Authorization", "Bearer " + adminToken)
@@ -289,13 +289,13 @@ class VenueControllerIT {
 
         mockMvc.perform(post("/api/ops/venues/" + venueId + "/manifests").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateManifestRequest("M-LAYOUT", "Layout", 100))))
+                        .content(objectMapper.writeValueAsString(new CreateManifestRequest("M-LAYOUT", "Layout", 100, null))))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(post("/api/ops/venues/manifests/M-LAYOUT/ga-areas").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateGAAreaRequest("GA-1", "L1", "S1", "P1", 120, 10, 20, 300, 140))))
+                                new CreateGAAreaRequest("GA-1", "L1", "P1", 120, 10, 20, 300, 140))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.x").value(10))
                 .andExpect(jsonPath("$.data.width").value(300));
@@ -303,7 +303,7 @@ class VenueControllerIT {
         mockMvc.perform(post("/api/ops/venues/manifests/M-LAYOUT/ga-areas").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateGAAreaRequest("GA-1", "L1", "S1", "P1", 150, 30, 40, 360, 180))))
+                                new CreateGAAreaRequest("GA-1", "L1", "P1", 150, 30, 40, 360, 180))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.x").value(30))
                 .andExpect(jsonPath("$.data.height").value(180));
@@ -311,7 +311,7 @@ class VenueControllerIT {
         mockMvc.perform(post("/api/ops/venues/manifests/M-LAYOUT/rs-areas").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateRSAreaRequest("RS-1", "L1", "S1", "P1", 50, 60, 280, 160))))
+                                new CreateRSAreaRequest("RS-1", "L1", 50, 60, 280, 160))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.x").value(50))
                 .andExpect(jsonPath("$.data.height").value(160));
@@ -319,7 +319,7 @@ class VenueControllerIT {
         mockMvc.perform(post("/api/ops/venues/manifests/M-LAYOUT/rs-areas").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateRSAreaRequest("RS-1", "L1", "S1", "P1", 80, 90, 340, 200))))
+                                new CreateRSAreaRequest("RS-1", "L1", 80, 90, 340, 200))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.x").value(80))
                 .andExpect(jsonPath("$.data.width").value(340));
@@ -338,13 +338,13 @@ class VenueControllerIT {
 
         mockMvc.perform(post("/api/ops/venues/rows/ROW-1/seats").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateSeatRequest("SEAT-1", "1", 0, true, false, false, null))))
+                        .content(objectMapper.writeValueAsString(new CreateSeatRequest("SEAT-1", "1", 0, null, true, false, false, null, null, null))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.positionX").value(0));
 
         mockMvc.perform(post("/api/ops/venues/rows/ROW-1/seats").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateSeatRequest("SEAT-1", "1", 12, false, true, true, io.qzz.hoangvu.ticketpeak.api.venue.model.SeatStatus.UNAVAILABLE))))
+                        .content(objectMapper.writeValueAsString(new CreateSeatRequest("SEAT-1", "1", 12, null, false, true, true, io.qzz.hoangvu.ticketpeak.api.venue.model.SeatStatus.UNAVAILABLE, null, null))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.positionX").value(12))
                 .andExpect(jsonPath("$.data.aisle").value(true))
@@ -363,7 +363,7 @@ class VenueControllerIT {
 
         mockMvc.perform(post("/api/ops/venues/" + venueId + "/manifests").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateManifestRequest("M006", "Original", 100))))
+                        .content(objectMapper.writeValueAsString(new CreateManifestRequest("M006", "Original", 100, null))))
                 .andExpect(status().isCreated());
         mockMvc.perform(put("/api/ops/venues/manifests/M006/levels").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -404,6 +404,84 @@ class VenueControllerIT {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void manifest_update_and_objects_persistence() throws Exception {
+        String responseStr = mockMvc.perform(post("/api/ops/venues").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new CreateVenueRequest("V-Obj", "A", "C", "VN", null, null, null, null, null, null, null, null))))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String venueId = JsonPath.read(responseStr, "$.data.id");
+
+        mockMvc.perform(post("/api/ops/venues/" + venueId + "/manifests").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CreateManifestRequest("M-OBJ", "Original", 100, null))))
+                .andExpect(status().isCreated());
+
+        var objects = java.util.List.of(
+                java.util.Map.<String, Object>of("type", "stage", "x", 100, "y", 200, "width", 400, "height", 150),
+                java.util.Map.<String, Object>of("type", "label", "text", "Mixer", "x", 500, "y", 600)
+        );
+
+        mockMvc.perform(put("/api/ops/venues/manifests/M-OBJ").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new UpdateManifestRequest("Updated Layout", 2000, objects))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.description").value("Updated Layout"))
+                .andExpect(jsonPath("$.data.totalCapacity").value(2000))
+                .andExpect(jsonPath("$.data.objects[0].type").value("stage"))
+                .andExpect(jsonPath("$.data.objects[0].width").value(400))
+                .andExpect(jsonPath("$.data.objects[1].text").value("Mixer"));
+
+        // Test cloning copies objects
+        mockMvc.perform(post("/api/ops/venues/manifests/M-OBJ/clone").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CloneManifestRequest("M-OBJ-CLONE", "Clone Layout"))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.objects[0].type").value("stage"))
+                .andExpect(jsonPath("$.data.objects[1].text").value("Mixer"));
+    }
+
+    @Test
+    void nullable_ga_area_price_level() throws Exception {
+        String responseStr = mockMvc.perform(post("/api/ops/venues").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new CreateVenueRequest("V-Nullable", "A", "C", "VN", null, null, null, null, null, null, null, null))))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String venueId = JsonPath.read(responseStr, "$.data.id");
+
+        mockMvc.perform(post("/api/ops/venues/" + venueId + "/manifests").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CreateManifestRequest("M-NULLABLE", "Original", 100, null))))
+                .andExpect(status().isCreated());
+
+        // Upsert level (required)
+        mockMvc.perform(put("/api/ops/venues/manifests/M-NULLABLE/levels").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new UpsertLookupRequest("L1", "Level 1", "#FF0000"))))
+                .andExpect(status().isOk());
+
+        // Create GAArea with null/blank priceLevelId
+        mockMvc.perform(post("/api/ops/venues/manifests/M-NULLABLE/ga-areas").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new CreateGAAreaRequest("GA-1", "L1", "", 150, 30, 40, 360, 180))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.priceLevelId").value(org.hamcrest.Matchers.nullValue()));
+
+        // Create RSArea with geometry only
+        mockMvc.perform(post("/api/ops/venues/manifests/M-NULLABLE/rs-areas").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new CreateRSAreaRequest("RS-1", "L1", 50, 60, 280, 160))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.x").value(50))
+                .andExpect(jsonPath("$.data.width").value(280));
     }
 
     private String login(String email, String password) throws Exception {

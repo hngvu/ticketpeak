@@ -24,9 +24,14 @@
 	let gaAreas = $state<any[]>(data.gaAreas || []);
 	let rsAreas = $state<any[]>(data.rsAreas || []);
 	let brushPriceLevelId = $state(data.priceLevels?.[0]?.id || 'STANDARD');
+	let brushSectionId = $state('');
 
 	// Active tab in sidebar for configs
-	let activeTab = $state<'levels' | 'sections' | 'priceLevels' | 'areas'>('levels');
+	let activeTab = $state<'levels' | 'sections' | 'priceLevels' | 'areas' | 'objects'>('levels');
+	let layoutObjects = $state<any[]>(data.manifest?.objects || []);
+	let selectedObjectId = $state<number | null>(null);
+	let selectedGaAreaId = $state<string>('');
+	let areaNameInput = $state('');
 
 	// Active layout mode
 	let activeMode = $state<'scaling' | 'inventory' | 'floor-edit'>('scaling');
@@ -76,8 +81,7 @@
 
 	let areaType = $state<'GA' | 'RS'>('RS');
 	let areaLevelId = $state('');
-	let areaSectionId = $state('');
-	let areaPriceLevelId = $state('STANDARD');
+	let areaPriceLevelId = $state('');
 	let areaCapacity = $state(500);
 
 	// Konva references
@@ -323,6 +327,12 @@
 		found.seat.priceLevelId = priceLevelId;
 	}
 
+	function paintSection(seatId: string, sectionId: string) {
+		const found = findSeatById(seatId);
+		if (!found) return;
+		found.seat.sectionId = sectionId;
+	}
+
 	function handleKeyDown(e: KeyboardEvent) {
 		const activeEl = document.activeElement;
 		if (
@@ -410,17 +420,16 @@
 	}
 
 	$effect(() => {
-		if (stage) {
+		if (stage && stage.container()) {
 			stage.draggable(activeTool === 'pan');
-			stage.cursor(
+			stage.container().style.cursor =
 				activeTool === 'pan'
 					? 'grab'
 					: activeTool === 'brush'
 						? 'copy'
 						: activeTool === 'eraser'
 							? 'cell'
-							: 'default'
-			);
+							: 'default';
 		}
 	});
 
@@ -437,6 +446,75 @@
 		}
 	});
 
+	const RS_AREA_PADDING = 25;
+
+	function computeRsAreaBounds(rows: any[]) {
+		let minX = Infinity;
+		let maxX = -Infinity;
+		let minY = Infinity;
+		let maxY = -Infinity;
+
+		rows.forEach((row: any, rIdx: number) => {
+			const rowY =
+				row.positionY !== undefined && row.positionY !== null ? row.positionY : 200 + rIdx * 50;
+
+			(row.seats || []).forEach((seat: any, sIdx: number) => {
+				const seatX =
+					seat.positionX !== undefined && seat.positionX !== null
+						? seat.positionX
+						: 100 + sIdx * 32;
+				const seatY =
+					seat.positionY !== undefined && seat.positionY !== null ? seat.positionY : rowY;
+				if (seatX < minX) minX = seatX;
+				if (seatX > maxX) maxX = seatX;
+				if (seatY < minY) minY = seatY;
+				if (seatY > maxY) maxY = seatY;
+			});
+		});
+
+		if (minX === Infinity || maxX === -Infinity || minY === Infinity || maxY === -Infinity) {
+			return null;
+		}
+
+		return {
+			boxX: minX - RS_AREA_PADDING,
+			boxY: minY - RS_AREA_PADDING,
+			boxW: maxX - minX + RS_AREA_PADDING * 2,
+			boxH: maxY - minY + RS_AREA_PADDING * 2
+		};
+	}
+
+	function applyRsAreaBounds(area: any, oldBounds: { boxX: number; boxY: number; boxW: number; boxH: number }, newBounds: { boxX: number; boxY: number; boxW: number; boxH: number }) {
+		const rows = area.rows || [];
+		rows.forEach((row: any, rIdx: number) => {
+			const rowY =
+				row.positionY !== undefined && row.positionY !== null ? row.positionY : 200 + rIdx * 50;
+			row.positionY = Math.round(
+				newBounds.boxY + ((rowY - oldBounds.boxY) / oldBounds.boxH) * newBounds.boxH
+			);
+
+			(row.seats || []).forEach((seat: any, sIdx: number) => {
+				const seatX =
+					seat.positionX !== undefined && seat.positionX !== null
+						? seat.positionX
+						: 100 + sIdx * 32;
+				const seatY =
+					seat.positionY !== undefined && seat.positionY !== null ? seat.positionY : rowY;
+				seat.positionX = Math.round(
+					newBounds.boxX + ((seatX - oldBounds.boxX) / oldBounds.boxW) * newBounds.boxW
+				);
+				seat.positionY = Math.round(
+					newBounds.boxY + ((seatY - oldBounds.boxY) / oldBounds.boxH) * newBounds.boxH
+				);
+			});
+		});
+
+		area.x = Math.round(newBounds.boxX);
+		area.y = Math.round(newBounds.boxY);
+		area.width = Math.round(newBounds.boxW);
+		area.height = Math.round(newBounds.boxH);
+	}
+
 	function drawSeatingMap() {
 		if (!stage || !layer) return;
 
@@ -446,15 +524,146 @@
 
 		drawBackgroundGrid();
 
+		// Draw Layout Objects (Stage, Field, Shapes, Labels)
+		layoutObjects.forEach((obj, idx) => {
+			const objX = obj.x !== undefined ? obj.x : 100;
+			const objY = obj.y !== undefined ? obj.y : 100;
+			const objW = obj.width !== undefined ? obj.width : 200;
+			const objH = obj.height !== undefined ? obj.height : 100;
+			const isSelected = selectedObjectId === idx;
+
+			const group = new Konva.Group({
+				x: objX,
+				y: objY,
+				draggable: activeTool === 'select',
+				id: 'obj-' + idx
+			});
+
+			if (obj.type === 'stage') {
+				const rect = new Konva.Rect({
+					width: objW,
+					height: objH,
+					fill: '#334155', // slate-700
+					stroke: isSelected ? '#F59E0B' : '#64748B', // amber-500 or slate-500
+					strokeWidth: isSelected ? 3 : 2,
+					cornerRadius: 8,
+					shadowColor: '#000',
+					shadowBlur: 5,
+					shadowOpacity: 0.15
+				});
+
+				const text = new Konva.Text({
+					text: (obj.text || 'STAGE').toUpperCase(),
+					fontSize: Math.max(12, Math.min(objW, objH) * 0.2),
+					fontStyle: 'bold',
+					fill: '#F8FAFC', // slate-50
+					align: 'center',
+					verticalAlign: 'middle',
+					width: objW,
+					height: objH
+				});
+
+				group.add(rect, text);
+			} else if (obj.type === 'label') {
+				const text = new Konva.Text({
+					text: obj.text || 'Label',
+					fontSize: obj.fontSize || 14,
+					fontStyle: 'bold',
+					fill: isSelected ? '#F59E0B' : (obj.color || '#0F172A'),
+					align: 'center',
+					verticalAlign: 'middle'
+				});
+
+				// Add a transparent padding box to make dragging/clicking easy
+				const paddingRect = new Konva.Rect({
+					width: text.width() + 16,
+					height: text.height() + 16,
+					x: -8,
+					y: -8,
+					fill: 'rgba(0,0,0,0)',
+					stroke: isSelected ? '#F59E0B' : 'transparent',
+					strokeWidth: 1.5,
+					cornerRadius: 4
+				});
+
+				group.add(paddingRect, text);
+			} else {
+				// Shape (Rectangle/Circle)
+				const fill = obj.color || '#CBD5E1';
+				const opacity = obj.opacity !== undefined ? Number(obj.opacity) : 0.5;
+
+				if (obj.shape === 'circle') {
+					const radius = obj.radius || Math.min(objW, objH) / 2;
+					const circle = new Konva.Circle({
+						x: radius,
+						y: radius,
+						radius: radius,
+						fill: fill,
+						opacity: opacity,
+						stroke: isSelected ? '#F59E0B' : '#94A3B8',
+						strokeWidth: isSelected ? 3 : 1
+					});
+					group.add(circle);
+				} else {
+					const rect = new Konva.Rect({
+						width: objW,
+						height: objH,
+						fill: fill,
+						opacity: opacity,
+						stroke: isSelected ? '#F59E0B' : '#94A3B8',
+						strokeWidth: isSelected ? 3 : 1,
+						cornerRadius: obj.cornerRadius || 4
+					});
+					group.add(rect);
+				}
+			}
+
+			// Interactive events
+			group.on('click tap', (e: any) => {
+				e.cancelBubble = true;
+				selectedObjectId = idx;
+				selectedGaAreaId = '';
+				selectedRsAreaId = '';
+				activeTab = 'objects';
+				drawSeatingMap();
+			});
+
+			group.on('dragend', () => {
+				obj.x = Math.round(group.x());
+				obj.y = Math.round(group.y());
+				selectedObjectId = idx;
+				selectedGaAreaId = '';
+				selectedRsAreaId = '';
+				saveMessage = 'Objects layout updated locally. Save Layout to persist.';
+				drawSeatingMap();
+			});
+
+			group.on('mouseenter', () => {
+				if (activeTool === 'select') {
+					stage.container().style.cursor = 'move';
+				}
+			});
+			group.on('mouseleave', () => {
+				if (activeTool === 'select') {
+					stage.container().style.cursor = 'default';
+				}
+			});
+
+			layer.add(group);
+		});
+
 		// Draw GA Areas
 		gaAreas.forEach((ga, idx) => {
 			const x = ga.x || 50 + idx * 220;
 			const y = ga.y || 50;
+			const gaW = ga.width || 200;
+			const gaH = ga.height || 100;
+			const isSelectedGa = selectedGaAreaId === ga.id;
 
 			const group = new Konva.Group({
 				x: ga.x || x,
 				y: ga.y || y,
-				draggable: activeMode === 'floor-edit',
+				draggable: activeTool === 'select',
 				id: ga.id
 			});
 
@@ -462,42 +671,58 @@
 			const fillColor = sec ? sec.color : '#E2E8F0';
 
 			const rect = new Konva.Rect({
-				width: 200,
-				height: 100,
-				fill: fillColor + '20', // translucent overlay
-				stroke: fillColor,
-				strokeWidth: 2,
-				cornerRadius: 12,
-				shadowColor: '#000',
-				shadowBlur: 3,
-				shadowOpacity: 0.05
+				width: gaW,
+				height: gaH,
+				fill: fillColor + '15',
+				stroke: isSelectedGa ? '#0F172A' : '#E2E8F0',
+				strokeWidth: isSelectedGa ? 2.5 : 1.5,
+				cornerRadius: 12
 			});
 
-			const title = new Konva.Text({
-				text: `GA Area: ${ga.id}`,
-				fontSize: 11,
+			const centerLabel = new Konva.Text({
+				text: (ga.name || ga.id.replace(manifestIdVal + '-', '')).toUpperCase(),
+				fontSize: Math.max(14, Math.min(gaW, gaH) * 0.2),
 				fontStyle: 'bold',
-				fill: '#0F172A',
-				x: 14,
-				y: 14
+				fill: 'rgba(148, 163, 184, 0.18)',
+				x: 0,
+				y: 0,
+				width: gaW,
+				height: gaH,
+				align: 'center',
+				verticalAlign: 'middle'
 			});
 
-			const details = new Konva.Text({
-				text: `Level: ${ga.levelId}\nSection: ${ga.sectionId}\nCapacity: ${ga.capacity}`,
-				fontSize: 10,
-				fill: '#475569',
-				x: 14,
-				y: 36,
-				lineHeight: 1.4
-			});
+			group.add(rect, centerLabel);
 
-			group.add(rect, title, details);
+			// Interactive events
+			group.on('click tap', (e: any) => {
+				e.cancelBubble = true;
+				selectedGaAreaId = ga.id;
+				selectedRsAreaId = '';
+				selectedObjectId = null;
+				activeTab = 'areas';
+				drawSeatingMap();
+			});
 
 			group.on('dragend', () => {
 				ga.x = Math.round(group.x() / snapGrid) * snapGrid;
 				ga.y = Math.round(group.y() / snapGrid) * snapGrid;
+				selectedGaAreaId = ga.id;
+				selectedRsAreaId = '';
+				selectedObjectId = null;
 				drawSeatingMap();
 				updateViewport();
+			});
+
+			group.on('mouseenter', () => {
+				if (activeTool === 'select') {
+					stage.container().style.cursor = 'move';
+				}
+			});
+			group.on('mouseleave', () => {
+				if (activeTool === 'select') {
+					stage.container().style.cursor = 'default';
+				}
 			});
 
 			layer.add(group);
@@ -508,48 +733,15 @@
 			const rows = area.rows || [];
 			if (rows.length === 0) return;
 
-			// Calculate bounds of this RS Area based purely on seat positions
-			let minX = Infinity;
-			let maxX = -Infinity;
-			let minY = Infinity;
-			let maxY = -Infinity;
+			const bounds = computeRsAreaBounds(rows);
+			if (!bounds) return;
 
-			rows.forEach((row: any, rIdx: number) => {
-				const rowY =
-					row.positionY !== undefined && row.positionY !== null ? row.positionY : 200 + rIdx * 50;
-
-				const seats = row.seats || [];
-				seats.forEach((seat: any, sIdx: number) => {
-					const seatX =
-						seat.positionX !== undefined && seat.positionX !== null
-							? seat.positionX
-							: 100 + sIdx * 32;
-					if (seatX < minX) minX = seatX;
-					if (seatX > maxX) maxX = seatX;
-
-					const seatY =
-						seat.positionY !== undefined && seat.positionY !== null ? seat.positionY : rowY;
-					if (seatY < minY) minY = seatY;
-					if (seatY > maxY) maxY = seatY;
-				});
-			});
-
-			if (minX === Infinity || maxX === -Infinity || minY === Infinity || maxY === -Infinity)
-				return;
-
-			// Add margins for padding around the seats (tight crop)
-			const paddingX = 25;
-			const paddingY = 25;
-
-			const boxX = minX - paddingX;
-			const boxY = minY - paddingY;
-			const boxW = maxX - minX + paddingX * 2;
-			const boxH = maxY - minY + paddingY * 2;
+			const { boxX, boxY, boxW, boxH } = bounds;
 
 			const areaGroup = new Konva.Group({
 				x: boxX,
 				y: boxY,
-				draggable: activeMode === 'floor-edit',
+				draggable: activeTool === 'select',
 				id: 'group-' + area.id
 			});
 
@@ -572,7 +764,7 @@
 
 			// Large centered watermark label inside the area box (e.g. 219, 220, VIP, etc.)
 			const centerLabel = new Konva.Text({
-				text: area.sectionId.toUpperCase(),
+				text: (area.sectionId || area.id.replace(manifestIdVal + '-', '')).toUpperCase(),
 				fontSize: Math.max(20, Math.min(boxW, boxH) * 0.25),
 				fontStyle: 'bold',
 				fill: 'rgba(148, 163, 184, 0.12)', // light gray semi-transparent watermark
@@ -588,22 +780,27 @@
 
 			areaGroup.on('click tap', () => {
 				selectedRsAreaId = area.id;
+				selectedGaAreaId = '';
+				selectedObjectId = null;
 				drawSeatingMap();
 			});
 
 			// Drag interactions for the entire Area
 			borderRect.on('mouseenter', () => {
-				if (activeMode === 'floor-edit') {
+				if (activeTool === 'select') {
 					stage.container().style.cursor = 'move';
 				}
 			});
 			borderRect.on('mouseleave', () => {
-				if (activeMode === 'floor-edit') {
+				if (activeTool === 'select') {
 					stage.container().style.cursor = 'default';
 				}
 			});
 
 			areaGroup.on('dragend', () => {
+				selectedRsAreaId = area.id;
+				selectedGaAreaId = '';
+				selectedObjectId = null;
 				const dx = Math.round((areaGroup.x() - boxX) / snapGrid) * snapGrid;
 				const dy = Math.round((areaGroup.y() - boxY) / snapGrid) * snapGrid;
 
@@ -658,9 +855,16 @@
 					const isSelected = selectedSeatIds.includes(seat.id);
 
 					// Dynamic color mappings based on mode & selection
-					const seatPriceLevelId = seat.priceLevelId || area.priceLevelId;
-					const seatPriceLevel = priceLevels.find((p) => p.id === seatPriceLevelId);
-					let seatColor = seatPriceLevel?.color || defaultColor;
+					// First priority: seat-level section color (when assigned to a section)
+					const seatSectionId = seat.sectionId;
+					const seatSection = seatSectionId ? sections.find((s) => s.id === seatSectionId) : null;
+					let seatColor = seatSection?.color;
+					if (!seatColor) {
+						// Fall back to price level color
+						const seatPriceLevelId = seat.priceLevelId || area.priceLevelId;
+						const seatPriceLevel = priceLevels.find((p) => p.id === seatPriceLevelId);
+						seatColor = seatPriceLevel?.color || defaultColor;
+					}
 					if (isSelected) {
 						seatColor = '#1A1A1A'; // turn black temporarily when selected
 					} else if (activeMode === 'inventory') {
@@ -711,10 +915,16 @@
 						e.cancelBubble = true;
 
 						if (activeTool === 'brush') {
-							const targetPriceLevelId = brushPriceLevelId || area.priceLevelId;
-							if (targetPriceLevelId) {
-								paintSeat(seat.id, targetPriceLevelId);
+							// If a section is selected for brushing, paint section instead of price level
+							if (brushSectionId) {
+								paintSection(seat.id, brushSectionId);
 								drawSeatingMap();
+							} else {
+								const targetPriceLevelId = brushPriceLevelId || area.priceLevelId;
+								if (targetPriceLevelId) {
+									paintSeat(seat.id, targetPriceLevelId);
+									drawSeatingMap();
+								}
 							}
 							return;
 						}
@@ -777,6 +987,165 @@
 			layer.add(areaGroup);
 		});
 
+		// Add interactive resize Transformer for selected layout object
+		if (selectedObjectId !== null && activeTool === 'select') {
+			const currentIdx = selectedObjectId;
+			const transformer = new Konva.Transformer({
+				rotateEnabled: false,
+				keepRatio: false, // allow free resizing of stage/rectangles
+				enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'top-center', 'bottom-center', 'middle-left', 'middle-right'],
+				boundBoxFunc: (oldBox: any, newBox: any) => {
+					if (newBox.width < 20 || newBox.height < 20) {
+						return oldBox;
+					}
+					return newBox;
+				}
+			});
+			layer.add(transformer);
+
+			const selectedGroup = layer.findOne('#obj-' + currentIdx);
+			if (selectedGroup) {
+				transformer.nodes([selectedGroup]);
+
+				// Listen to transformend event on the group to update state
+				selectedGroup.on('transformend', () => {
+					const obj = layoutObjects[currentIdx];
+					if (obj) {
+						const scaleX = selectedGroup.scaleX();
+						const scaleY = selectedGroup.scaleY();
+
+						// Reset scale
+						selectedGroup.scaleX(1);
+						selectedGroup.scaleY(1);
+
+						const objW = obj.width !== undefined ? obj.width : 200;
+						const objH = obj.height !== undefined ? obj.height : 100;
+
+						if (obj.type === 'stage' || (obj.type === 'shape' && obj.shape !== 'circle')) {
+							obj.width = Math.round(objW * scaleX);
+							obj.height = Math.round(objH * scaleY);
+						} else if (obj.type === 'shape' && obj.shape === 'circle') {
+							const radius = obj.radius || Math.min(objW, objH) / 2;
+							obj.radius = Math.round(radius * Math.max(scaleX, scaleY));
+						} else if (obj.type === 'label') {
+							const size = obj.fontSize || 14;
+							obj.fontSize = Math.round(size * Math.max(scaleX, scaleY));
+						}
+
+						obj.x = Math.round(selectedGroup.x());
+						obj.y = Math.round(selectedGroup.y());
+
+						saveMessage = 'Objects resized and repositioned. Save Layout to persist.';
+						drawSeatingMap();
+					}
+				});
+			}
+		}
+
+		// Add interactive resize Transformer for selected GA area
+		if (selectedGaAreaId !== '' && activeTool === 'select') {
+			const targetGaId = selectedGaAreaId;
+			const transformer = new Konva.Transformer({
+				rotateEnabled: false,
+				keepRatio: false,
+				enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'top-center', 'bottom-center', 'middle-left', 'middle-right'],
+				boundBoxFunc: (oldBox: any, newBox: any) => {
+					if (newBox.width < 50 || newBox.height < 50) {
+						return oldBox;
+					}
+					return newBox;
+				}
+			});
+			layer.add(transformer);
+
+			const selectedGroup = layer.findOne('#' + targetGaId);
+			if (selectedGroup) {
+				transformer.nodes([selectedGroup]);
+
+				selectedGroup.on('transformend', () => {
+					const ga = gaAreas.find((g) => g.id === targetGaId);
+					if (ga) {
+						const scaleX = selectedGroup.scaleX();
+						const scaleY = selectedGroup.scaleY();
+
+						selectedGroup.scaleX(1);
+						selectedGroup.scaleY(1);
+
+						const gaW = ga.width || 200;
+						const gaH = ga.height || 100;
+
+						ga.width = Math.max(50, Math.round(gaW * scaleX));
+						ga.height = Math.max(50, Math.round(gaH * scaleY));
+
+						ga.x = Math.round(selectedGroup.x());
+						ga.y = Math.round(selectedGroup.y());
+
+						saveMessage = 'GA Area resized and repositioned. Save Layout to persist.';
+						drawSeatingMap();
+					}
+				});
+			}
+		}
+
+		// Add interactive resize Transformer for selected RS area
+		if (selectedRsAreaId !== '' && activeTool === 'select') {
+			const targetRsId = selectedRsAreaId;
+			const transformer = new Konva.Transformer({
+				rotateEnabled: false,
+				keepRatio: false,
+				enabledAnchors: [
+					'top-left',
+					'top-right',
+					'bottom-left',
+					'bottom-right',
+					'top-center',
+					'bottom-center',
+					'middle-left',
+					'middle-right'
+				],
+				boundBoxFunc: (oldBox: any, newBox: any) => {
+					if (newBox.width < 50 || newBox.height < 50) {
+						return oldBox;
+					}
+					return newBox;
+				}
+			});
+			layer.add(transformer);
+
+			const selectedGroup = layer.findOne('#group-' + targetRsId);
+			if (selectedGroup) {
+				transformer.nodes([selectedGroup]);
+
+				selectedGroup.on('transformend', () => {
+					const area = rsAreas.find((a) => a.id === targetRsId);
+					if (!area) return;
+
+					const oldBounds = computeRsAreaBounds(area.rows || []);
+					if (!oldBounds) return;
+
+					const scaleX = selectedGroup.scaleX();
+					const scaleY = selectedGroup.scaleY();
+					const newGroupX = Math.round(selectedGroup.x());
+					const newGroupY = Math.round(selectedGroup.y());
+
+					selectedGroup.scaleX(1);
+					selectedGroup.scaleY(1);
+
+					const newBounds = {
+						boxX: newGroupX,
+						boxY: newGroupY,
+						boxW: Math.max(50, Math.round(oldBounds.boxW * scaleX)),
+						boxH: Math.max(50, Math.round(oldBounds.boxH * scaleY))
+					};
+
+					applyRsAreaBounds(area, oldBounds, newBounds);
+					rsAreas = [...rsAreas];
+					saveMessage = 'RS Area resized and repositioned. Save Layout to persist.';
+					drawSeatingMap();
+				});
+			}
+		}
+
 		layer.batchDraw();
 	}
 
@@ -806,12 +1175,22 @@
 		let brushModeActive = false;
 
 		stage.on('mousedown touchstart', (e: any) => {
+			if (e.target === stage) {
+				selectedObjectId = null;
+				selectedGaAreaId = '';
+				selectedRsAreaId = '';
+				drawSeatingMap();
+			}
 			isMouseDown = true;
 			const target = e.target;
 			const isSeat =
 				target &&
-				(target.className === 'Circle' ||
-					(target.parent && target.parent.id() && !target.parent.id().startsWith('group-')));
+				target.className === 'Circle' &&
+				target.parent &&
+				target.parent.id() &&
+				target.parent.id().includes('-seat-') &&
+				!target.parent.id().startsWith('group-') &&
+				!target.parent.id().startsWith('obj-');
 			if (isSeat) {
 				brushModeActive = true;
 				const seatId = target.parent?.id() || target.id();
@@ -821,10 +1200,15 @@
 						drawSeatingMap();
 					} else if (activeTool === 'brush') {
 						const found = findSeatById(seatId);
-						const targetPriceLevelId = brushPriceLevelId || found?.area?.priceLevelId;
-						if (targetPriceLevelId) {
-							paintSeat(seatId, targetPriceLevelId);
+						if (brushSectionId) {
+							paintSection(seatId, brushSectionId);
 							drawSeatingMap();
+						} else {
+							const targetPriceLevelId = brushPriceLevelId || found?.area?.priceLevelId;
+							if (targetPriceLevelId) {
+								paintSeat(seatId, targetPriceLevelId);
+								drawSeatingMap();
+							}
 						}
 					} else if (activeTool === 'select') {
 						if (isShiftPressed) {
@@ -870,7 +1254,12 @@
 				const pos = stage.getPointerPosition();
 				if (!pos) return;
 				const shape = stage.getIntersection(pos);
-				if (shape && shape.className === 'Circle') {
+				if (
+					shape &&
+					shape.className === 'Circle' &&
+					shape.parent?.id()?.includes('-seat-') &&
+					!shape.parent?.id()?.startsWith('obj-')
+				) {
 					const seatId = shape.parent?.id() || shape.id();
 					if (seatId && !seatId.startsWith('group-') && seatId !== stage.id()) {
 						if (activeTool === 'eraser') {
@@ -878,10 +1267,15 @@
 							drawSeatingMap();
 						} else if (activeTool === 'brush') {
 							const found = findSeatById(seatId);
-							const targetPriceLevelId = brushPriceLevelId || found?.area?.priceLevelId;
-							if (targetPriceLevelId) {
-								paintSeat(seatId, targetPriceLevelId);
+							if (brushSectionId) {
+								paintSection(seatId, brushSectionId);
 								drawSeatingMap();
+							} else {
+								const targetPriceLevelId = brushPriceLevelId || found?.area?.priceLevelId;
+								if (targetPriceLevelId) {
+									paintSeat(seatId, targetPriceLevelId);
+									drawSeatingMap();
+								}
 							}
 						} else if (activeTool === 'select') {
 							if (!selectedSeatIds.includes(seatId)) {
@@ -992,6 +1386,31 @@
 		saveMessage = `Assigned tier ${priceLevelId} to selected seats!`;
 		selectedSeatIds = [];
 		drawSeatingMap();
+	}
+
+	function assignSectionToSelected(sectionId: string) {
+		if (selectedSeatIds.length === 0) return;
+
+		rsAreas.forEach((area) => {
+			const rows = area.rows || [];
+			rows.forEach((row: any) => {
+				const seats = row.seats || [];
+				seats.forEach((seat: any) => {
+					if (selectedSeatIds.includes(seat.id)) {
+						seat.sectionId = sectionId || null;
+					}
+				});
+			});
+		});
+		rsAreas = [...rsAreas];
+
+		saveMessage = `Assigned section ${sectionId || 'None'} to selected seats!`;
+		selectedSeatIds = [];
+		drawSeatingMap();
+	}
+
+	function clearSectionFromSelected() {
+		assignSectionToSelected('');
 	}
 
 	// Trigger quick inventory overrides in Inventory Mode
@@ -1256,24 +1675,27 @@
 	}
 
 	function createArea() {
-		if (!areaLevelId || !areaSectionId || !areaPriceLevelId) {
-			errorMessage = 'Level, Section, and Price Tier links are required to create an Area.';
+		if (!areaLevelId) {
+			errorMessage = 'Level link is required to create an Area.';
+			return;
+		}
+		if (!areaNameInput || !areaNameInput.trim()) {
+			errorMessage = 'Area Name / Code is required.';
 			return;
 		}
 
-		if (areaType === 'RS' && (blockRowsCount < 1 || blockSeatsPerRow < 1)) {
-			errorMessage = 'Row count and seats per row must be at least 1.';
+		const cleanName = areaNameInput.trim().toUpperCase();
+		const areaId = `${manifestIdVal}-${cleanName}`;
+
+		if (rsAreas.some((a) => a.id === areaId) || gaAreas.some((a) => a.id === areaId)) {
+			errorMessage = 'An area with this name already exists in this manifest.';
 			return;
 		}
-
-		const areaId =
-			`${manifestIdVal}-${areaLevelId}-${areaSectionId}-${areaPriceLevelId}-${areaType}`.toUpperCase();
 
 		const payload: any = {
 			id: areaId,
 			levelId: areaLevelId,
-			sectionId: areaSectionId,
-			priceLevelId: areaPriceLevelId
+			priceLevelId: areaPriceLevelId || null
 		};
 
 		if (areaType === 'GA') {
@@ -1285,15 +1707,57 @@
 				blockRowPrefix,
 				blockRowsCount,
 				blockSeatsPerRow,
-				blockSeatStartNum
+				blockSeatStartNum,
+				220,
+				120
 			);
 			payload.curvature = 0;
 			rsAreas = [...rsAreas, payload];
 			selectedRsAreaId = areaId;
 		}
 
-		saveMessage = `Added ${areaType} Area locally. Save Layout to persist.`;
+		// Reset inputs
+		areaNameInput = '';
+		saveMessage = `Added ${areaType} Area "${cleanName}" locally. Save Layout to persist.`;
 		errorMessage = '';
+		drawSeatingMap();
+	}
+
+	function addStageObject() {
+		layoutObjects = [
+			...layoutObjects,
+			{ type: 'stage', text: 'STAGE', x: 250, y: 150, width: 300, height: 100 }
+		];
+		selectedObjectId = layoutObjects.length - 1;
+		saveMessage = 'Stage added locally. Save Layout to persist.';
+		drawSeatingMap();
+	}
+
+	function addLabelObject() {
+		layoutObjects = [
+			...layoutObjects,
+			{ type: 'label', text: 'Mixer', x: 300, y: 300, fontSize: 14, color: '#0F172A' }
+		];
+		selectedObjectId = layoutObjects.length - 1;
+		saveMessage = 'Label added locally. Save Layout to persist.';
+		drawSeatingMap();
+	}
+
+	function addShapeObject(shapeType: 'rect' | 'circle') {
+		layoutObjects = [
+			...layoutObjects,
+			{ type: 'shape', shape: shapeType, x: 200, y: 200, width: 100, height: 100, color: '#CBD5E1', opacity: 0.5 }
+		];
+		selectedObjectId = layoutObjects.length - 1;
+		saveMessage = 'Shape added locally. Save Layout to persist.';
+		drawSeatingMap();
+	}
+
+	function deleteSelectedObject() {
+		if (selectedObjectId === null) return;
+		layoutObjects = layoutObjects.filter((_, idx) => idx !== selectedObjectId);
+		selectedObjectId = null;
+		saveMessage = 'Object removed locally. Save Layout to persist.';
 		drawSeatingMap();
 	}
 
@@ -1303,6 +1767,17 @@
 		errorMessage = '';
 
 		try {
+			// 1. Update Manifest properties & objects
+			await fetch(`/api/ops/venues/manifests/${manifestIdVal}`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					description: manifestDescVal,
+					totalCapacity: Number(manifestCapVal),
+					objects: layoutObjects
+				})
+			});
+
 			// Save Levels
 			for (const lvl of levels) {
 				await fetch(`/api/ops/venues/manifests/${manifestIdVal}/levels`, {
@@ -1340,13 +1815,40 @@
 						levelId: ga.levelId,
 						sectionId: ga.sectionId,
 						priceLevelId: ga.priceLevelId,
-						capacity: Number(ga.capacity)
+						capacity: Number(ga.capacity),
+						x: ga.x !== undefined ? ga.x : null,
+						y: ga.y !== undefined ? ga.y : null,
+						width: ga.width || 200,
+						height: ga.height || 100
 					})
 				});
 			}
 
 			// 6. Save RS Areas, Rows, and Seats
 			for (const area of rsAreas) {
+				// Calculate RS Area bounds dynamically based on its seats
+				let minX = Infinity;
+				let maxX = -Infinity;
+				let minY = Infinity;
+				let maxY = -Infinity;
+
+				(area.rows || []).forEach((row: any) => {
+					(row.seats || []).forEach((seat: any) => {
+						const seatX = seat.positionX || 0;
+						const seatY = seat.positionY !== undefined && seat.positionY !== null ? seat.positionY : (row.positionY || 0);
+						if (seatX < minX) minX = seatX;
+						if (seatX > maxX) maxX = seatX;
+						if (seatY < minY) minY = seatY;
+						if (seatY > maxY) maxY = seatY;
+					});
+				});
+
+				const padding = 25;
+				const calculatedX = minX !== Infinity ? minX - padding : 0;
+				const calculatedY = minY !== Infinity ? minY - padding : 0;
+				const calculatedW = maxX !== -Infinity ? maxX - minX + padding * 2 : 0;
+				const calculatedH = maxY !== -Infinity ? maxY - minY + padding * 2 : 0;
+
 				await fetch(`/api/ops/venues/manifests/${manifestIdVal}/rs-areas`, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
@@ -1354,7 +1856,11 @@
 						id: area.id,
 						levelId: area.levelId,
 						sectionId: area.sectionId,
-						priceLevelId: area.priceLevelId
+						priceLevelId: area.priceLevelId,
+						x: calculatedX,
+						y: calculatedY,
+						width: calculatedW,
+						height: calculatedH
 					})
 				});
 
@@ -1379,9 +1885,13 @@
 								id: seat.id,
 								name: seat.name,
 								positionX: seat.positionX,
+								positionY: seat.positionY !== undefined && seat.positionY !== null ? seat.positionY : row.positionY,
 								accessibility: seat.accessibility,
 								obstructedView: seat.obstructedView,
-								aisle: seat.aisle
+								aisle: seat.aisle,
+								status: seat.status,
+								priceLevelId: seat.priceLevelId || null,
+								sectionId: seat.sectionId || null
 							})
 						});
 					}
@@ -1392,7 +1902,7 @@
 			selectedSeatIds = [];
 			drawSeatingMap();
 
-			if (isNew) {
+			if (data.isNew) {
 				setTimeout(() => {
 					goto(`/ops/venues/${venue.id}/manifests/${manifestIdVal}`, { invalidateAll: true });
 				}, 1000);
@@ -1574,6 +2084,15 @@
 						>
 							Areas
 						</button>
+						<button
+							type="button"
+							onclick={() => (activeTab = 'objects')}
+							class="flex-1 border-b-2 py-3 text-center transition-all {activeTab === 'objects'
+								? 'border-slate-900 font-extrabold text-slate-900'
+								: 'border-transparent text-slate-400 hover:bg-slate-50 hover:text-slate-600'}"
+						>
+							Objects
+						</button>
 					</div>
 
 					<div class="flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -1720,11 +2239,14 @@
 											<div class="space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
 												<div class="flex items-center justify-between">
 													<span class="text-xs font-extrabold text-slate-900">
-														Editing Area: {targetArea.id}
+														Editing Area: {targetArea.id.replace(manifestIdVal + '-', '')}
 													</span>
 													<button
 														type="button"
-														onclick={() => (selectedRsAreaId = '')}
+														onclick={() => {
+															selectedRsAreaId = '';
+															drawSeatingMap();
+														}}
 														class="text-[10px] font-bold text-slate-400 hover:text-slate-600"
 													>
 														Back
@@ -1732,7 +2254,7 @@
 												</div>
 												<div class="space-y-0.5 text-[10px] font-semibold text-slate-500">
 													<p>Level: {targetArea.levelId}</p>
-													<p>Section: {targetArea.sectionId}</p>
+													<p>Section: {targetArea.sectionId || 'None'}</p>
 													<p>Current Rows: {targetArea.rows?.length || 0}</p>
 												</div>
 											</div>
@@ -1856,29 +2378,140 @@
 												</div>
 											</div>
 										{/if}
+									{:else if selectedGaAreaId}
+										{@const targetGaArea = gaAreas.find((g) => g.id === selectedGaAreaId)}
+										{#if targetGaArea}
+											<div class="space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
+												<div class="flex items-center justify-between">
+													<span class="text-xs font-extrabold text-slate-900">
+														Editing GA: {targetGaArea.id.replace(manifestIdVal + '-', '')}
+													</span>
+													<button
+														type="button"
+														onclick={() => {
+															selectedGaAreaId = '';
+															drawSeatingMap();
+														}}
+														class="text-[10px] font-bold text-slate-400 hover:text-slate-600"
+													>
+														Back
+													</button>
+												</div>
+												<div class="space-y-0.5 text-[10px] font-semibold text-slate-500">
+													<p>Level: {targetGaArea.levelId}</p>
+													<p>Section: {targetGaArea.sectionId || 'None'}</p>
+												</div>
+											</div>
+
+											<div class="space-y-3 border-t border-slate-100 pt-3 font-semibold text-slate-700 text-xs">
+												<div class="space-y-1">
+													<label for="ga-cap-edit" class="text-[10px] text-slate-500">Standing Capacity</label>
+													<input
+														id="ga-cap-edit"
+														type="number"
+														bind:value={targetGaArea.capacity}
+														class="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs outline-none"
+													/>
+												</div>
+
+												<div class="grid grid-cols-2 gap-2">
+													<div class="space-y-1">
+														<label for="ga-x-edit" class="text-[10px] text-slate-500">Position X</label>
+														<input
+															id="ga-x-edit"
+															type="number"
+															bind:value={targetGaArea.x}
+															oninput={drawSeatingMap}
+															class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+														/>
+													</div>
+													<div class="space-y-1">
+														<label for="ga-y-edit" class="text-[10px] text-slate-500">Position Y</label>
+														<input
+															id="ga-y-edit"
+															type="number"
+															bind:value={targetGaArea.y}
+															oninput={drawSeatingMap}
+															class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+														/>
+													</div>
+												</div>
+
+												<div class="grid grid-cols-2 gap-2">
+													<div class="space-y-1">
+														<label for="ga-w-edit" class="text-[10px] text-slate-500">Width</label>
+														<input
+															id="ga-w-edit"
+															type="number"
+															bind:value={targetGaArea.width}
+															oninput={drawSeatingMap}
+															class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+														/>
+													</div>
+													<div class="space-y-1">
+														<label for="ga-h-edit" class="text-[10px] text-slate-500">Height</label>
+														<input
+															id="ga-h-edit"
+															type="number"
+															bind:value={targetGaArea.height}
+															oninput={drawSeatingMap}
+															class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+														/>
+													</div>
+												</div>
+
+												<button
+													type="button"
+													onclick={() => {
+														gaAreas = gaAreas.filter((g) => g.id !== selectedGaAreaId);
+														selectedGaAreaId = '';
+														saveMessage = 'GA Area removed. Save Layout to persist.';
+														drawSeatingMap();
+													}}
+													class="w-full rounded-md bg-rose-600 py-1.5 text-xs font-bold text-white transition hover:bg-rose-700 mt-2"
+												>
+													Delete GA Area
+												</button>
+											</div>
+										{/if}
 									{:else}
 										{#if gaAreas.length > 0 || rsAreas.length > 0}
 											<div class="space-y-2">
 												{#each gaAreas as ga}
-													<div
-														class="flex items-center justify-between rounded-lg border border-emerald-100 bg-emerald-50/20 p-2.5 text-[10px] font-bold text-emerald-800"
+													<button
+														type="button"
+														onclick={() => {
+															selectedGaAreaId = ga.id;
+															selectedRsAreaId = '';
+															selectedObjectId = null;
+															drawSeatingMap();
+														}}
+														class="block w-full rounded-lg border p-2.5 text-left text-[10px] font-bold transition select-none {selectedGaAreaId ===
+														ga.id
+															? 'border-slate-950 bg-slate-50 text-slate-950 shadow-2xs'
+															: 'border-emerald-100 bg-emerald-50/20 text-emerald-800 hover:border-emerald-300'}"
 													>
-														<span>GA Area: {ga.id} (Cap: {ga.capacity})</span>
-													</div>
+														<span>GA Area: {ga.id.replace(manifestIdVal + '-', '')} (Cap: {ga.capacity})</span>
+													</button>
 												{/each}
 												{#each rsAreas as rs}
 													<button
-														onclick={() => (selectedRsAreaId = rs.id)}
+														onclick={() => {
+															selectedRsAreaId = rs.id;
+															selectedGaAreaId = '';
+															selectedObjectId = null;
+															drawSeatingMap();
+														}}
 														class="block w-full rounded-lg border p-2.5 text-left text-[10px] font-bold transition select-none {selectedRsAreaId ===
 														rs.id
 															? 'border-slate-950 bg-slate-50 text-slate-950 shadow-2xs'
-															: 'border-slate-100 bg-slate-50/50 text-slate-500'}"
+															: 'border-slate-100 bg-slate-50/50 text-slate-500 hover:border-slate-300'}"
 													>
-														<span>Reserved Area: {rs.id}</span>
+														<span>Reserved Area: {rs.id.replace(manifestIdVal + '-', '')}</span>
 														<span
 															class="mt-1 block font-mono text-[9px] leading-none font-semibold text-slate-400"
 														>
-															Level: {rs.levelId} · Section: {rs.sectionId} · Rows: {rs.rows
+															Level: {rs.levelId} · Section: {rs.sectionId || 'None'} · Rows: {rs.rows
 																?.length || 0}
 														</span>
 													</button>
@@ -1920,6 +2553,20 @@
 											</div>
 
 											<div class="space-y-1">
+												<label for="area-name-input" class="text-[10px] text-slate-500"
+													>Area Name / Code</label
+												>
+												<input
+													id="area-name-input"
+													type="text"
+													bind:value={areaNameInput}
+													placeholder="e.g. Khán đài A, Stand B, VIP"
+													class="w-full rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs outline-none"
+													required
+												/>
+											</div>
+
+											<div class="space-y-1">
 												<label for="area-level-select" class="text-[10px] text-slate-500"
 													>Level Link</label
 												>
@@ -1937,21 +2584,7 @@
 											</div>
 
 											<div class="space-y-1">
-												<label for="area-section-select" class="text-[10px] text-slate-500"
-													>Section Link</label
-												>
-												<select
-													id="area-section-select"
-													bind:value={areaSectionId}
-													class="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold outline-none"
-													required
-												>
-													<option value="">-- Choose Section --</option>
-													{#each sections as sec}
-														<option value={sec.id}>Section {sec.id}</option>
-													{/each}
-												</select>
-											</div>
+
 
 											{#if areaType === 'GA'}
 												<div class="space-y-1">
@@ -2050,6 +2683,221 @@
 												Create Area
 											</button>
 										</form>
+									{/if}
+								</div>
+							{:else if activeTab === 'objects'}
+								<div class="space-y-4">
+									<h3 class="text-xs font-bold text-slate-800">Layout Objects (Stage/Labels)</h3>
+
+									{#if selectedObjectId !== null && layoutObjects[selectedObjectId]}
+										{@const targetObj = layoutObjects[selectedObjectId]}
+										<div class="space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
+											<div class="flex items-center justify-between">
+												<span class="text-[10px] font-extrabold text-slate-900 uppercase">
+													Editing: {targetObj.type}
+												</span>
+												<button
+													type="button"
+													onclick={() => {
+														selectedObjectId = null;
+														drawSeatingMap();
+													}}
+													class="text-[10px] font-bold text-slate-400 hover:text-slate-600"
+												>
+													Deselect
+												</button>
+											</div>
+
+											<div class="space-y-2 text-xs font-semibold text-slate-700">
+												<div class="grid grid-cols-2 gap-2">
+													<div class="space-y-1">
+														<label for="obj-pos-x" class="text-[9px] text-slate-400">Position X</label>
+														<input
+															id="obj-pos-x"
+															type="number"
+															bind:value={targetObj.x}
+															oninput={drawSeatingMap}
+															class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+														/>
+													</div>
+													<div class="space-y-1">
+														<label for="obj-pos-y" class="text-[9px] text-slate-400">Position Y</label>
+														<input
+															id="obj-pos-y"
+															type="number"
+															bind:value={targetObj.y}
+															oninput={drawSeatingMap}
+															class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+														/>
+													</div>
+												</div>
+
+												{#if targetObj.type === 'stage' || (targetObj.type === 'shape' && targetObj.shape !== 'circle')}
+													<div class="grid grid-cols-2 gap-2">
+														<div class="space-y-1">
+															<label for="obj-width" class="text-[9px] text-slate-400">Width</label>
+															<input
+																id="obj-width"
+																type="number"
+																bind:value={targetObj.width}
+																oninput={drawSeatingMap}
+																class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+															/>
+														</div>
+														<div class="space-y-1">
+															<label for="obj-height" class="text-[9px] text-slate-400">Height</label>
+															<input
+																id="obj-height"
+																type="number"
+																bind:value={targetObj.height}
+																oninput={drawSeatingMap}
+																class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+															/>
+														</div>
+													</div>
+												{/if}
+
+												{#if targetObj.type === 'shape' && targetObj.shape === 'circle'}
+													<div class="space-y-1">
+														<label for="obj-radius" class="text-[9px] text-slate-400">Radius</label>
+														<input
+															id="obj-radius"
+															type="number"
+															bind:value={targetObj.radius}
+															oninput={drawSeatingMap}
+															class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+														/>
+													</div>
+												{/if}
+
+												{#if targetObj.type === 'stage' || targetObj.type === 'label'}
+													<div class="space-y-1">
+														<label for="obj-text" class="text-[9px] text-slate-400">Label Text</label>
+														<input
+															id="obj-text"
+															type="text"
+															bind:value={targetObj.text}
+															oninput={drawSeatingMap}
+															class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+														/>
+													</div>
+												{/if}
+
+												{#if targetObj.type === 'label'}
+													<div class="space-y-1">
+														<label for="obj-fontsize" class="text-[9px] text-slate-400">Font Size</label>
+														<input
+															id="obj-fontsize"
+															type="number"
+															bind:value={targetObj.fontSize}
+															oninput={drawSeatingMap}
+															class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+														/>
+													</div>
+												{/if}
+
+												{#if targetObj.type === 'label' || targetObj.type === 'shape'}
+													<div class="space-y-1">
+														<label for="obj-color" class="text-[9px] text-slate-400">Color Tag</label>
+														<div class="flex items-center gap-2">
+															<input
+																id="obj-color"
+																type="color"
+																bind:value={targetObj.color}
+																oninput={drawSeatingMap}
+																class="h-7 w-7 cursor-pointer rounded border border-slate-200"
+															/>
+															<span class="font-mono text-xs text-slate-500">{targetObj.color || '#000000'}</span>
+														</div>
+													</div>
+												{/if}
+
+												{#if targetObj.type === 'shape'}
+													<div class="space-y-1">
+														<label for="obj-opacity" class="text-[9px] text-slate-400">Opacity ({targetObj.opacity !== undefined ? targetObj.opacity : 0.5})</label>
+														<input
+															id="obj-opacity"
+															type="range"
+															min="0"
+															max="1"
+															step="0.1"
+															bind:value={targetObj.opacity}
+															oninput={drawSeatingMap}
+															class="w-full accent-slate-900"
+														/>
+													</div>
+												{/if}
+
+												<button
+													type="button"
+													onclick={deleteSelectedObject}
+													class="w-full rounded-md bg-rose-600 py-1.5 text-xs font-bold text-white transition hover:bg-rose-700 mt-2"
+												>
+													Delete Object
+												</button>
+											</div>
+										</div>
+									{:else}
+										<div class="space-y-2.5 font-semibold text-slate-700">
+											<p class="text-[10px] text-slate-400 leading-relaxed">
+												Add non-seating physical items to your layout map, such as stages, background shape barriers, sound mixer labels, or entrances. Drag them to position.
+											</p>
+											
+											<button
+												type="button"
+												onclick={addStageObject}
+												class="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white py-2 text-center text-xs hover:bg-slate-50"
+											>
+												<span class="text-slate-500">➕</span> Add Stage Box
+											</button>
+											
+											<button
+												type="button"
+												onclick={addLabelObject}
+												class="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white py-2 text-center text-xs hover:bg-slate-50"
+											>
+												<span class="text-slate-500">➕</span> Add Text Label
+											</button>
+											
+											<button
+												type="button"
+												onclick={() => addShapeObject('rect')}
+												class="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white py-2 text-center text-xs hover:bg-slate-50"
+											>
+												<span class="text-slate-500">➕</span> Add Rectangle Shape
+											</button>
+
+											<button
+												type="button"
+												onclick={() => addShapeObject('circle')}
+												class="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white py-2 text-center text-xs hover:bg-slate-50"
+											>
+												<span class="text-slate-500">➕</span> Add Circle Shape
+											</button>
+										</div>
+
+										{#if layoutObjects.length > 0}
+											<div class="space-y-2 border-t border-slate-100 pt-3">
+												<h4 class="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+													Current Layout Objects ({layoutObjects.length})
+												</h4>
+												<div class="space-y-1.5 max-h-[180px] overflow-y-auto pr-1">
+													{#each layoutObjects as obj, idx}
+														<button
+															type="button"
+															onclick={() => {
+																selectedObjectId = idx;
+																drawSeatingMap();
+															}}
+															class="flex w-full items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 p-2 text-left text-[10px] font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300"
+														>
+															<span class="capitalize">{obj.type}{obj.shape ? ` (${obj.shape})` : ''}: {obj.text || `Item #${idx + 1}`}</span>
+															<span class="text-[9px] font-mono text-slate-400">({obj.x}, {obj.y})</span>
+														</button>
+													{/each}
+												</div>
+											</div>
+										{/if}
 									{/if}
 								</div>
 							{/if}

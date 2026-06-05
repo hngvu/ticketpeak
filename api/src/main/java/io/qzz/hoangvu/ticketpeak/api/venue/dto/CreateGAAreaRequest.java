@@ -8,8 +8,7 @@ import jakarta.validation.constraints.Positive;
 public record CreateGAAreaRequest(
         @NotBlank String id,
         @NotBlank String levelId,
-        @NotBlank String sectionId,
-        @NotBlank String priceLevelId,
+        String priceLevelId,
         @NotNull @Positive Integer capacity,
         @PositiveOrZero Integer x,
         @PositiveOrZero Integer y,

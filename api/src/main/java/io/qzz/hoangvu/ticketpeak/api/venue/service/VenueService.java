@@ -108,6 +108,7 @@ public class VenueService {
         Manifest manifest = Manifest.builder()
                 .id(req.id()).venue(venue).description(req.description())
                 .totalCapacity(req.totalCapacity()).status(ManifestStatus.DRAFT)
+                .objects(req.objects())
                 .build();
         return ManifestResponse.from(manifestRepository.save(manifest));
     }
@@ -150,6 +151,15 @@ public class VenueService {
     }
 
     @Transactional
+    public ManifestResponse updateManifest(String manifestId, UpdateManifestRequest req) {
+        Manifest manifest = requireManifest(manifestId);
+        manifest.setDescription(req.description());
+        manifest.setTotalCapacity(req.totalCapacity());
+        manifest.setObjects(req.objects());
+        return ManifestResponse.from(manifestRepository.save(manifest));
+    }
+
+    @Transactional
     public ManifestResponse cloneManifest(String sourceManifestId, CloneManifestRequest req) {
         Manifest source = requireManifest(sourceManifestId);
         String newId = req.newId() != null ? req.newId() : sourceManifestId + "-clone";
@@ -161,6 +171,7 @@ public class VenueService {
         Manifest clone = Manifest.builder()
                 .id(newId).venue(source.getVenue()).description(newDescription)
                 .totalCapacity(source.getTotalCapacity()).status(ManifestStatus.DRAFT)
+                .objects(source.getObjects() != null ? new java.util.ArrayList<>(source.getObjects()) : null)
                 .build();
         manifestRepository.save(clone);
 
@@ -186,9 +197,12 @@ public class VenueService {
                         .id(newId + "-" + g.getId())
                         .manifestId(clone.getId())
                         .levelId(g.getLevelId())
-                        .sectionId(g.getSectionId())
                         .priceLevelId(g.getPriceLevelId())
                         .capacity(g.getCapacity())
+                        .x(g.getX())
+                        .y(g.getY())
+                        .width(g.getWidth())
+                        .height(g.getHeight())
                         .build())
                 .toList();
         gaAreaRepository.saveAll(gaAreas);
@@ -198,8 +212,10 @@ public class VenueService {
                         .id(newId + "-" + r.getId())
                         .manifestId(clone.getId())
                         .levelId(r.getLevelId())
-                        .sectionId(r.getSectionId())
-                        .priceLevelId(r.getPriceLevelId())
+                        .x(r.getX())
+                        .y(r.getY())
+                        .width(r.getWidth())
+                        .height(r.getHeight())
                         .build())
                 .toList();
         rsAreas = rsAreaRepository.saveAll(rsAreas);
@@ -242,6 +258,8 @@ public class VenueService {
                             .accessibility(seat.getAccessibility())
                             .obstructedView(seat.getObstructedView())
                             .aisle(seat.getAisle())
+                            .priceLevelId(seat.getPriceLevelId())
+                            .sectionId(seat.getSectionId())
                             .build();
                     seats.add(newSeat);
                 }
@@ -300,12 +318,30 @@ public class VenueService {
     @Transactional
     public GAAreaResponse createGAArea(String manifestId, CreateGAAreaRequest req) {
         requireManifest(manifestId);
-        if (gaAreaRepository.existsById(req.id())) {
-            throw VenueException.gaAreaIdExists(req.id());
-        }
-        GAArea area = GAArea.builder().id(req.id()).manifestId(manifestId)
-                .levelId(req.levelId()).sectionId(req.sectionId()).priceLevelId(req.priceLevelId())
-                .capacity(req.capacity()).build();
+        String priceLevelId = req.priceLevelId() != null && !req.priceLevelId().isBlank() ? req.priceLevelId() : null;
+        
+        GAArea area = gaAreaRepository.findById(req.id())
+                .map(existing -> {
+                    existing.setLevelId(req.levelId());
+                    existing.setPriceLevelId(priceLevelId);
+                    existing.setCapacity(req.capacity());
+                    existing.setX(req.x());
+                    existing.setY(req.y());
+                    existing.setWidth(req.width());
+                    existing.setHeight(req.height());
+                    return existing;
+                })
+                .orElseGet(() -> GAArea.builder()
+                        .id(req.id())
+                        .manifestId(manifestId)
+                        .levelId(req.levelId())
+                        .priceLevelId(priceLevelId)
+                        .capacity(req.capacity())
+                        .x(req.x())
+                        .y(req.y())
+                        .width(req.width())
+                        .height(req.height())
+                        .build());
         return GAAreaResponse.from(gaAreaRepository.save(area));
     }
 
@@ -318,11 +354,25 @@ public class VenueService {
     @Transactional
     public RSAreaResponse createRSArea(String manifestId, CreateRSAreaRequest req) {
         requireManifest(manifestId);
-        if (rsAreaRepository.existsById(req.id())) {
-            throw VenueException.rsAreaIdExists(req.id());
-        }
-        RSArea area = RSArea.builder().id(req.id()).manifestId(manifestId)
-                .levelId(req.levelId()).sectionId(req.sectionId()).priceLevelId(req.priceLevelId()).build();
+
+        RSArea area = rsAreaRepository.findById(req.id())
+                .map(existing -> {
+                    existing.setLevelId(req.levelId());
+                    existing.setX(req.x());
+                    existing.setY(req.y());
+                    existing.setWidth(req.width());
+                    existing.setHeight(req.height());
+                    return existing;
+                })
+                .orElseGet(() -> RSArea.builder()
+                        .id(req.id())
+                        .manifestId(manifestId)
+                        .levelId(req.levelId())
+                        .x(req.x())
+                        .y(req.y())
+                        .width(req.width())
+                        .height(req.height())
+                        .build());
         return RSAreaResponse.from(rsAreaRepository.save(area));
     }
 
@@ -338,13 +388,28 @@ public class VenueService {
     public SeatRowResponse createSeatRow(String rsAreaId, CreateSeatRowRequest req) {
         RSArea rsArea = rsAreaRepository.findById(rsAreaId)
                 .orElseThrow(() -> VenueException.rsAreaNotFound(rsAreaId));
-        if (seatRowRepository.existsById(req.id())) {
-            throw VenueException.seatRowIdExists(req.id());
-        }
-        if (seatRowRepository.existsByRsAreaIdAndName(rsAreaId, req.name())) {
-            throw VenueException.seatRowNameDuplicate(req.name());
-        }
-        SeatRow row = SeatRow.builder().id(req.id()).rsArea(rsArea).name(req.name()).positionY(req.positionY()).build();
+        
+        SeatRow row = seatRowRepository.findById(req.id())
+                .map(existing -> {
+                    if (!existing.getName().equals(req.name()) && seatRowRepository.existsByRsAreaIdAndName(rsAreaId, req.name())) {
+                        throw VenueException.seatRowNameDuplicate(req.name());
+                    }
+                    existing.setRsArea(rsArea);
+                    existing.setName(req.name());
+                    existing.setPositionY(req.positionY());
+                    return existing;
+                })
+                .orElseGet(() -> {
+                    if (seatRowRepository.existsByRsAreaIdAndName(rsAreaId, req.name())) {
+                        throw VenueException.seatRowNameDuplicate(req.name());
+                    }
+                    return SeatRow.builder()
+                            .id(req.id())
+                            .rsArea(rsArea)
+                            .name(req.name())
+                            .positionY(req.positionY())
+                            .build();
+                });
         return SeatRowResponse.from(seatRowRepository.save(row));
     }
 
@@ -357,15 +422,52 @@ public class VenueService {
     public SeatResponse createSeat(String rowId, CreateSeatRequest req) {
         SeatRow row = seatRowRepository.findById(rowId)
                 .orElseThrow(() -> VenueException.seatRowNotFound(rowId));
-        if (seatRepository.existsById(req.id())) {
-            throw VenueException.seatIdExists(req.id());
-        }
-        if (seatRepository.existsBySeatRowIdAndName(rowId, req.name())) {
-            throw VenueException.seatNameDuplicate(req.name());
-        }
-        Seat seat = Seat.builder().id(req.id()).seatRow(row).name(req.name()).positionX(req.positionX())
-                .status(SeatStatus.AVAILABLE).accessibility(req.accessibility())
-                .obstructedView(req.obstructedView()).aisle(req.aisle()).build();
+        
+        Integer posY = req.positionY() != null ? req.positionY() : (row.getPositionY() != null ? row.getPositionY() : 0);
+        
+        Seat seat = seatRepository.findById(req.id())
+                .map(existing -> {
+                    if (!existing.getName().equals(req.name()) && seatRepository.existsBySeatRowIdAndName(rowId, req.name())) {
+                        throw VenueException.seatNameDuplicate(req.name());
+                    }
+                    existing.setSeatRow(row);
+                    existing.setName(req.name());
+                    existing.setPositionX(req.positionX());
+                    existing.setPositionY(posY);
+                    existing.setPriceLevelId(req.priceLevelId());
+                    existing.setSectionId(req.sectionId());
+                    if (req.status() != null) {
+                        existing.setStatus(req.status());
+                    }
+                    if (req.accessibility() != null) {
+                        existing.setAccessibility(req.accessibility());
+                    }
+                    if (req.obstructedView() != null) {
+                        existing.setObstructedView(req.obstructedView());
+                    }
+                    if (req.aisle() != null) {
+                        existing.setAisle(req.aisle());
+                    }
+                    return existing;
+                })
+                .orElseGet(() -> {
+                    if (seatRepository.existsBySeatRowIdAndName(rowId, req.name())) {
+                        throw VenueException.seatNameDuplicate(req.name());
+                    }
+                    return Seat.builder()
+                            .id(req.id())
+                            .seatRow(row)
+                            .name(req.name())
+                            .positionX(req.positionX())
+                            .positionY(posY)
+                            .status(req.status() != null ? req.status() : SeatStatus.AVAILABLE)
+                            .accessibility(req.accessibility())
+                            .obstructedView(req.obstructedView())
+                            .aisle(req.aisle())
+                            .priceLevelId(req.priceLevelId())
+                            .sectionId(req.sectionId())
+                            .build();
+                });
         return SeatResponse.from(seatRepository.save(seat));
     }
 

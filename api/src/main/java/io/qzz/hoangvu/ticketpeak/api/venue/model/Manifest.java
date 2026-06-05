@@ -8,6 +8,10 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import java.util.List;
+import java.util.Map;
 
 @Entity
 @Getter @Setter @Builder
@@ -42,4 +46,8 @@ public class Manifest {
     @LastModifiedDate
     @Column(nullable = false)
     Instant updatedAt;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    List<Map<String, Object>> objects;
 }

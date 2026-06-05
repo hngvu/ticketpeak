@@ -20,10 +20,7 @@ public class GAArea {
     @Column(name = "level_id", nullable = false)
     String levelId;
 
-    @Column(name = "section_id", nullable = false)
-    String sectionId;
-
-    @Column(name = "price_level_id", nullable = false)
+    @Column(name = "price_level_id")
     String priceLevelId;
 
     @Column(nullable = false)

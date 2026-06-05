@@ -1,0 +1,1 @@
+ALTER TABLE manifest ADD COLUMN objects JSONB;

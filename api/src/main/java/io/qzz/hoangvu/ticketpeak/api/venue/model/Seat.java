@@ -40,5 +40,11 @@ public class Seat {
     Boolean obstructedView;
 
     Boolean aisle;
+
+    @Column(name = "price_level_id")
+    String priceLevelId;
+
+    @Column(name = "section_id")
+    String sectionId;
 }
 

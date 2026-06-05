@@ -78,7 +78,7 @@ public class InventoryEventListener {
 
                 for (Offer offer : gaOffers) {
                     List<GAArea> matchingAreas = gaAreas.stream()
-                            .filter(area -> (offer.getSectionId() == null || Objects.equals(area.getSectionId(), offer.getSectionId()))
+                            .filter(area -> (offer.getSectionId() == null || Objects.equals(area.getLevelId(), offer.getSectionId()))
                                     && (offer.getPriceLevelId() == null || Objects.equals(area.getPriceLevelId(), offer.getPriceLevelId())))
                             .toList();
 
@@ -130,16 +130,16 @@ public class InventoryEventListener {
                 List<InventorySeat> inventorySeats = new ArrayList<>();
                 for (Seat seat : seats) {
                     UUID matchedOfferId = rsOffers.stream()
-                            .filter(o -> Objects.equals(o.getSectionId(), seat.getSeatRow().getRsArea().getSectionId())
-                                    && Objects.equals(o.getPriceLevelId(), seat.getSeatRow().getRsArea().getPriceLevelId()))
+                            .filter(o -> Objects.equals(o.getSectionId(), seat.getSectionId())
+                                    && Objects.equals(o.getPriceLevelId(), seat.getPriceLevelId()))
                             .map(Offer::getId)
                             .findFirst()
                             .orElse(null);
 
                     if (matchedOfferId == null) {
                         throw InventoryException.invalidOfferMapping("No matching offer found for seat " + seat.getId()
-                                + " in section " + seat.getSeatRow().getRsArea().getSectionId()
-                                + " and price level " + seat.getSeatRow().getRsArea().getPriceLevelId());
+                                + " in section " + seat.getSectionId()
+                                + " and price level " + seat.getPriceLevelId());
                     }
 
                     inventorySeats.add(InventorySeat.builder()

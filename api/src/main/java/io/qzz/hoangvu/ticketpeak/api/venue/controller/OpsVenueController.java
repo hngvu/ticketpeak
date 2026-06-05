@@ -63,6 +63,12 @@ public class OpsVenueController {
         return ResponseEntity.ok(ApiResponse.success(venueService.getManifest(manifestId), "OK"));
     }
 
+    @PutMapping("/manifests/{manifestId}")
+    public ResponseEntity<ApiResponse<ManifestResponse>> updateManifest(
+            @PathVariable String manifestId, @Valid @RequestBody UpdateManifestRequest req) {
+        return ResponseEntity.ok(ApiResponse.success(venueService.updateManifest(manifestId, req), "Manifest updated"));
+    }
+
     @PostMapping("/manifests/{manifestId}/publish")
     public ResponseEntity<ApiResponse<ManifestResponse>> publishManifest(@PathVariable String manifestId) {
         return ResponseEntity.ok(ApiResponse.success(venueService.publishManifest(manifestId), "Manifest published"));

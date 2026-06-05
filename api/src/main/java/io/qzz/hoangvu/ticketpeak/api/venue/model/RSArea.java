@@ -20,12 +20,6 @@ public class RSArea {
     @Column(name = "level_id", nullable = false)
     String levelId;
 
-    @Column(name = "section_id", nullable = false)
-    String sectionId;
-
-    @Column(name = "price_level_id", nullable = false)
-    String priceLevelId;
-
     Integer x;
 
     Integer y;

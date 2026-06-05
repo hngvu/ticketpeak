@@ -1,0 +1,4 @@
+ALTER TABLE rs_area ALTER COLUMN section_id DROP NOT NULL;
+ALTER TABLE rs_area ALTER COLUMN price_level_id DROP NOT NULL;
+ALTER TABLE ga_area ALTER COLUMN section_id DROP NOT NULL;
+ALTER TABLE ga_area ALTER COLUMN price_level_id DROP NOT NULL;

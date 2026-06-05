@@ -223,7 +223,6 @@ class InventoryControllerIT {
                 .id("GA-A")
                 .manifestId(manifest.getId())
                 .levelId("LV-1")
-                .sectionId("SEC-A")
                 .priceLevelId("PL-1")
                 .capacity(50)
                 .build());
@@ -233,8 +232,6 @@ class InventoryControllerIT {
                 .id("RS-A")
                 .manifestId(manifest.getId())
                 .levelId("LV-1")
-                .sectionId("SEC-A")
-                .priceLevelId("PL-1")
                 .build());
 
         SeatRow seatRow = seatRowRepository.saveAndFlush(SeatRow.builder()
@@ -249,6 +246,9 @@ class InventoryControllerIT {
                 .seatRow(seatRow)
                 .name("A-01")
                 .positionX(1)
+                .positionY(1)
+                .sectionId("SEC-A")
+                .priceLevelId("PL-1")
                 .status(SeatStatus.AVAILABLE)
                 .build());
 
@@ -267,7 +267,7 @@ class InventoryControllerIT {
                 .capacityCap(50)
                 .sellableQuantities(List.of(1, 2, 4))
                 .seatingMode(SeatingMode.GENERAL_ADMISSION)
-                .sectionId("SEC-A")
+                .sectionId(null)
                 .priceLevelId("PL-1")
                 .charges(List.of())
                 .build());
@@ -398,7 +398,6 @@ class InventoryControllerIT {
                 .id("GA-B")
                 .manifestId(manifest.getId())
                 .levelId("LV-1")
-                .sectionId("SEC-A")
                 .priceLevelId("PL-1")
                 .capacity(10)
                 .build());
@@ -407,8 +406,6 @@ class InventoryControllerIT {
                 .id("RS-B")
                 .manifestId(manifest.getId())
                 .levelId("LV-1")
-                .sectionId("SEC-A")
-                .priceLevelId("PL-1")
                 .build());
 
         SeatRow seatRow = seatRowRepository.saveAndFlush(SeatRow.builder()
@@ -423,6 +420,9 @@ class InventoryControllerIT {
                 .seatRow(seatRow)
                 .name("B-01")
                 .positionX(1)
+                .positionY(1)
+                .sectionId("SEC-A")
+                .priceLevelId("PL-1")
                 .status(SeatStatus.AVAILABLE)
                 .build());
 

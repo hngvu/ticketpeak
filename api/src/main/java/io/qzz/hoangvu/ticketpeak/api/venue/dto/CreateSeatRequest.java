@@ -12,5 +12,7 @@ public record CreateSeatRequest(
 
         Boolean obstructedView,
         Boolean aisle,
-        SeatStatus status
+        SeatStatus status,
+        String priceLevelId,
+        String sectionId
 ) {}
