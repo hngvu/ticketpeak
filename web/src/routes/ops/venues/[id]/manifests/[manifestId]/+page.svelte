@@ -31,7 +31,6 @@
 	let layoutObjects = $state<any[]>(data.manifest?.objects || []);
 	let selectedObjectId = $state<number | null>(null);
 	let selectedGaAreaId = $state<string>('');
-	let areaNameInput = $state('');
 
 	// Active layout mode
 	let activeMode = $state<'scaling' | 'inventory' | 'floor-edit'>('scaling');
@@ -78,11 +77,6 @@
 
 	let sectionCode = $state('');
 	let sectionColor = $state('#10B981');
-
-	let areaType = $state<'GA' | 'RS'>('RS');
-	let areaLevelId = $state('');
-	let areaPriceLevelId = $state('');
-	let areaCapacity = $state(500);
 
 	// Konva references
 	let Konva: any;
@@ -252,48 +246,6 @@
 			});
 		});
 		drawSeatingMap();
-	}
-
-	function buildRectangularRows(
-		areaId: string,
-		rowPrefix: string,
-		rowsCount: number,
-		seatsPerRow: number,
-		seatStartNum: number,
-		startY = 220,
-		startX = 120
-	) {
-		const rows: any[] = [];
-		const startRowCode = rowPrefix.toUpperCase().charCodeAt(0);
-
-		for (let rowIndex = 0; rowIndex < rowsCount; rowIndex++) {
-			const rowName = String.fromCharCode(startRowCode + rowIndex);
-			const rowId = `${areaId}-row-${rowName}-${Date.now()}-${rowIndex}`;
-			const rowY = startY + rowIndex * 48;
-			const seats: any[] = [];
-
-			for (let seatIndex = 0; seatIndex < seatsPerRow; seatIndex++) {
-				const seatNum = seatStartNum + seatIndex;
-				seats.push({
-					id: `${rowId}-seat-${seatNum}`,
-					name: String(seatNum).padStart(3, '0'),
-					positionX: startX + seatIndex * 32,
-					status: 'AVAILABLE',
-					accessibility: false,
-					obstructedView: false,
-					aisle: false
-				});
-			}
-
-			rows.push({
-				id: rowId,
-				name: rowName,
-				positionY: rowY,
-				seats
-			});
-		}
-
-		return rows;
 	}
 
 	function findSeatById(seatId: string) {
@@ -484,7 +436,11 @@
 		};
 	}
 
-	function applyRsAreaBounds(area: any, oldBounds: { boxX: number; boxY: number; boxW: number; boxH: number }, newBounds: { boxX: number; boxY: number; boxW: number; boxH: number }) {
+	function applyRsAreaBounds(
+		area: any,
+		oldBounds: { boxX: number; boxY: number; boxW: number; boxH: number },
+		newBounds: { boxX: number; boxY: number; boxW: number; boxH: number }
+	) {
 		const rows = area.rows || [];
 		rows.forEach((row: any, rIdx: number) => {
 			const rowY =
@@ -569,7 +525,7 @@
 					text: obj.text || 'Label',
 					fontSize: obj.fontSize || 14,
 					fontStyle: 'bold',
-					fill: isSelected ? '#F59E0B' : (obj.color || '#0F172A'),
+					fill: isSelected ? '#F59E0B' : obj.color || '#0F172A',
 					align: 'center',
 					verticalAlign: 'middle'
 				});
@@ -993,7 +949,16 @@
 			const transformer = new Konva.Transformer({
 				rotateEnabled: false,
 				keepRatio: false, // allow free resizing of stage/rectangles
-				enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'top-center', 'bottom-center', 'middle-left', 'middle-right'],
+				enabledAnchors: [
+					'top-left',
+					'top-right',
+					'bottom-left',
+					'bottom-right',
+					'top-center',
+					'bottom-center',
+					'middle-left',
+					'middle-right'
+				],
 				boundBoxFunc: (oldBox: any, newBox: any) => {
 					if (newBox.width < 20 || newBox.height < 20) {
 						return oldBox;
@@ -1048,7 +1013,16 @@
 			const transformer = new Konva.Transformer({
 				rotateEnabled: false,
 				keepRatio: false,
-				enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'top-center', 'bottom-center', 'middle-left', 'middle-right'],
+				enabledAnchors: [
+					'top-left',
+					'top-right',
+					'bottom-left',
+					'bottom-right',
+					'top-center',
+					'bottom-center',
+					'middle-left',
+					'middle-right'
+				],
 				boundBoxFunc: (oldBox: any, newBox: any) => {
 					if (newBox.width < 50 || newBox.height < 50) {
 						return oldBox;
@@ -1674,85 +1648,6 @@
 		errorMessage = '';
 	}
 
-	function createArea() {
-		if (!areaLevelId) {
-			errorMessage = 'Level link is required to create an Area.';
-			return;
-		}
-		if (!areaNameInput || !areaNameInput.trim()) {
-			errorMessage = 'Area Name / Code is required.';
-			return;
-		}
-
-		const cleanName = areaNameInput.trim().toUpperCase();
-		const areaId = `${manifestIdVal}-${cleanName}`;
-
-		if (rsAreas.some((a) => a.id === areaId) || gaAreas.some((a) => a.id === areaId)) {
-			errorMessage = 'An area with this name already exists in this manifest.';
-			return;
-		}
-
-		const payload: any = {
-			id: areaId,
-			levelId: areaLevelId,
-			priceLevelId: areaPriceLevelId || null
-		};
-
-		if (areaType === 'GA') {
-			payload.capacity = areaCapacity;
-			gaAreas = [...gaAreas, payload];
-		} else {
-			payload.rows = buildRectangularRows(
-				areaId,
-				blockRowPrefix,
-				blockRowsCount,
-				blockSeatsPerRow,
-				blockSeatStartNum,
-				220,
-				120
-			);
-			payload.curvature = 0;
-			rsAreas = [...rsAreas, payload];
-			selectedRsAreaId = areaId;
-		}
-
-		// Reset inputs
-		areaNameInput = '';
-		saveMessage = `Added ${areaType} Area "${cleanName}" locally. Save Layout to persist.`;
-		errorMessage = '';
-		drawSeatingMap();
-	}
-
-	function addStageObject() {
-		layoutObjects = [
-			...layoutObjects,
-			{ type: 'stage', text: 'STAGE', x: 250, y: 150, width: 300, height: 100 }
-		];
-		selectedObjectId = layoutObjects.length - 1;
-		saveMessage = 'Stage added locally. Save Layout to persist.';
-		drawSeatingMap();
-	}
-
-	function addLabelObject() {
-		layoutObjects = [
-			...layoutObjects,
-			{ type: 'label', text: 'Mixer', x: 300, y: 300, fontSize: 14, color: '#0F172A' }
-		];
-		selectedObjectId = layoutObjects.length - 1;
-		saveMessage = 'Label added locally. Save Layout to persist.';
-		drawSeatingMap();
-	}
-
-	function addShapeObject(shapeType: 'rect' | 'circle') {
-		layoutObjects = [
-			...layoutObjects,
-			{ type: 'shape', shape: shapeType, x: 200, y: 200, width: 100, height: 100, color: '#CBD5E1', opacity: 0.5 }
-		];
-		selectedObjectId = layoutObjects.length - 1;
-		saveMessage = 'Shape added locally. Save Layout to persist.';
-		drawSeatingMap();
-	}
-
 	function deleteSelectedObject() {
 		if (selectedObjectId === null) return;
 		layoutObjects = layoutObjects.filter((_, idx) => idx !== selectedObjectId);
@@ -1835,7 +1730,10 @@
 				(area.rows || []).forEach((row: any) => {
 					(row.seats || []).forEach((seat: any) => {
 						const seatX = seat.positionX || 0;
-						const seatY = seat.positionY !== undefined && seat.positionY !== null ? seat.positionY : (row.positionY || 0);
+						const seatY =
+							seat.positionY !== undefined && seat.positionY !== null
+								? seat.positionY
+								: row.positionY || 0;
 						if (seatX < minX) minX = seatX;
 						if (seatX > maxX) maxX = seatX;
 						if (seatY < minY) minY = seatY;
@@ -1885,7 +1783,10 @@
 								id: seat.id,
 								name: seat.name,
 								positionX: seat.positionX,
-								positionY: seat.positionY !== undefined && seat.positionY !== null ? seat.positionY : row.positionY,
+								positionY:
+									seat.positionY !== undefined && seat.positionY !== null
+										? seat.positionY
+										: row.positionY,
 								accessibility: seat.accessibility,
 								obstructedView: seat.obstructedView,
 								aisle: seat.aisle,
@@ -2053,940 +1954,678 @@
 			class="z-40 flex w-[20%] min-w-[280px] flex-col border-r border-slate-200 bg-white select-none"
 		>
 			<!-- Price Levels/Inventory/Nudges depending on active Mode -->
-				{#if activeMode === 'scaling'}
-					<div
-						class="flex shrink-0 border-b border-slate-200 text-[10px] font-black tracking-wider text-slate-400 uppercase select-none"
+			{#if activeMode === 'scaling'}
+				<div
+					class="flex shrink-0 border-b border-slate-200 text-[10px] font-black tracking-wider text-slate-400 uppercase select-none"
+				>
+					<button
+						type="button"
+						onclick={() => (activeTab = 'levels')}
+						class="flex-1 border-b-2 py-3 text-center transition-all {activeTab === 'levels'
+							? 'border-slate-900 font-extrabold text-slate-900'
+							: 'border-transparent text-slate-400 hover:bg-slate-50 hover:text-slate-600'}"
 					>
-						<button
-							type="button"
-							onclick={() => (activeTab = 'levels')}
-							class="flex-1 border-b-2 py-3 text-center transition-all {activeTab === 'levels'
-								? 'border-slate-900 font-extrabold text-slate-900'
-								: 'border-transparent text-slate-400 hover:bg-slate-50 hover:text-slate-600'}"
-						>
-							Levels
-						</button>
-						<button
-							type="button"
-							onclick={() => (activeTab = 'sections')}
-							class="flex-1 border-b-2 py-3 text-center transition-all {activeTab === 'sections'
-								? 'border-slate-900 font-extrabold text-slate-900'
-								: 'border-transparent text-slate-400 hover:bg-slate-50 hover:text-slate-600'}"
-						>
-							Sections
-						</button>
-						<button
-							type="button"
-							onclick={() => (activeTab = 'areas')}
-							class="flex-1 border-b-2 py-3 text-center transition-all {activeTab === 'areas'
-								? 'border-slate-900 font-extrabold text-slate-900'
-								: 'border-transparent text-slate-400 hover:bg-slate-50 hover:text-slate-600'}"
-						>
-							Areas
-						</button>
-						<button
-							type="button"
-							onclick={() => (activeTab = 'objects')}
-							class="flex-1 border-b-2 py-3 text-center transition-all {activeTab === 'objects'
-								? 'border-slate-900 font-extrabold text-slate-900'
-								: 'border-transparent text-slate-400 hover:bg-slate-50 hover:text-slate-600'}"
-						>
-							Objects
-						</button>
-					</div>
+						Levels
+					</button>
+					<button
+						type="button"
+						onclick={() => (activeTab = 'sections')}
+						class="flex-1 border-b-2 py-3 text-center transition-all {activeTab === 'sections'
+							? 'border-slate-900 font-extrabold text-slate-900'
+							: 'border-transparent text-slate-400 hover:bg-slate-50 hover:text-slate-600'}"
+					>
+						Sections
+					</button>
+				</div>
 
-					<div class="flex min-h-0 flex-1 flex-col overflow-y-auto">
-						<!-- Config Views (levels, sections, areas) -->
-						<div class="space-y-4 p-4">
-							{#if activeTab === 'levels'}
-								<div class="space-y-4">
-									<h3 class="text-xs font-bold text-slate-800">Manage Levels</h3>
-									<div class="space-y-2">
-										{#each levels as lvl}
-											<div
-												class="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 p-2 text-xs font-bold"
-											>
-												<span class="flex items-center gap-2">
-													<span
-														class="h-3 w-3 rounded-full border border-white shadow-2xs"
-														style="background-color: {lvl.color}"
-													></span>
-													{lvl.description}
-												</span>
-												<span class="font-mono text-[9px] text-[#71717A] uppercase">{lvl.id}</span>
-											</div>
-										{/each}
+				<div class="flex min-h-0 flex-1 flex-col overflow-y-auto">
+					<!-- Config Views (levels, sections, areas) -->
+					<div class="space-y-4 p-4">
+						{#if activeTab === 'levels'}
+							<div class="space-y-4">
+								<h3 class="text-xs font-bold text-slate-800">Manage Levels</h3>
+								<div class="space-y-2">
+									{#each levels as lvl}
+										<div
+											class="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 p-2 text-xs font-bold"
+										>
+											<span class="flex items-center gap-2">
+												<span
+													class="h-3 w-3 rounded-full border border-white shadow-2xs"
+													style="background-color: {lvl.color}"
+												></span>
+												{lvl.description}
+											</span>
+											<span class="font-mono text-[9px] text-[#71717A] uppercase">{lvl.id}</span>
+										</div>
+									{/each}
+								</div>
+
+								<form
+									onsubmit={(e) => {
+										e.preventDefault();
+										createLookup('level');
+									}}
+									class="space-y-3 border-t border-slate-100 pt-4 font-semibold text-slate-700"
+								>
+									<h4 class="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+										Add New Level
+									</h4>
+									<div class="space-y-1">
+										<label for="level-code-input" class="text-[10px] text-slate-500"
+											>Level Code / ID</label
+										>
+										<input
+											id="level-code-input"
+											type="text"
+											bind:value={levelCode}
+											placeholder="e.g. FLOOR, BALCONY"
+											class="w-full rounded-md border border-slate-200 px-3 py-1.5 text-xs outline-none"
+											required
+										/>
 									</div>
-
-									<form
-										onsubmit={(e) => {
-											e.preventDefault();
-											createLookup('level');
-										}}
-										class="space-y-3 border-t border-slate-100 pt-4 font-semibold text-slate-700"
-									>
-										<h4 class="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
-											Add New Level
-										</h4>
-										<div class="space-y-1">
-											<label for="level-code-input" class="text-[10px] text-slate-500"
-												>Level Code / ID</label
-											>
-											<input
-												id="level-code-input"
-												type="text"
-												bind:value={levelCode}
-												placeholder="e.g. FLOOR, BALCONY"
-												class="w-full rounded-md border border-slate-200 px-3 py-1.5 text-xs outline-none"
-												required
-											/>
-										</div>
-										<div class="space-y-1">
-											<label for="level-color-input" class="text-[10px] text-slate-500"
-												>Color Tag</label
-											>
-											<div class="flex items-center gap-2">
-												<input
-													id="level-color-input"
-													type="color"
-													bind:value={levelColor}
-													class="h-8 w-8 cursor-pointer rounded border border-slate-200"
-												/>
-												<span class="font-mono text-xs font-bold text-slate-500">{levelColor}</span>
-											</div>
-										</div>
-										<button
-											type="submit"
-											class="w-full rounded-md bg-slate-900 py-1.5 text-xs font-bold text-white transition hover:bg-black"
+									<div class="space-y-1">
+										<label for="level-color-input" class="text-[10px] text-slate-500"
+											>Color Tag</label
 										>
-											Add Level
-										</button>
-									</form>
-								</div>
-							{:else if activeTab === 'sections'}
-								<div class="space-y-4">
-									<h3 class="text-xs font-bold text-slate-800">Manage Sections</h3>
-									<div class="space-y-2">
-										{#each sections as sec}
-											<div
-												class="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 p-2 text-xs font-bold"
-											>
-												<span class="flex items-center gap-2">
-													<span
-														class="h-3 w-3 rounded-full border border-white shadow-2xs"
-														style="background-color: {sec.color}"
-													></span>
-													Section {sec.id}
-												</span>
-											</div>
-										{/each}
+										<div class="flex items-center gap-2">
+											<input
+												id="level-color-input"
+												type="color"
+												bind:value={levelColor}
+												class="h-8 w-8 cursor-pointer rounded border border-slate-200"
+											/>
+											<span class="font-mono text-xs font-bold text-slate-500">{levelColor}</span>
+										</div>
 									</div>
-
-									<form
-										onsubmit={(e) => {
-											e.preventDefault();
-											createLookup('section');
-										}}
-										class="space-y-3 border-t border-slate-100 pt-4 font-semibold text-slate-700"
+									<button
+										type="submit"
+										class="w-full rounded-md bg-slate-900 py-1.5 text-xs font-bold text-white transition hover:bg-black"
 									>
-										<h4 class="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
-											Add New Section
-										</h4>
-										<div class="space-y-1">
-											<label for="section-code-input" class="text-[10px] text-slate-500"
-												>Section Code</label
-											>
+										Add Level
+									</button>
+								</form>
+							</div>
+						{:else if activeTab === 'sections'}
+							<div class="space-y-4">
+								<h3 class="text-xs font-bold text-slate-800">Manage Sections</h3>
+								<div class="space-y-2">
+									{#each sections as sec}
+										<div
+											class="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 p-2 text-xs font-bold"
+										>
+											<span class="flex items-center gap-2">
+												<span
+													class="h-3 w-3 rounded-full border border-white shadow-2xs"
+													style="background-color: {sec.color}"
+												></span>
+												Section {sec.id}
+											</span>
+										</div>
+									{/each}
+								</div>
+
+								<form
+									onsubmit={(e) => {
+										e.preventDefault();
+										createLookup('section');
+									}}
+									class="space-y-3 border-t border-slate-100 pt-4 font-semibold text-slate-700"
+								>
+									<h4 class="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+										Add New Section
+									</h4>
+									<div class="space-y-1">
+										<label for="section-code-input" class="text-[10px] text-slate-500"
+											>Section Code</label
+										>
+										<input
+											id="section-code-input"
+											type="text"
+											bind:value={sectionCode}
+											placeholder="e.g. SEC-A, VIP-1"
+											class="w-full rounded-md border border-slate-200 px-3 py-1.5 text-xs outline-none"
+											required
+										/>
+									</div>
+									<div class="space-y-1">
+										<label for="section-color-input" class="text-[10px] text-slate-500"
+											>Color Tag</label
+										>
+										<div class="flex items-center gap-2">
 											<input
-												id="section-code-input"
-												type="text"
-												bind:value={sectionCode}
-												placeholder="e.g. SEC-A, VIP-1"
-												class="w-full rounded-md border border-slate-200 px-3 py-1.5 text-xs outline-none"
-												required
+												id="section-color-input"
+												type="color"
+												bind:value={sectionColor}
+												class="h-8 w-8 cursor-pointer rounded border border-slate-200"
 											/>
+											<span class="font-mono text-xs font-bold text-slate-500">{sectionColor}</span>
 										</div>
-										<div class="space-y-1">
-											<label for="section-color-input" class="text-[10px] text-slate-500"
-												>Color Tag</label
-											>
-											<div class="flex items-center gap-2">
-												<input
-													id="section-color-input"
-													type="color"
-													bind:value={sectionColor}
-													class="h-8 w-8 cursor-pointer rounded border border-slate-200"
-												/>
-												<span class="font-mono text-xs font-bold text-slate-500"
-													>{sectionColor}</span
-												>
-											</div>
-										</div>
-										<button
-											type="submit"
-											class="w-full rounded-md bg-slate-900 py-1.5 text-xs font-bold text-white transition hover:bg-black"
-										>
-											Add Section
-										</button>
-									</form>
-								</div>
-							{:else if activeTab === 'areas'}
-								<div class="space-y-4">
-									<h3 class="text-xs font-bold text-slate-800">Seating & GA Areas</h3>
+									</div>
+									<button
+										type="submit"
+										class="w-full rounded-md bg-slate-900 py-1.5 text-xs font-bold text-white transition hover:bg-black"
+									>
+										Add Section
+									</button>
+								</form>
+							</div>
+						{:else if activeTab === 'areas'}
+							<div class="space-y-4">
+								<h3 class="text-xs font-bold text-slate-800">Seating & GA Areas</h3>
 
-									{#if selectedRsAreaId}
-										{@const targetArea = rsAreas.find((a) => a.id === selectedRsAreaId)}
-										{#if targetArea}
-											<div class="space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
-												<div class="flex items-center justify-between">
-													<span class="text-xs font-extrabold text-slate-900">
-														Editing Area: {targetArea.id.replace(manifestIdVal + '-', '')}
-													</span>
-													<button
-														type="button"
-														onclick={() => {
-															selectedRsAreaId = '';
-															drawSeatingMap();
-														}}
-														class="text-[10px] font-bold text-slate-400 hover:text-slate-600"
-													>
-														Back
-													</button>
-												</div>
-												<div class="space-y-0.5 text-[10px] font-semibold text-slate-500">
-													<p>Level: {targetArea.levelId}</p>
-													<p>Section: {targetArea.sectionId || 'None'}</p>
-													<p>Current Rows: {targetArea.rows?.length || 0}</p>
-												</div>
-											</div>
-
-											<form
-												onsubmit={(e) => {
-													e.preventDefault();
-													generateSeatingBlock();
-												}}
-												class="space-y-3 border-t border-slate-100 pt-3 font-semibold text-slate-700"
-											>
-												<h4 class="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
-													Generate Seating Block
-												</h4>
-												<div class="grid grid-cols-2 gap-2">
-													<div class="space-y-1">
-														<label for="block-row-prefix" class="text-[10px] text-slate-500"
-															>Row Prefix</label
-														>
-														<input
-															id="block-row-prefix"
-															type="text"
-															bind:value={blockRowPrefix}
-															placeholder="A"
-															class="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs outline-none"
-															required
-														/>
-													</div>
-													<div class="space-y-1">
-														<label for="block-rows-count" class="text-[10px] text-slate-500"
-															>Number of Rows</label
-														>
-														<input
-															id="block-rows-count"
-															type="number"
-															bind:value={blockRowsCount}
-															min="1"
-															max="26"
-															class="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs outline-none"
-															required
-														/>
-													</div>
-												</div>
-												<div class="grid grid-cols-2 gap-2">
-													<div class="space-y-1">
-														<label for="block-seats-per-row" class="text-[10px] text-slate-500"
-															>Seats Per Row</label
-														>
-														<input
-															id="block-seats-per-row"
-															type="number"
-															bind:value={blockSeatsPerRow}
-															min="1"
-															class="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs outline-none"
-															required
-														/>
-													</div>
-													<div class="space-y-1">
-														<label for="block-seat-start-num" class="text-[10px] text-slate-500"
-															>Seat Start Num</label
-														>
-														<input
-															id="block-seat-start-num"
-															type="number"
-															bind:value={blockSeatStartNum}
-															min="1"
-															class="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs outline-none"
-															required
-														/>
-													</div>
-												</div>
-												<div class="space-y-1">
-													<label for="block-shape" class="text-[10px] text-slate-500"
-														>Layout Shape</label
-													>
-													<select
-														id="block-shape"
-														bind:value={blockShape}
-														class="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 outline-none"
-														required
-													>
-														<option value="rectangle">Rectangle (Chữ nhật)</option>
-														<option value="trapezoid">Trapezoid (Hình thang / Vát chéo)</option>
-														<option value="diamond">Diamond (Hình thoi)</option>
-														<option value="staggered">Staggered (Xếp so le)</option>
-													</select>
-												</div>
-												<button
-													type="submit"
-													class="w-full rounded-md bg-slate-900 py-1.5 text-xs font-bold text-white transition hover:bg-black"
-												>
-													Generate Block
-												</button>
-											</form>
-
-											<!-- Curvature Slider -->
-											<div class="space-y-2 border-t border-slate-100 pt-3">
-												<h4 class="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
-													Curvature / Bend (Độ cong)
-												</h4>
-												<div class="flex items-center gap-3">
-													<input
-														type="range"
-														min="-200"
-														max="200"
-														value={targetArea.curvature || 0}
-														oninput={(e) => {
-															const val = Number((e.target as HTMLInputElement).value);
-															applyCurvature(targetArea, val);
-														}}
-														class="flex-1 cursor-pointer accent-slate-900"
-													/>
-													<span
-														class="w-10 text-right text-[11px] font-bold text-slate-600 tabular-nums"
-														>{targetArea.curvature || 0}</span
-													>
-												</div>
-												<div class="flex justify-between text-[9px] font-semibold text-slate-400">
-													<span>Curve Down (Cong xuống)</span>
-													<span>Curve Up (Cong lên)</span>
-												</div>
-											</div>
-										{/if}
-									{:else if selectedGaAreaId}
-										{@const targetGaArea = gaAreas.find((g) => g.id === selectedGaAreaId)}
-										{#if targetGaArea}
-											<div class="space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
-												<div class="flex items-center justify-between">
-													<span class="text-xs font-extrabold text-slate-900">
-														Editing GA: {targetGaArea.id.replace(manifestIdVal + '-', '')}
-													</span>
-													<button
-														type="button"
-														onclick={() => {
-															selectedGaAreaId = '';
-															drawSeatingMap();
-														}}
-														class="text-[10px] font-bold text-slate-400 hover:text-slate-600"
-													>
-														Back
-													</button>
-												</div>
-												<div class="space-y-0.5 text-[10px] font-semibold text-slate-500">
-													<p>Level: {targetGaArea.levelId}</p>
-													<p>Section: {targetGaArea.sectionId || 'None'}</p>
-												</div>
-											</div>
-
-											<div class="space-y-3 border-t border-slate-100 pt-3 font-semibold text-slate-700 text-xs">
-												<div class="space-y-1">
-													<label for="ga-cap-edit" class="text-[10px] text-slate-500">Standing Capacity</label>
-													<input
-														id="ga-cap-edit"
-														type="number"
-														bind:value={targetGaArea.capacity}
-														class="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs outline-none"
-													/>
-												</div>
-
-												<div class="grid grid-cols-2 gap-2">
-													<div class="space-y-1">
-														<label for="ga-x-edit" class="text-[10px] text-slate-500">Position X</label>
-														<input
-															id="ga-x-edit"
-															type="number"
-															bind:value={targetGaArea.x}
-															oninput={drawSeatingMap}
-															class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
-														/>
-													</div>
-													<div class="space-y-1">
-														<label for="ga-y-edit" class="text-[10px] text-slate-500">Position Y</label>
-														<input
-															id="ga-y-edit"
-															type="number"
-															bind:value={targetGaArea.y}
-															oninput={drawSeatingMap}
-															class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
-														/>
-													</div>
-												</div>
-
-												<div class="grid grid-cols-2 gap-2">
-													<div class="space-y-1">
-														<label for="ga-w-edit" class="text-[10px] text-slate-500">Width</label>
-														<input
-															id="ga-w-edit"
-															type="number"
-															bind:value={targetGaArea.width}
-															oninput={drawSeatingMap}
-															class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
-														/>
-													</div>
-													<div class="space-y-1">
-														<label for="ga-h-edit" class="text-[10px] text-slate-500">Height</label>
-														<input
-															id="ga-h-edit"
-															type="number"
-															bind:value={targetGaArea.height}
-															oninput={drawSeatingMap}
-															class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
-														/>
-													</div>
-												</div>
-
-												<button
-													type="button"
-													onclick={() => {
-														gaAreas = gaAreas.filter((g) => g.id !== selectedGaAreaId);
-														selectedGaAreaId = '';
-														saveMessage = 'GA Area removed. Save Layout to persist.';
-														drawSeatingMap();
-													}}
-													class="w-full rounded-md bg-rose-600 py-1.5 text-xs font-bold text-white transition hover:bg-rose-700 mt-2"
-												>
-													Delete GA Area
-												</button>
-											</div>
-										{/if}
-									{:else}
-										{#if gaAreas.length > 0 || rsAreas.length > 0}
-											<div class="space-y-2">
-												{#each gaAreas as ga}
-													<button
-														type="button"
-														onclick={() => {
-															selectedGaAreaId = ga.id;
-															selectedRsAreaId = '';
-															selectedObjectId = null;
-															drawSeatingMap();
-														}}
-														class="block w-full rounded-lg border p-2.5 text-left text-[10px] font-bold transition select-none {selectedGaAreaId ===
-														ga.id
-															? 'border-slate-950 bg-slate-50 text-slate-950 shadow-2xs'
-															: 'border-emerald-100 bg-emerald-50/20 text-emerald-800 hover:border-emerald-300'}"
-													>
-														<span>GA Area: {ga.id.replace(manifestIdVal + '-', '')} (Cap: {ga.capacity})</span>
-													</button>
-												{/each}
-												{#each rsAreas as rs}
-													<button
-														onclick={() => {
-															selectedRsAreaId = rs.id;
-															selectedGaAreaId = '';
-															selectedObjectId = null;
-															drawSeatingMap();
-														}}
-														class="block w-full rounded-lg border p-2.5 text-left text-[10px] font-bold transition select-none {selectedRsAreaId ===
-														rs.id
-															? 'border-slate-950 bg-slate-50 text-slate-950 shadow-2xs'
-															: 'border-slate-100 bg-slate-50/50 text-slate-500 hover:border-slate-300'}"
-													>
-														<span>Reserved Area: {rs.id.replace(manifestIdVal + '-', '')}</span>
-														<span
-															class="mt-1 block font-mono text-[9px] leading-none font-semibold text-slate-400"
-														>
-															Level: {rs.levelId} · Section: {rs.sectionId || 'None'} · Rows: {rs.rows
-																?.length || 0}
-														</span>
-													</button>
-												{/each}
-											</div>
-										{/if}
-
-										<form
-											onsubmit={(e) => {
-												e.preventDefault();
-												createArea();
-											}}
-											class="space-y-3 border-t border-slate-100 pt-4 font-semibold text-slate-700"
-										>
-											<h4 class="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
-												Create Seating Area
-											</h4>
-											<div class="flex gap-2">
-												<button
-													type="button"
-													onclick={() => (areaType = 'RS')}
-													class="flex-1 rounded border py-1 text-center text-xs font-bold {areaType ===
-													'RS'
-														? 'border-slate-900 bg-slate-50 text-slate-900'
-														: 'border-slate-200 text-slate-400'}"
-												>
-													Reserved
-												</button>
-												<button
-													type="button"
-													onclick={() => (areaType = 'GA')}
-													class="flex-1 rounded border py-1 text-center text-xs font-bold {areaType ===
-													'GA'
-														? 'border-slate-900 bg-slate-50 text-slate-900'
-														: 'border-slate-200 text-slate-400'}"
-												>
-													Standing
-												</button>
-											</div>
-
-											<div class="space-y-1">
-												<label for="area-name-input" class="text-[10px] text-slate-500"
-													>Area Name / Code</label
-												>
-												<input
-													id="area-name-input"
-													type="text"
-													bind:value={areaNameInput}
-													placeholder="e.g. Khán đài A, Stand B, VIP"
-													class="w-full rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs outline-none"
-													required
-												/>
-											</div>
-
-											<div class="space-y-1">
-												<label for="area-level-select" class="text-[10px] text-slate-500"
-													>Level Link</label
-												>
-												<select
-													id="area-level-select"
-													bind:value={areaLevelId}
-													class="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold outline-none"
-													required
-												>
-													<option value="">-- Choose Level --</option>
-													{#each levels as lvl}
-														<option value={lvl.id}>{lvl.description} ({lvl.id})</option>
-													{/each}
-												</select>
-											</div>
-
-											<div class="space-y-1">
-
-
-											{#if areaType === 'GA'}
-												<div class="space-y-1">
-													<label for="area-capacity-input" class="text-[10px] text-slate-500"
-														>Standing Capacity</label
-													>
-													<input
-														id="area-capacity-input"
-														type="number"
-														bind:value={areaCapacity}
-														min="1"
-														class="w-full rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs outline-none"
-														required
-													/>
-												</div>
-											{:else}
-												<div class="grid grid-cols-2 gap-2">
-													<div class="space-y-1">
-														<label for="rs-block-rows" class="text-[10px] text-slate-500"
-															>Number of Rows</label
-														>
-														<input
-															id="rs-block-rows"
-															type="number"
-															bind:value={blockRowsCount}
-															min="1"
-															max="26"
-															class="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs outline-none"
-															required
-														/>
-													</div>
-													<div class="space-y-1">
-														<label for="rs-block-seats" class="text-[10px] text-slate-500"
-															>Seats Per Row</label
-														>
-														<input
-															id="rs-block-seats"
-															type="number"
-															bind:value={blockSeatsPerRow}
-															min="1"
-															class="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs outline-none"
-															required
-														/>
-													</div>
-												</div>
-												<div class="grid grid-cols-2 gap-2">
-													<div class="space-y-1">
-														<label for="rs-block-prefix" class="text-[10px] text-slate-500"
-															>Row Prefix</label
-														>
-														<input
-															id="rs-block-prefix"
-															type="text"
-															bind:value={blockRowPrefix}
-															placeholder="A"
-															class="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs outline-none"
-															required
-														/>
-													</div>
-													<div class="space-y-1">
-														<label for="rs-block-start-num" class="text-[10px] text-slate-500"
-															>Seat Start Num</label
-														>
-														<input
-															id="rs-block-start-num"
-															type="number"
-															bind:value={blockSeatStartNum}
-															min="1"
-															class="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs outline-none"
-															required
-														/>
-													</div>
-												</div>
-												<div class="space-y-1">
-													<label for="rs-block-shape" class="text-[10px] text-slate-500"
-														>Layout Shape</label
-													>
-													<select
-														id="rs-block-shape"
-														bind:value={blockShape}
-														class="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 outline-none"
-														required
-													>
-														<option value="rectangle">Rectangle (Chữ nhật)</option>
-														<option value="trapezoid">Trapezoid (Hình thang)</option>
-														<option value="diamond">Diamond (Hình thoi)</option>
-														<option value="staggered">Staggered (Xếp so le)</option>
-													</select>
-												</div>
-											{/if}
-
-											<button
-												type="submit"
-												class="w-full rounded-md bg-slate-900 py-1.5 text-xs font-bold text-white transition hover:bg-black"
-											>
-												Create Area
-											</button>
-										</form>
-									{/if}
-								</div>
-							{:else if activeTab === 'objects'}
-								<div class="space-y-4">
-									<h3 class="text-xs font-bold text-slate-800">Layout Objects (Stage/Labels)</h3>
-
-									{#if selectedObjectId !== null && layoutObjects[selectedObjectId]}
-										{@const targetObj = layoutObjects[selectedObjectId]}
+								{#if selectedRsAreaId}
+									{@const targetArea = rsAreas.find((a) => a.id === selectedRsAreaId)}
+									{#if targetArea}
 										<div class="space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
 											<div class="flex items-center justify-between">
-												<span class="text-[10px] font-extrabold text-slate-900 uppercase">
-													Editing: {targetObj.type}
+												<span class="text-xs font-extrabold text-slate-900">
+													Editing Area: {targetArea.id.replace(manifestIdVal + '-', '')}
 												</span>
 												<button
 													type="button"
 													onclick={() => {
-														selectedObjectId = null;
+														selectedRsAreaId = '';
 														drawSeatingMap();
 													}}
 													class="text-[10px] font-bold text-slate-400 hover:text-slate-600"
 												>
-													Deselect
+													Back
 												</button>
 											</div>
+											<div class="space-y-0.5 text-[10px] font-semibold text-slate-500">
+												<p>Level: {targetArea.levelId}</p>
+												<p>Section: {targetArea.sectionId || 'None'}</p>
+												<p>Current Rows: {targetArea.rows?.length || 0}</p>
+											</div>
+										</div>
 
-											<div class="space-y-2 text-xs font-semibold text-slate-700">
-												<div class="grid grid-cols-2 gap-2">
-													<div class="space-y-1">
-														<label for="obj-pos-x" class="text-[9px] text-slate-400">Position X</label>
-														<input
-															id="obj-pos-x"
-															type="number"
-															bind:value={targetObj.x}
-															oninput={drawSeatingMap}
-															class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
-														/>
-													</div>
-													<div class="space-y-1">
-														<label for="obj-pos-y" class="text-[9px] text-slate-400">Position Y</label>
-														<input
-															id="obj-pos-y"
-															type="number"
-															bind:value={targetObj.y}
-															oninput={drawSeatingMap}
-															class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
-														/>
-													</div>
+										<form
+											onsubmit={(e) => {
+												e.preventDefault();
+												generateSeatingBlock();
+											}}
+											class="space-y-3 border-t border-slate-100 pt-3 font-semibold text-slate-700"
+										>
+											<h4 class="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+												Generate Seating Block
+											</h4>
+											<div class="grid grid-cols-2 gap-2">
+												<div class="space-y-1">
+													<label for="block-row-prefix" class="text-[10px] text-slate-500"
+														>Row Prefix</label
+													>
+													<input
+														id="block-row-prefix"
+														type="text"
+														bind:value={blockRowPrefix}
+														placeholder="A"
+														class="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs outline-none"
+														required
+													/>
 												</div>
+												<div class="space-y-1">
+													<label for="block-rows-count" class="text-[10px] text-slate-500"
+														>Number of Rows</label
+													>
+													<input
+														id="block-rows-count"
+														type="number"
+														bind:value={blockRowsCount}
+														min="1"
+														max="26"
+														class="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs outline-none"
+														required
+													/>
+												</div>
+											</div>
+											<div class="grid grid-cols-2 gap-2">
+												<div class="space-y-1">
+													<label for="block-seats-per-row" class="text-[10px] text-slate-500"
+														>Seats Per Row</label
+													>
+													<input
+														id="block-seats-per-row"
+														type="number"
+														bind:value={blockSeatsPerRow}
+														min="1"
+														class="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs outline-none"
+														required
+													/>
+												</div>
+												<div class="space-y-1">
+													<label for="block-seat-start-num" class="text-[10px] text-slate-500"
+														>Seat Start Num</label
+													>
+													<input
+														id="block-seat-start-num"
+														type="number"
+														bind:value={blockSeatStartNum}
+														min="1"
+														class="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs outline-none"
+														required
+													/>
+												</div>
+											</div>
+											<div class="space-y-1">
+												<label for="block-shape" class="text-[10px] text-slate-500"
+													>Layout Shape</label
+												>
+												<select
+													id="block-shape"
+													bind:value={blockShape}
+													class="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 outline-none"
+													required
+												>
+													<option value="rectangle">Rectangle (Chữ nhật)</option>
+													<option value="trapezoid">Trapezoid (Hình thang / Vát chéo)</option>
+													<option value="diamond">Diamond (Hình thoi)</option>
+													<option value="staggered">Staggered (Xếp so le)</option>
+												</select>
+											</div>
+											<button
+												type="submit"
+												class="w-full rounded-md bg-slate-900 py-1.5 text-xs font-bold text-white transition hover:bg-black"
+											>
+												Generate Block
+											</button>
+										</form>
 
-												{#if targetObj.type === 'stage' || (targetObj.type === 'shape' && targetObj.shape !== 'circle')}
-													<div class="grid grid-cols-2 gap-2">
-														<div class="space-y-1">
-															<label for="obj-width" class="text-[9px] text-slate-400">Width</label>
-															<input
-																id="obj-width"
-																type="number"
-																bind:value={targetObj.width}
-																oninput={drawSeatingMap}
-																class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
-															/>
-														</div>
-														<div class="space-y-1">
-															<label for="obj-height" class="text-[9px] text-slate-400">Height</label>
-															<input
-																id="obj-height"
-																type="number"
-																bind:value={targetObj.height}
-																oninput={drawSeatingMap}
-																class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
-															/>
-														</div>
-													</div>
-												{/if}
-
-												{#if targetObj.type === 'shape' && targetObj.shape === 'circle'}
-													<div class="space-y-1">
-														<label for="obj-radius" class="text-[9px] text-slate-400">Radius</label>
-														<input
-															id="obj-radius"
-															type="number"
-															bind:value={targetObj.radius}
-															oninput={drawSeatingMap}
-															class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
-														/>
-													</div>
-												{/if}
-
-												{#if targetObj.type === 'stage' || targetObj.type === 'label'}
-													<div class="space-y-1">
-														<label for="obj-text" class="text-[9px] text-slate-400">Label Text</label>
-														<input
-															id="obj-text"
-															type="text"
-															bind:value={targetObj.text}
-															oninput={drawSeatingMap}
-															class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
-														/>
-													</div>
-												{/if}
-
-												{#if targetObj.type === 'label'}
-													<div class="space-y-1">
-														<label for="obj-fontsize" class="text-[9px] text-slate-400">Font Size</label>
-														<input
-															id="obj-fontsize"
-															type="number"
-															bind:value={targetObj.fontSize}
-															oninput={drawSeatingMap}
-															class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
-														/>
-													</div>
-												{/if}
-
-												{#if targetObj.type === 'label' || targetObj.type === 'shape'}
-													<div class="space-y-1">
-														<label for="obj-color" class="text-[9px] text-slate-400">Color Tag</label>
-														<div class="flex items-center gap-2">
-															<input
-																id="obj-color"
-																type="color"
-																bind:value={targetObj.color}
-																oninput={drawSeatingMap}
-																class="h-7 w-7 cursor-pointer rounded border border-slate-200"
-															/>
-															<span class="font-mono text-xs text-slate-500">{targetObj.color || '#000000'}</span>
-														</div>
-													</div>
-												{/if}
-
-												{#if targetObj.type === 'shape'}
-													<div class="space-y-1">
-														<label for="obj-opacity" class="text-[9px] text-slate-400">Opacity ({targetObj.opacity !== undefined ? targetObj.opacity : 0.5})</label>
-														<input
-															id="obj-opacity"
-															type="range"
-															min="0"
-															max="1"
-															step="0.1"
-															bind:value={targetObj.opacity}
-															oninput={drawSeatingMap}
-															class="w-full accent-slate-900"
-														/>
-													</div>
-												{/if}
-
+										<!-- Curvature Slider -->
+										<div class="space-y-2 border-t border-slate-100 pt-3">
+											<h4 class="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+												Curvature / Bend (Độ cong)
+											</h4>
+											<div class="flex items-center gap-3">
+												<input
+													type="range"
+													min="-200"
+													max="200"
+													value={targetArea.curvature || 0}
+													oninput={(e) => {
+														const val = Number((e.target as HTMLInputElement).value);
+														applyCurvature(targetArea, val);
+													}}
+													class="flex-1 cursor-pointer accent-slate-900"
+												/>
+												<span
+													class="w-10 text-right text-[11px] font-bold text-slate-600 tabular-nums"
+													>{targetArea.curvature || 0}</span
+												>
+											</div>
+											<div class="flex justify-between text-[9px] font-semibold text-slate-400">
+												<span>Curve Down (Cong xuống)</span>
+												<span>Curve Up (Cong lên)</span>
+											</div>
+										</div>
+									{/if}
+								{:else if selectedGaAreaId}
+									{@const targetGaArea = gaAreas.find((g) => g.id === selectedGaAreaId)}
+									{#if targetGaArea}
+										<div class="space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
+											<div class="flex items-center justify-between">
+												<span class="text-xs font-extrabold text-slate-900">
+													Editing GA: {targetGaArea.id.replace(manifestIdVal + '-', '')}
+												</span>
 												<button
 													type="button"
-													onclick={deleteSelectedObject}
-													class="w-full rounded-md bg-rose-600 py-1.5 text-xs font-bold text-white transition hover:bg-rose-700 mt-2"
+													onclick={() => {
+														selectedGaAreaId = '';
+														drawSeatingMap();
+													}}
+													class="text-[10px] font-bold text-slate-400 hover:text-slate-600"
 												>
-													Delete Object
+													Back
 												</button>
 											</div>
-										</div>
-									{:else}
-										<div class="space-y-2.5 font-semibold text-slate-700">
-											<p class="text-[10px] text-slate-400 leading-relaxed">
-												Add non-seating physical items to your layout map, such as stages, background shape barriers, sound mixer labels, or entrances. Drag them to position.
-											</p>
-											
-											<button
-												type="button"
-												onclick={addStageObject}
-												class="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white py-2 text-center text-xs hover:bg-slate-50"
-											>
-												<span class="text-slate-500">➕</span> Add Stage Box
-											</button>
-											
-											<button
-												type="button"
-												onclick={addLabelObject}
-												class="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white py-2 text-center text-xs hover:bg-slate-50"
-											>
-												<span class="text-slate-500">➕</span> Add Text Label
-											</button>
-											
-											<button
-												type="button"
-												onclick={() => addShapeObject('rect')}
-												class="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white py-2 text-center text-xs hover:bg-slate-50"
-											>
-												<span class="text-slate-500">➕</span> Add Rectangle Shape
-											</button>
-
-											<button
-												type="button"
-												onclick={() => addShapeObject('circle')}
-												class="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white py-2 text-center text-xs hover:bg-slate-50"
-											>
-												<span class="text-slate-500">➕</span> Add Circle Shape
-											</button>
+											<div class="space-y-0.5 text-[10px] font-semibold text-slate-500">
+												<p>Level: {targetGaArea.levelId}</p>
+												<p>Section: {targetGaArea.sectionId || 'None'}</p>
+											</div>
 										</div>
 
-										{#if layoutObjects.length > 0}
-											<div class="space-y-2 border-t border-slate-100 pt-3">
-												<h4 class="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
-													Current Layout Objects ({layoutObjects.length})
-												</h4>
-												<div class="space-y-1.5 max-h-[180px] overflow-y-auto pr-1">
-													{#each layoutObjects as obj, idx}
-														<button
-															type="button"
-															onclick={() => {
-																selectedObjectId = idx;
-																drawSeatingMap();
-															}}
-															class="flex w-full items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 p-2 text-left text-[10px] font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300"
-														>
-															<span class="capitalize">{obj.type}{obj.shape ? ` (${obj.shape})` : ''}: {obj.text || `Item #${idx + 1}`}</span>
-															<span class="text-[9px] font-mono text-slate-400">({obj.x}, {obj.y})</span>
-														</button>
-													{/each}
+										<div
+											class="space-y-3 border-t border-slate-100 pt-3 text-xs font-semibold text-slate-700"
+										>
+											<div class="space-y-1">
+												<label for="ga-cap-edit" class="text-[10px] text-slate-500"
+													>Standing Capacity</label
+												>
+												<input
+													id="ga-cap-edit"
+													type="number"
+													bind:value={targetGaArea.capacity}
+													class="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs outline-none"
+												/>
+											</div>
+
+											<div class="grid grid-cols-2 gap-2">
+												<div class="space-y-1">
+													<label for="ga-x-edit" class="text-[10px] text-slate-500"
+														>Position X</label
+													>
+													<input
+														id="ga-x-edit"
+														type="number"
+														bind:value={targetGaArea.x}
+														oninput={drawSeatingMap}
+														class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+													/>
+												</div>
+												<div class="space-y-1">
+													<label for="ga-y-edit" class="text-[10px] text-slate-500"
+														>Position Y</label
+													>
+													<input
+														id="ga-y-edit"
+														type="number"
+														bind:value={targetGaArea.y}
+														oninput={drawSeatingMap}
+														class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+													/>
 												</div>
 											</div>
-										{/if}
+
+											<div class="grid grid-cols-2 gap-2">
+												<div class="space-y-1">
+													<label for="ga-w-edit" class="text-[10px] text-slate-500">Width</label>
+													<input
+														id="ga-w-edit"
+														type="number"
+														bind:value={targetGaArea.width}
+														oninput={drawSeatingMap}
+														class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+													/>
+												</div>
+												<div class="space-y-1">
+													<label for="ga-h-edit" class="text-[10px] text-slate-500">Height</label>
+													<input
+														id="ga-h-edit"
+														type="number"
+														bind:value={targetGaArea.height}
+														oninput={drawSeatingMap}
+														class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+													/>
+												</div>
+											</div>
+
+											<button
+												type="button"
+												onclick={() => {
+													gaAreas = gaAreas.filter((g) => g.id !== selectedGaAreaId);
+													selectedGaAreaId = '';
+													saveMessage = 'GA Area removed. Save Layout to persist.';
+													drawSeatingMap();
+												}}
+												class="mt-2 w-full rounded-md bg-rose-600 py-1.5 text-xs font-bold text-white transition hover:bg-rose-700"
+											>
+												Delete GA Area
+											</button>
+										</div>
 									{/if}
-								</div>
-							{/if}
-						</div>
-					</div>
-				{:else}
-					<!-- Mode is either 'inventory' or 'floor-edit' -->
-					<div class="flex-1 space-y-4 overflow-y-auto p-4">
-						{#if activeMode === 'inventory'}
-							<div class="space-y-3">
-								<h3 class="text-[10px] font-black tracking-widest text-slate-400 uppercase">
-									Inventory Management
-								</h3>
-								<div
-									class="space-y-2 rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs font-semibold text-slate-600"
-								>
-									<p class="text-[10px] leading-relaxed text-slate-500">
-										Toggle the status of selected seats to release them for public booking or hold
-										them.
+								{:else}
+									<p class="text-[10px] leading-relaxed text-slate-400">
+										Select a Reserved Seating or GA area on the canvas to edit its properties, or
+										use the controls above to manage Levels and Sections.
 									</p>
-									<div class="flex gap-2 pt-2">
-										<button
-											onclick={() => setInventoryStatus('AVAILABLE')}
-											disabled={selectedSeatIds.length === 0}
-											class="flex-1 rounded-lg bg-emerald-600 py-2 text-center text-[10px] font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50"
-										>
-											Unlock / Open
-										</button>
-										<button
-											onclick={() => setInventoryStatus('UNAVAILABLE')}
-											disabled={selectedSeatIds.length === 0}
-											class="flex-1 rounded-lg bg-rose-600 py-2 text-center text-[10px] font-bold text-white transition hover:bg-rose-700 disabled:opacity-50"
-										>
-											Lock / Hold
-										</button>
-									</div>
-								</div>
+								{/if}
 							</div>
-						{:else}
+						{:else if activeTab === 'objects'}
 							<div class="space-y-4">
-								<h3 class="text-[10px] font-black tracking-widest text-slate-400 uppercase">
-									Physical Positioning
-								</h3>
-								<div
-									class="space-y-3 rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs font-semibold text-slate-600"
-								>
-									<p class="text-[10px] leading-relaxed text-slate-500">
-										Seats can be dragged and repositioned directly on the map. Snapping aligns
-										locations.
-									</p>
-									<div class="space-y-1">
-										<label
-											for="grid-snap"
-											class="text-[9px] font-bold tracking-wider text-slate-400 uppercase"
-											>Grid Alignment</label
-										>
-										<select
-											id="grid-snap"
-											bind:value={snapGrid}
-											class="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none"
-										>
-											<option value={1}>Free Movement (No Snap)</option>
-											<option value={8}>Snap to 8px</option>
-											<option value={16}>Snap to 16px</option>
-											<option value={32}>Snap to 32px</option>
-										</select>
+								<h3 class="text-xs font-bold text-slate-800">Layout Objects (Stage/Labels)</h3>
+
+								{#if selectedObjectId !== null && layoutObjects[selectedObjectId]}
+									{@const targetObj = layoutObjects[selectedObjectId]}
+									<div class="space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
+										<div class="flex items-center justify-between">
+											<span class="text-[10px] font-extrabold text-slate-900 uppercase">
+												Editing: {targetObj.type}
+											</span>
+											<button
+												type="button"
+												onclick={() => {
+													selectedObjectId = null;
+													drawSeatingMap();
+												}}
+												class="text-[10px] font-bold text-slate-400 hover:text-slate-600"
+											>
+												Deselect
+											</button>
+										</div>
+
+										<div class="space-y-2 text-xs font-semibold text-slate-700">
+											<div class="grid grid-cols-2 gap-2">
+												<div class="space-y-1">
+													<label for="obj-pos-x" class="text-[9px] text-slate-400">Position X</label
+													>
+													<input
+														id="obj-pos-x"
+														type="number"
+														bind:value={targetObj.x}
+														oninput={drawSeatingMap}
+														class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+													/>
+												</div>
+												<div class="space-y-1">
+													<label for="obj-pos-y" class="text-[9px] text-slate-400">Position Y</label
+													>
+													<input
+														id="obj-pos-y"
+														type="number"
+														bind:value={targetObj.y}
+														oninput={drawSeatingMap}
+														class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+													/>
+												</div>
+											</div>
+
+											{#if targetObj.type === 'stage' || (targetObj.type === 'shape' && targetObj.shape !== 'circle')}
+												<div class="grid grid-cols-2 gap-2">
+													<div class="space-y-1">
+														<label for="obj-width" class="text-[9px] text-slate-400">Width</label>
+														<input
+															id="obj-width"
+															type="number"
+															bind:value={targetObj.width}
+															oninput={drawSeatingMap}
+															class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+														/>
+													</div>
+													<div class="space-y-1">
+														<label for="obj-height" class="text-[9px] text-slate-400">Height</label>
+														<input
+															id="obj-height"
+															type="number"
+															bind:value={targetObj.height}
+															oninput={drawSeatingMap}
+															class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+														/>
+													</div>
+												</div>
+											{/if}
+
+											{#if targetObj.type === 'shape' && targetObj.shape === 'circle'}
+												<div class="space-y-1">
+													<label for="obj-radius" class="text-[9px] text-slate-400">Radius</label>
+													<input
+														id="obj-radius"
+														type="number"
+														bind:value={targetObj.radius}
+														oninput={drawSeatingMap}
+														class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+													/>
+												</div>
+											{/if}
+
+											{#if targetObj.type === 'stage' || targetObj.type === 'label'}
+												<div class="space-y-1">
+													<label for="obj-text" class="text-[9px] text-slate-400">Label Text</label>
+													<input
+														id="obj-text"
+														type="text"
+														bind:value={targetObj.text}
+														oninput={drawSeatingMap}
+														class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+													/>
+												</div>
+											{/if}
+
+											{#if targetObj.type === 'label'}
+												<div class="space-y-1">
+													<label for="obj-fontsize" class="text-[9px] text-slate-400"
+														>Font Size</label
+													>
+													<input
+														id="obj-fontsize"
+														type="number"
+														bind:value={targetObj.fontSize}
+														oninput={drawSeatingMap}
+														class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+													/>
+												</div>
+											{/if}
+
+											{#if targetObj.type === 'label' || targetObj.type === 'shape'}
+												<div class="space-y-1">
+													<label for="obj-color" class="text-[9px] text-slate-400">Color Tag</label>
+													<div class="flex items-center gap-2">
+														<input
+															id="obj-color"
+															type="color"
+															bind:value={targetObj.color}
+															oninput={drawSeatingMap}
+															class="h-7 w-7 cursor-pointer rounded border border-slate-200"
+														/>
+														<span class="font-mono text-xs text-slate-500"
+															>{targetObj.color || '#000000'}</span
+														>
+													</div>
+												</div>
+											{/if}
+
+											{#if targetObj.type === 'shape'}
+												<div class="space-y-1">
+													<label for="obj-opacity" class="text-[9px] text-slate-400"
+														>Opacity ({targetObj.opacity !== undefined
+															? targetObj.opacity
+															: 0.5})</label
+													>
+													<input
+														id="obj-opacity"
+														type="range"
+														min="0"
+														max="1"
+														step="0.1"
+														bind:value={targetObj.opacity}
+														oninput={drawSeatingMap}
+														class="w-full accent-slate-900"
+													/>
+												</div>
+											{/if}
+
+											<button
+												type="button"
+												onclick={deleteSelectedObject}
+												class="mt-2 w-full rounded-md bg-rose-600 py-1.5 text-xs font-bold text-white transition hover:bg-rose-700"
+											>
+												Delete Object
+											</button>
+										</div>
 									</div>
-								</div>
+								{:else}
+									<p class="text-[10px] leading-relaxed text-slate-400">
+										Select a layout object (stage, label, or shape) on the canvas to edit its
+										properties.
+									</p>
+								{/if}
 							</div>
 						{/if}
 					</div>
-				{/if}
-
-				<!-- Lower block: Thống kê tài chính (Financial Info) -->
-				<div class="border-t border-slate-200 bg-slate-50 p-4">
-					<h3 class="mb-3.5 text-[10px] font-black tracking-widest text-slate-400 uppercase">
-						Stadium Metrics
-					</h3>
-					<div class="space-y-2.5 text-xs font-semibold text-slate-600">
-						<div
-							class="flex items-center justify-between rounded-lg border border-slate-200/60 bg-white p-2.5 shadow-2xs"
-						>
-							<span class="text-slate-400">Total Capacity</span>
-							<span class="font-mono text-sm font-extrabold text-slate-800"
-								>{totalCapacity.toLocaleString()}</span
+				</div>
+			{:else}
+				<!-- Mode is either 'inventory' or 'floor-edit' -->
+				<div class="flex-1 space-y-4 overflow-y-auto p-4">
+					{#if activeMode === 'inventory'}
+						<div class="space-y-3">
+							<h3 class="text-[10px] font-black tracking-widest text-slate-400 uppercase">
+								Inventory Management
+							</h3>
+							<div
+								class="space-y-2 rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs font-semibold text-slate-600"
 							>
+								<p class="text-[10px] leading-relaxed text-slate-500">
+									Toggle the status of selected seats to release them for public booking or hold
+									them.
+								</p>
+								<div class="flex gap-2 pt-2">
+									<button
+										onclick={() => setInventoryStatus('AVAILABLE')}
+										disabled={selectedSeatIds.length === 0}
+										class="flex-1 rounded-lg bg-emerald-600 py-2 text-center text-[10px] font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+									>
+										Unlock / Open
+									</button>
+									<button
+										onclick={() => setInventoryStatus('UNAVAILABLE')}
+										disabled={selectedSeatIds.length === 0}
+										class="flex-1 rounded-lg bg-rose-600 py-2 text-center text-[10px] font-bold text-white transition hover:bg-rose-700 disabled:opacity-50"
+									>
+										Lock / Hold
+									</button>
+								</div>
+							</div>
 						</div>
+					{:else}
+						<div class="space-y-4">
+							<h3 class="text-[10px] font-black tracking-widest text-slate-400 uppercase">
+								Physical Positioning
+							</h3>
+							<div
+								class="space-y-3 rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs font-semibold text-slate-600"
+							>
+								<p class="text-[10px] leading-relaxed text-slate-500">
+									Seats can be dragged and repositioned directly on the map. Snapping aligns
+									locations.
+								</p>
+								<div class="space-y-1">
+									<label
+										for="grid-snap"
+										class="text-[9px] font-bold tracking-wider text-slate-400 uppercase"
+										>Grid Alignment</label
+									>
+									<select
+										id="grid-snap"
+										bind:value={snapGrid}
+										class="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none"
+									>
+										<option value={1}>Free Movement (No Snap)</option>
+										<option value={8}>Snap to 8px</option>
+										<option value={16}>Snap to 16px</option>
+										<option value={32}>Snap to 32px</option>
+									</select>
+								</div>
+							</div>
+						</div>
+					{/if}
+				</div>
+			{/if}
+
+			<!-- Lower block: Thống kê tài chính (Financial Info) -->
+			<div class="border-t border-slate-200 bg-slate-50 p-4">
+				<h3 class="mb-3.5 text-[10px] font-black tracking-widest text-slate-400 uppercase">
+					Stadium Metrics
+				</h3>
+				<div class="space-y-2.5 text-xs font-semibold text-slate-600">
+					<div
+						class="flex items-center justify-between rounded-lg border border-slate-200/60 bg-white p-2.5 shadow-2xs"
+					>
+						<span class="text-slate-400">Total Capacity</span>
+						<span class="font-mono text-sm font-extrabold text-slate-800"
+							>{totalCapacity.toLocaleString()}</span
+						>
 					</div>
 				</div>
+			</div>
 		</aside>
 
 		<!-- Zone 3: Canvas Working Area -->
@@ -3071,27 +2710,6 @@
 							<span class="ml-0.5 rounded bg-slate-200 px-1 text-[9px] text-slate-500">E</span>
 						</button>
 					</div>
-
-					{#if activeTool === 'select'}
-						<button
-							onclick={() => {
-								selectedRsAreaId = '';
-								activeTab = 'areas';
-								// trigger layout modal
-							}}
-							class="ml-2 flex items-center gap-1 text-xs font-bold text-blue-600 transition hover:text-blue-800"
-						>
-							<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-								><path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M12 4v16m8-8H4"
-								/></svg
-							>
-							Add Area
-						</button>
-					{/if}
 
 					{#if activeTool === 'brush'}
 						<div class="mx-2 flex items-center gap-2">
@@ -3474,9 +3092,4 @@
 			</div>
 		</form>
 	</div>
-{/if}
-
-<!-- ======================== ADD SEATING BLOCK POPUP DIALOG ======================== -->
-{#if activeTab === 'areas' && selectedRsAreaId === ''}
-	<!-- Handled implicitly or keep popup wrapper -->
 {/if}
