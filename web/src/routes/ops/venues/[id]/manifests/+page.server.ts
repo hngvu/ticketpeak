@@ -2,6 +2,14 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { apiFetch } from '$lib/server/api';
+import { MOCK_VENUE_HOLLYWOOD_BOWL, MOCK_MANIFEST_HOLLYWOOD_BOWL } from '$lib/server/mockData';
+
+const MOCK_VENUE_IDS: Record<string, { venue: any; manifests: any[] }> = {
+	'019e90ee-6afa-70fc-aa55-2159192f0729': {
+		venue: MOCK_VENUE_HOLLYWOOD_BOWL,
+		manifests: [MOCK_MANIFEST_HOLLYWOOD_BOWL]
+	}
+};
 
 export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 	const accessToken = cookies.get('ops_access_token');
@@ -10,6 +18,12 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 	}
 
 	const venueId = params.id;
+
+	// Check mock venues first
+	const mock = MOCK_VENUE_IDS[venueId];
+	if (mock) {
+		return { venue: mock.venue, manifests: mock.manifests };
+	}
 
 	try {
 		// 1. Fetch Venue details

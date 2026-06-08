@@ -2,6 +2,8 @@ package io.qzz.hoangvu.ticketpeak.api.venue.dto;
 
 import io.qzz.hoangvu.ticketpeak.api.venue.model.GAArea;
 
+import java.util.List;
+
 public record GAAreaResponse(
         String id,
         String manifestId,
@@ -11,7 +13,8 @@ public record GAAreaResponse(
         Integer x,
         Integer y,
         Integer width,
-        Integer height) {
+        Integer height,
+        List<List<Double>> polygon) {
     public static GAAreaResponse from(GAArea a) {
         return new GAAreaResponse(
                 a.getId(),
@@ -22,6 +25,7 @@ public record GAAreaResponse(
                 a.getX(),
                 a.getY(),
                 a.getWidth(),
-                a.getHeight());
+                a.getHeight(),
+                a.getPolygon());
     }
 }

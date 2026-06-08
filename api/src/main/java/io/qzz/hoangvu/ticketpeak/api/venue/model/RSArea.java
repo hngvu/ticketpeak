@@ -3,6 +3,10 @@ package io.qzz.hoangvu.ticketpeak.api.venue.model;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.util.List;
 
 @Entity
 @Getter @Setter @Builder
@@ -27,5 +31,9 @@ public class RSArea {
     Integer width;
 
     Integer height;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    List<List<Double>> polygon; // e.g., [[x1,y1],[x2,y2],...]
 
 }

@@ -1,0 +1,8 @@
+ALTER TABLE rs_area ADD COLUMN polygon JSONB;
+
+ALTER TABLE ga_area ADD COLUMN polygon JSONB;
+ALTER TABLE section ADD COLUMN polygon JSONB;
+ALTER TABLE section ADD COLUMN label_x INTEGER;
+ALTER TABLE section ADD COLUMN label_y INTEGER;
+
+ALTER TABLE venue_level ADD COLUMN polygon JSONB;

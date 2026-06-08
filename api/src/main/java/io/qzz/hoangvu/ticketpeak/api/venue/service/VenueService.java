@@ -329,6 +329,7 @@ public class VenueService {
                     existing.setY(req.y());
                     existing.setWidth(req.width());
                     existing.setHeight(req.height());
+                    existing.setPolygon(req.polygon());
                     return existing;
                 })
                 .orElseGet(() -> GAArea.builder()
@@ -341,6 +342,7 @@ public class VenueService {
                         .y(req.y())
                         .width(req.width())
                         .height(req.height())
+                        .polygon(req.polygon())
                         .build());
         return GAAreaResponse.from(gaAreaRepository.save(area));
     }
@@ -362,6 +364,7 @@ public class VenueService {
                     existing.setY(req.y());
                     existing.setWidth(req.width());
                     existing.setHeight(req.height());
+                    existing.setPolygon(req.polygon());
                     return existing;
                 })
                 .orElseGet(() -> RSArea.builder()
@@ -372,6 +375,7 @@ public class VenueService {
                         .y(req.y())
                         .width(req.width())
                         .height(req.height())
+                        .polygon(req.polygon())
                         .build());
         return RSAreaResponse.from(rsAreaRepository.save(area));
     }

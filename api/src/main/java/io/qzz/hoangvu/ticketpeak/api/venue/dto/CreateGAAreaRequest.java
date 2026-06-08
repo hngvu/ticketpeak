@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Positive;
 
+import java.util.List;
+
 public record CreateGAAreaRequest(
         @NotBlank String id,
         @NotBlank String levelId,
@@ -13,5 +15,6 @@ public record CreateGAAreaRequest(
         @PositiveOrZero Integer x,
         @PositiveOrZero Integer y,
         @Positive Integer width,
-        @Positive Integer height
+        @Positive Integer height,
+        List<List<Double>> polygon
 ) {}

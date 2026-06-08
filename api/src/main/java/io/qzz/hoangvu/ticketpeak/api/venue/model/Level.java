@@ -9,7 +9,7 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @IdClass(LevelId.class)
-@Table(name = "venue_level") // "level" is not technically reserved, but "venue_level" is extremely clean and safe
+@Table(name = "venue_level")
 public class Level {
 
     @Id

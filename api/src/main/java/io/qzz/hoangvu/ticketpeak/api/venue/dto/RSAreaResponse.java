@@ -2,6 +2,8 @@ package io.qzz.hoangvu.ticketpeak.api.venue.dto;
 
 import io.qzz.hoangvu.ticketpeak.api.venue.model.RSArea;
 
+import java.util.List;
+
 public record RSAreaResponse(
         String id,
         String manifestId,
@@ -9,7 +11,8 @@ public record RSAreaResponse(
         Integer x,
         Integer y,
         Integer width,
-        Integer height) {
+        Integer height,
+        List<List<Double>> polygon) {
     public static RSAreaResponse from(RSArea a) {
         return new RSAreaResponse(
                 a.getId(),
@@ -18,6 +21,7 @@ public record RSAreaResponse(
                 a.getX(),
                 a.getY(),
                 a.getWidth(),
-                a.getHeight());
+                a.getHeight(),
+                a.getPolygon());
     }
 }

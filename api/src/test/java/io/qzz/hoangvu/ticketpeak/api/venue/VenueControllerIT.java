@@ -227,7 +227,7 @@ class VenueControllerIT {
                 .andExpect(status().isCreated());
                 mockMvc.perform(post("/api/ops/venues/manifests/M005/rs-areas").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateRSAreaRequest("RA001", "L1", null, null, null, null))))
+                        .content(objectMapper.writeValueAsString(new CreateRSAreaRequest("RA001", "L1", null, null, null, null, null))))
                 .andExpect(status().isCreated());
         mockMvc.perform(post("/api/ops/venues/rs-areas/RA001/rows").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -262,7 +262,7 @@ class VenueControllerIT {
                 .andExpect(status().isCreated());
         mockMvc.perform(post("/api/ops/venues/manifests/M005-Row/rs-areas").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateRSAreaRequest("RA001-Row", "L1", null, null, null, null))))
+                        .content(objectMapper.writeValueAsString(new CreateRSAreaRequest("RA001-Row", "L1", null, null, null, null, null))))
                 .andExpect(status().isCreated());
         
         mockMvc.perform(post("/api/ops/venues/rs-areas/RA001-Row/rows").header("Authorization", "Bearer " + adminToken)
@@ -295,7 +295,7 @@ class VenueControllerIT {
         mockMvc.perform(post("/api/ops/venues/manifests/M-LAYOUT/ga-areas").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateGAAreaRequest("GA-1", "L1", "P1", 120, 10, 20, 300, 140))))
+                                new CreateGAAreaRequest("GA-1", "L1", "P1", 120, 10, 20, 300, 140, null))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.x").value(10))
                 .andExpect(jsonPath("$.data.width").value(300));
@@ -303,7 +303,7 @@ class VenueControllerIT {
         mockMvc.perform(post("/api/ops/venues/manifests/M-LAYOUT/ga-areas").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateGAAreaRequest("GA-1", "L1", "P1", 150, 30, 40, 360, 180))))
+                                new CreateGAAreaRequest("GA-1", "L1", "P1", 150, 30, 40, 360, 180, null))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.x").value(30))
                 .andExpect(jsonPath("$.data.height").value(180));
@@ -311,7 +311,7 @@ class VenueControllerIT {
         mockMvc.perform(post("/api/ops/venues/manifests/M-LAYOUT/rs-areas").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateRSAreaRequest("RS-1", "L1", 50, 60, 280, 160))))
+                                new CreateRSAreaRequest("RS-1", "L1", 50, 60, 280, 160, null))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.x").value(50))
                 .andExpect(jsonPath("$.data.height").value(160));
@@ -319,7 +319,7 @@ class VenueControllerIT {
         mockMvc.perform(post("/api/ops/venues/manifests/M-LAYOUT/rs-areas").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateRSAreaRequest("RS-1", "L1", 80, 90, 340, 200))))
+                                new CreateRSAreaRequest("RS-1", "L1", 80, 90, 340, 200, null))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.x").value(80))
                 .andExpect(jsonPath("$.data.width").value(340));
@@ -470,7 +470,7 @@ class VenueControllerIT {
         mockMvc.perform(post("/api/ops/venues/manifests/M-NULLABLE/ga-areas").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateGAAreaRequest("GA-1", "L1", "", 150, 30, 40, 360, 180))))
+                                new CreateGAAreaRequest("GA-1", "L1", "", 150, 30, 40, 360, 180, null))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.priceLevelId").value(org.hamcrest.Matchers.nullValue()));
 
@@ -478,7 +478,7 @@ class VenueControllerIT {
         mockMvc.perform(post("/api/ops/venues/manifests/M-NULLABLE/rs-areas").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateRSAreaRequest("RS-1", "L1", 50, 60, 280, 160))))
+                                new CreateRSAreaRequest("RS-1", "L1", 50, 60, 280, 160, null))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.x").value(50))
                 .andExpect(jsonPath("$.data.width").value(280));

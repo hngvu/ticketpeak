@@ -2,6 +2,27 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { apiFetch } from '$lib/server/api';
+import {
+	MOCK_VENUE_HOLLYWOOD_BOWL,
+	MOCK_MANIFEST_HOLLYWOOD_BOWL,
+	MOCK_MANIFEST_HB_LEVELS,
+	MOCK_MANIFEST_HB_SECTIONS,
+	MOCK_MANIFEST_HB_PRICE_LEVELS,
+	MOCK_MANIFEST_HB_RS_AREAS,
+	MOCK_MANIFEST_HB_GA_AREAS
+} from '$lib/server/mockData';
+
+	const MOCK_VENUES: Record<string, any> = {
+		'019e90ee-6afa-70fc-aa55-2159192f0729': {
+			venue: MOCK_VENUE_HOLLYWOOD_BOWL,
+			manifest: MOCK_MANIFEST_HOLLYWOOD_BOWL,
+			levels: MOCK_MANIFEST_HB_LEVELS,
+			sections: MOCK_MANIFEST_HB_SECTIONS,
+			priceLevels: MOCK_MANIFEST_HB_PRICE_LEVELS,
+			rsAreas: MOCK_MANIFEST_HB_RS_AREAS,
+			gaAreas: MOCK_MANIFEST_HB_GA_AREAS
+		}
+	};
 
 export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 	const accessToken = cookies.get('ops_access_token');
@@ -36,6 +57,21 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 			console.error('[OPS NEW MANIFEST CREATE ERROR]:', err);
 			throw redirect(303, `/ops/venues/${venueId}/manifests`);
 		}
+	}
+
+	// Check if this is a mock venue – serve directly without API calls
+	const mockData = MOCK_VENUES[venueId];
+	if (mockData && mockData.manifest.id === manifestId) {
+		return {
+			isNew: false,
+			venue: mockData.venue,
+			manifest: mockData.manifest,
+			levels: mockData.levels,
+			sections: mockData.sections,
+			priceLevels: mockData.priceLevels,
+			gaAreas: mockData.gaAreas,
+			rsAreas: mockData.rsAreas
+		};
 	}
 
 	try {
@@ -105,5 +141,3 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 		throw redirect(303, `/ops/venues/${venueId}/manifests`);
 	}
 };
-
-
