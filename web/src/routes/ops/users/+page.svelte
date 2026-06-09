@@ -1,12 +1,20 @@
 <script lang="ts">
-	/* eslint-disable @typescript-eslint/no-explicit-any */
 	import { page } from '$app/state';
 	import PaginationBar from '$lib/components/catalog/PaginationBar.svelte';
 
-	let { data } = $props<{ data: any }>();
+	interface User {
+		id: string;
+		name: string;
+		email: string;
+		role: string;
+		status: string;
+		registeredAt: string;
+	}
+
+	let { data } = $props<{ data: { users?: User[] } }>();
 
 	// Initial high-fidelity mock users
-	const defaultMockUsers = [
+	const defaultMockUsers: User[] = [
 		{
 			id: 'usr-1',
 			name: 'Nguyen Van A',
@@ -58,7 +66,7 @@
 	];
 
 	// Initialize state: merge DB users and default mock users
-	let usersList = $state<any[]>([]);
+	let usersList = $state<User[]>([]);
 
 	$effect(() => {
 		const apiUsers = data.users || [];
@@ -84,7 +92,7 @@
 			.normalize('NFD')
 			.replace(/[\u0300-\u036f]/g, '')
 			.replace(/đ/g, 'd')
-			.replace(/Đ/g, 'd');
+			.replace(/Đ/g, 'D');
 	}
 
 	const filteredUsers = $derived(
@@ -169,7 +177,9 @@
 		>
 			<div class="flex flex-1 items-center gap-3">
 				<div class="relative w-full max-w-xs">
-					<span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-mute">
+					<span
+						class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-mute"
+					>
 						<svg
 							class="h-3.5 w-3.5"
 							fill="none"
@@ -207,13 +217,14 @@
 			<table class="w-full border-collapse text-left text-[13px] text-body">
 				<thead>
 					<tr
-						class="border-b border-hairline bg-canvas-soft-2 font-mono text-[10px] uppercase tracking-wider text-mute select-none"
+						class="border-b border-hairline bg-canvas-soft-2 font-mono text-[10px] tracking-wider text-mute uppercase select-none"
 					>
 						<th class="w-10 px-6 py-2.5">
 							<input
 								type="checkbox"
 								checked={allSelected}
 								onchange={toggleAll}
+								aria-label="Select all users"
 								class="h-3.5 w-3.5 cursor-pointer rounded-xs border-hairline accent-primary transition-all"
 							/>
 						</th>
@@ -233,6 +244,7 @@
 									type="checkbox"
 									checked={selectedUserIds.includes(user.id)}
 									onchange={() => toggleUserSelection(user.id)}
+									aria-label="Select {user.name}"
 									class="h-3.5 w-3.5 cursor-pointer rounded-xs border-hairline accent-primary transition-all"
 								/>
 							</td>
@@ -248,7 +260,7 @@
 							<td class="px-6 py-2.5 font-mono text-mute">{formatDateTime(user.registeredAt)}</td>
 							<td class="px-6 py-2.5">
 								<span
-									class="inline-flex items-center rounded-sm px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider {user.status ===
+									class="inline-flex items-center rounded-sm px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase {user.status ===
 									'ACTIVE'
 										? 'bg-success/10 text-success'
 										: 'bg-error/10 text-error'}"
@@ -277,7 +289,9 @@
 		</div>
 
 		{#if totalPages > 1}
-			<div class="flex items-center justify-center border-t border-hairline bg-canvas-soft-2 py-2">
+			<div
+				class="flex items-center justify-center border-t border-hairline bg-canvas-soft-2 py-1.5"
+			>
 				<PaginationBar {currentPage} {totalPages} />
 			</div>
 		{/if}
@@ -300,4 +314,3 @@
 		</div>
 	{/if}
 </div>
-
