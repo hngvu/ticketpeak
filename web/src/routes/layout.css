@@ -3,34 +3,24 @@
 @plugin '@tailwindcss/typography';
 
 @theme {
-	--color-primary: #2185d5;
-	--color-on-primary: #ffffff;
-	--color-ink: #303841;
-	--color-body: #3a4750;
-	--color-mute: #7a8894;
-	--color-hairline: #e5e8eb;
-	--color-hairline-strong: #b2c0cc;
-	--color-canvas: #ffffff;
-	--color-canvas-soft: #f3f3f3;
-	--color-canvas-soft-2: #e5e8eb;
-	--color-link: #2185d5;
-	--color-link-deep: #1966a3;
-	--color-link-bg-soft: #e6f3fc;
+	--color-primary: oklch(60% 0.16 250);
+	--color-on-primary: oklch(100% 0 0);
+	--color-ink: oklch(20% 0 0);
+	--color-body: oklch(45% 0 0);
+	--color-mute: oklch(70% 0 0);
+	--color-hairline: oklch(92% 0 0);
+	--color-hairline-strong: oklch(85% 0 0);
+	--color-canvas: oklch(100% 0 0);
+	--color-canvas-soft: oklch(99% 0 0);
+	--color-canvas-soft-2: oklch(96% 0 0);
+	--color-link: oklch(60% 0.16 250);
 
-	--color-success: #10b981;
-	--color-error: #ef4444;
-	--color-error-soft: #fee2e2;
-	--color-error-deep: #b91c1c;
-	--color-warning: #f59e0b;
-	--color-warning-soft: #fef3c7;
-	--color-warning-deep: #b45309;
+	--color-success: oklch(65% 0.14 160);
+	--color-error: oklch(60% 0.18 25);
+	--color-warning: oklch(75% 0.12 80);
 
-	--color-blue-accent: #2185d5;
-	--color-blue-accent-soft: #e6f3fc;
-	--color-blue-accent-deep: #1966a3;
-
-	--font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-	--font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+	--font-sans: 'Geist Sans', system-ui, -apple-system, sans-serif;
+	--font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
 }
 
 body {
