@@ -19,14 +19,19 @@
 	--color-error: oklch(60% 0.18 25);
 	--color-warning: oklch(75% 0.12 80);
 
-	--font-sans: 'Geist Sans', system-ui, -apple-system, sans-serif;
-	--font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+	--font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+	--font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
 }
 
 body {
 	background-color: var(--color-canvas-soft);
 	color: var(--color-body);
 	font-family: var(--font-sans);
+	font-weight: 450;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'ss01';
+	font-optical-sizing: auto;
 }
 
 /* Premium ultra-thin scrollbars with no arrows at the two ends */

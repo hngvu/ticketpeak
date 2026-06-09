@@ -132,7 +132,7 @@
 					<!-- Address & Capacity Card -->
 					<div class="space-y-3 rounded-lg border border-hairline bg-canvas p-5 shadow-sm">
 						<div
-							class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-accent-soft text-primary shadow-inner"
+							class="bg-blue-accent-soft flex h-10 w-10 items-center justify-center rounded-full text-primary shadow-inner"
 						>
 							<svg
 								class="h-5 w-5"

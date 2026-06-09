@@ -601,7 +601,7 @@
 												selectedLocationText = city.label;
 												showLocationMenu = false;
 											}}
-											class="flex w-full items-center justify-between px-4 py-3 text-left text-sm text-slate-800 hover:bg-blue-accent-soft hover:text-slate-900"
+											class="hover:bg-blue-accent-soft flex w-full items-center justify-between px-4 py-3 text-left text-sm text-slate-800 hover:text-slate-900"
 										>
 											<span>{city.label}</span>
 											{#if selectedLocationText.toLowerCase() === city.label.toLowerCase()}
@@ -828,7 +828,7 @@
 													layoutEndDate = calendarEnd || '';
 													showDateMenu = false;
 												}}
-												class="rounded-lg bg-primary px-5 py-2 text-sm font-bold text-white transition-colors hover:bg-link-deep focus:outline-none"
+												class="hover:bg-link-deep rounded-lg bg-primary px-5 py-2 text-sm font-bold text-white transition-colors focus:outline-none"
 											>
 												Apply
 											</button>
@@ -866,7 +866,7 @@
 
 						<button
 							type="submit"
-							class="md:rounded-b-0 rounded-b-[4px] bg-primary px-6 py-4 text-sm font-bold text-white transition-colors hover:bg-link-deep md:rounded-r-[4px]"
+							class="md:rounded-b-0 hover:bg-link-deep rounded-b-[4px] bg-primary px-6 py-4 text-sm font-bold text-white transition-colors md:rounded-r-[4px]"
 						>
 							Search
 						</button>
@@ -890,7 +890,7 @@
 					<div class="flex h-20 items-center gap-4 border-b border-hairline px-5">
 						<button
 							type="button"
-							class="inline-flex h-10 w-10 items-center justify-center rounded-full text-primary transition-colors hover:bg-blue-accent-soft"
+							class="hover:bg-blue-accent-soft inline-flex h-10 w-10 items-center justify-center rounded-full text-primary transition-colors"
 							onclick={() => (showCountryMenu = false)}
 							aria-label="Close"
 						>
@@ -924,7 +924,7 @@
 								<button
 									type="button"
 									aria-label="Close location drawer"
-									class="ml-auto text-primary transition-colors hover:text-link-deep"
+									class="hover:text-link-deep ml-auto text-primary transition-colors"
 									onclick={() => (showCountryMenu = false)}
 								>
 									<svg
@@ -946,7 +946,7 @@
 									<button
 										type="button"
 										onclick={() => setCountry(country)}
-										class="flex w-full items-center gap-4 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-blue-accent-soft"
+										class="hover:bg-blue-accent-soft flex w-full items-center gap-4 rounded-2xl px-3 py-3 text-left transition-colors"
 									>
 										<img
 											src={countryFlagSrc(country.flagCode)}
@@ -958,7 +958,7 @@
 										</div>
 										{#if activeCountry.value === country.value}
 											<span
-												class="rounded-full bg-blue-accent-soft px-3 py-1 text-xs font-semibold text-primary"
+												class="bg-blue-accent-soft rounded-full px-3 py-1 text-xs font-semibold text-primary"
 											>
 												Selected
 											</span>

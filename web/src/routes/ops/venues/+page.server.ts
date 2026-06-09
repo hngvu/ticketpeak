@@ -2,6 +2,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { apiFetch, type PageResponse } from '$lib/server/api';
+import { MOCK_VENUES } from '$lib/server/mockData';
 
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const accessToken = cookies.get('ops_access_token');
@@ -16,13 +17,20 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 			}
 		}).catch(() => ({ content: [] }) as any);
 
+		// Merge real API venues with mock venues (deduplicate by ID, API takes precedence)
+		const apiVenues: any[] = venuesRes?.content || [];
+		const apiVenueIds = new Set(apiVenues.map((v: any) => v.id));
+		const mockVenuesToAdd = MOCK_VENUES.filter((v) => !apiVenueIds.has(v.id));
+		const allVenues = [...apiVenues, ...mockVenuesToAdd];
+
 		return {
-			venues: venuesRes?.content || []
+			venues: allVenues
 		};
 	} catch (err: any) {
 		console.error('[OPS VENUES LOAD ERROR]:', err);
+		// Fallback: serve mock venues when API is unreachable
 		return {
-			venues: [],
+			venues: [...MOCK_VENUES],
 			error: err.message || 'Failed to load venues.'
 		};
 	}

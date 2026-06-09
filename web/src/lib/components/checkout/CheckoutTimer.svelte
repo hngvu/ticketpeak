@@ -56,7 +56,7 @@
 <div class="select-none">
 	{#if isExpired}
 		<div
-			class="flex animate-pulse items-center gap-3 rounded-xl border border-error/20 bg-error-soft p-4 text-error-deep"
+			class="bg-error-soft text-error-deep flex animate-pulse items-center gap-3 rounded-xl border border-error/20 p-4"
 		>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -74,7 +74,7 @@
 			</svg>
 			<div>
 				<h4 class="text-sm font-bold">Hold Time Expired</h4>
-				<p class="mt-0.5 text-xs leading-relaxed font-semibold text-error-deep/80">
+				<p class="text-error-deep/80 mt-0.5 text-xs leading-relaxed font-semibold">
 					Your tickets have been released back to the general inventory. Please return to the event
 					page to select tickets again.
 				</p>
@@ -84,8 +84,8 @@
 		<div
 			class="flex items-center justify-between rounded-xl border p-4 transition-colors duration-300
 				{isCritical
-				? 'border-error/25 bg-error-soft/30 text-error-deep'
-				: 'border-warning/25 bg-warning-soft/30 text-warning-deep'}"
+				? 'bg-error-soft/30 text-error-deep border-error/25'
+				: 'bg-warning-soft/30 text-warning-deep border-warning/25'}"
 		>
 			<div class="flex items-center gap-3">
 				<svg
@@ -113,7 +113,7 @@
 			<div class="shrink-0 text-right">
 				<span
 					class="font-mono text-xl font-black tracking-tight sm:text-2xl
-						{isCritical ? 'animate-pulse text-error-deep' : 'text-primary'}"
+						{isCritical ? 'text-error-deep animate-pulse' : 'text-primary'}"
 				>
 					{formattedTime}
 				</span>

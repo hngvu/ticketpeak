@@ -100,7 +100,7 @@
 
 			{#if event.classifications && event.classifications.length > 0}
 				<div
-					class="inline-flex items-center rounded-full bg-blue-accent-soft px-2 py-0.5 text-[9px] font-bold tracking-wider text-primary uppercase"
+					class="bg-blue-accent-soft inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wider text-primary uppercase"
 				>
 					{event.classifications[0].name}
 				</div>

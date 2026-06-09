@@ -243,7 +243,7 @@
 							<button
 								type="button"
 								onclick={() => (bioExpanded = !bioExpanded)}
-								class="mt-3 cursor-pointer font-sans text-xs font-bold text-primary outline-none hover:text-link-deep"
+								class="hover:text-link-deep mt-3 cursor-pointer font-sans text-xs font-bold text-primary outline-none"
 							>
 								{bioExpanded ? 'Read less ▴' : 'Read more ▾'}
 							</button>

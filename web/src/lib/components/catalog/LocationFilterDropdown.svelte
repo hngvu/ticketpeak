@@ -57,7 +57,7 @@
 				<button
 					type="button"
 					onclick={() => selectLocation('all')}
-					class="flex w-full items-center justify-between px-4 py-2.5 text-left text-xs font-semibold transition-colors hover:bg-blue-accent-soft
+					class="hover:bg-blue-accent-soft flex w-full items-center justify-between px-4 py-2.5 text-left text-xs font-semibold transition-colors
 						{selectedLocation === 'all' ? 'bg-blue-accent-soft/30 text-primary' : 'text-slate-700'}"
 				>
 					<span>All Locations</span>
@@ -82,7 +82,7 @@
 					<button
 						type="button"
 						onclick={() => selectLocation(city)}
-						class="flex w-full items-center justify-between px-4 py-2.5 text-left text-xs font-semibold transition-colors hover:bg-blue-accent-soft
+						class="hover:bg-blue-accent-soft flex w-full items-center justify-between px-4 py-2.5 text-left text-xs font-semibold transition-colors
 							{selectedLocation === city ? 'bg-blue-accent-soft/30 text-primary' : 'text-slate-700'}"
 					>
 						<span>{city}</span>

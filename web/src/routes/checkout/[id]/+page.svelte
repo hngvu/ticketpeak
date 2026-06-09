@@ -218,7 +218,7 @@
 							disabled={isExpired}
 							class="flex cursor-pointer flex-col items-start rounded-xl border p-4.5 text-left transition-all duration-200 outline-none
 								{provider === 'VNPAY'
-								? 'border-primary/50 bg-blue-accent-soft/20 shadow-2xs'
+								? 'bg-blue-accent-soft/20 border-primary/50 shadow-2xs'
 								: 'border-hairline bg-canvas hover:border-hairline-strong hover:bg-canvas-soft/10'} disabled:opacity-50"
 						>
 							<div class="flex w-full items-center justify-between">
@@ -244,7 +244,7 @@
 							disabled={isExpired}
 							class="flex cursor-pointer flex-col items-start rounded-xl border p-4.5 text-left transition-all duration-200 outline-none
 								{provider === 'STRIPE'
-								? 'border-primary/50 bg-blue-accent-soft/20 shadow-2xs'
+								? 'bg-blue-accent-soft/20 border-primary/50 shadow-2xs'
 								: 'border-hairline bg-canvas hover:border-hairline-strong hover:bg-canvas-soft/10'} disabled:opacity-50"
 						>
 							<div class="flex w-full items-center justify-between">
@@ -355,7 +355,7 @@
 				<!-- Errors display -->
 				{#if checkoutError}
 					<div
-						class="rounded-xl border border-error/20 bg-error-soft p-4 font-sans text-xs font-bold text-error-deep"
+						class="bg-error-soft text-error-deep rounded-xl border border-error/20 p-4 font-sans text-xs font-bold"
 					>
 						⚠️ {checkoutError}
 					</div>
@@ -367,7 +367,7 @@
 						type="button"
 						onclick={handlePlaceOrder}
 						disabled={isExpired || submitting}
-						class="flex w-full cursor-pointer items-center justify-center rounded-full bg-primary py-3.5 font-sans text-xs font-bold text-white shadow-md transition-all hover:bg-link-deep active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+						class="hover:bg-link-deep flex w-full cursor-pointer items-center justify-center rounded-full bg-primary py-3.5 font-sans text-xs font-bold text-white shadow-md transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						{#if submitting}
 							<svg
@@ -409,7 +409,7 @@
 			>
 				<!-- Icon -->
 				<div
-					class="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-error-soft text-error-deep"
+					class="bg-error-soft text-error-deep mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full"
 				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -439,7 +439,7 @@
 				<button
 					type="button"
 					onclick={() => goto(`/${data.event?.slug ?? ''}`)}
-					class="mt-6 flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-primary py-3 font-sans text-sm font-bold text-white shadow-md transition-all hover:bg-link-deep active:scale-[0.98]"
+					class="hover:bg-link-deep mt-6 flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-primary py-3 font-sans text-sm font-bold text-white shadow-md transition-all active:scale-[0.98]"
 				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"

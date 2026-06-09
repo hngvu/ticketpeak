@@ -24,7 +24,7 @@
 			{#if event.classifications}
 				{#each event.classifications as cls (cls.id)}
 					<span
-						class="rounded-full bg-blue-accent-soft px-3 py-1 font-sans text-xs font-bold tracking-wider text-blue-accent uppercase"
+						class="bg-blue-accent-soft text-blue-accent rounded-full px-3 py-1 font-sans text-xs font-bold tracking-wider uppercase"
 					>
 						{cls.name}
 					</span>

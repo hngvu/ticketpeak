@@ -22,7 +22,7 @@
 >
 	<!-- Glass icon background -->
 	<div
-		class="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-blue-accent-soft text-primary shadow-inner"
+		class="bg-blue-accent-soft mb-5 flex h-14 w-14 items-center justify-center rounded-full text-primary shadow-inner"
 	>
 		<svg
 			class="h-6 w-6"

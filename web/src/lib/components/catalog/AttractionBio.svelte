@@ -38,7 +38,7 @@
 			<button
 				type="button"
 				onclick={() => (isExpanded = !isExpanded)}
-				class="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-primary transition-colors select-none hover:text-link-deep"
+				class="hover:text-link-deep inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-primary transition-colors select-none"
 			>
 				<span>{isExpanded ? 'Read Less' : 'Read More'}</span>
 				<svg

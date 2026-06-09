@@ -61,7 +61,7 @@
 					type="button"
 					onclick={onGetTickets}
 					disabled={reserving}
-					class="flex h-11 shrink-0 items-center justify-center rounded-full bg-primary px-6 font-sans text-xs font-bold text-white shadow-md transition-all hover:bg-link-deep active:scale-[0.98] disabled:opacity-50"
+					class="hover:bg-link-deep flex h-11 shrink-0 items-center justify-center rounded-full bg-primary px-6 font-sans text-xs font-bold text-white shadow-md transition-all active:scale-[0.98] disabled:opacity-50"
 				>
 					{#if reserving}
 						<svg

@@ -4,7 +4,7 @@
 
 {#if status === 'CANCELLED'}
 	<div
-		class="mb-6 flex items-start gap-3 rounded-lg border border-error/20 bg-error-soft p-4 select-none"
+		class="bg-error-soft mb-6 flex items-start gap-3 rounded-lg border border-error/20 p-4 select-none"
 	>
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
@@ -14,15 +14,15 @@
 			stroke-width="2"
 			stroke-linecap="round"
 			stroke-linejoin="round"
-			class="mt-0.5 h-5 w-5 shrink-0 text-error-deep"
+			class="text-error-deep mt-0.5 h-5 w-5 shrink-0"
 		>
 			<circle cx="12" cy="12" r="10" />
 			<line x1="15" x2="9" y1="9" y2="15" />
 			<line x1="9" x2="15" y1="9" y2="15" />
 		</svg>
 		<div>
-			<h4 class="text-sm font-bold text-error-deep">Event Cancelled</h4>
-			<p class="mt-0.5 text-xs leading-relaxed font-semibold text-error-deep/80">
+			<h4 class="text-error-deep text-sm font-bold">Event Cancelled</h4>
+			<p class="text-error-deep/80 mt-0.5 text-xs leading-relaxed font-semibold">
 				This event has been officially cancelled. Ticket refunds will be processed automatically to
 				the original method of payment.
 			</p>
@@ -30,7 +30,7 @@
 	</div>
 {:else if status === 'POSTPONED'}
 	<div
-		class="mb-6 flex items-start gap-3 rounded-lg border border-warning/20 bg-warning-soft p-4 select-none"
+		class="bg-warning-soft mb-6 flex items-start gap-3 rounded-lg border border-warning/20 p-4 select-none"
 	>
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
@@ -40,14 +40,14 @@
 			stroke-width="2"
 			stroke-linecap="round"
 			stroke-linejoin="round"
-			class="mt-0.5 h-5 w-5 shrink-0 text-warning-deep"
+			class="text-warning-deep mt-0.5 h-5 w-5 shrink-0"
 		>
 			<circle cx="12" cy="12" r="10" />
 			<polyline points="12 6 12 12 16 14" />
 		</svg>
 		<div>
-			<h4 class="text-sm font-bold text-warning-deep">Event Postponed</h4>
-			<p class="mt-0.5 text-xs leading-relaxed font-semibold text-warning-deep/80">
+			<h4 class="text-warning-deep text-sm font-bold">Event Postponed</h4>
+			<p class="text-warning-deep/80 mt-0.5 text-xs leading-relaxed font-semibold">
 				This event has been postponed. Hang on to your tickets as they will be valid for the new
 				date, which will be announced soon.
 			</p>

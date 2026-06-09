@@ -211,7 +211,7 @@
 			{#if data.query || data.location || data.startDate || data.endDate}
 				<button
 					onclick={clearAll}
-					class="cursor-pointer text-xs font-bold text-error transition-colors hover:text-error-deep"
+					class="hover:text-error-deep cursor-pointer text-xs font-bold text-error transition-colors"
 				>
 					Clear All Filters
 				</button>

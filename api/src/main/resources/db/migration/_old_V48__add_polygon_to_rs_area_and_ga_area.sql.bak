@@ -1,0 +1,3 @@
+ALTER TABLE rs_area ADD COLUMN polygon JSONB;
+
+ALTER TABLE ga_area ADD COLUMN polygon JSONB;

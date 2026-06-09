@@ -149,7 +149,7 @@
 	<!-- Error Banner (if reservation fails) -->
 	{#if reservationError}
 		<div
-			class="mb-4 rounded-lg border border-error/20 bg-error-soft p-3.5 font-sans text-[11px] leading-relaxed font-semibold text-error-deep"
+			class="bg-error-soft text-error-deep mb-4 rounded-lg border border-error/20 p-3.5 font-sans text-[11px] leading-relaxed font-semibold"
 		>
 			⚠️ {reservationError}
 		</div>
@@ -160,7 +160,7 @@
 		type="button"
 		onclick={onGetTickets}
 		disabled={totalQty === 0 || reserving}
-		class="flex w-full cursor-pointer items-center justify-center rounded-full bg-primary py-3.5 font-sans text-xs font-bold text-white shadow-md transition-all hover:bg-link-deep active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+		class="hover:bg-link-deep flex w-full cursor-pointer items-center justify-center rounded-full bg-primary py-3.5 font-sans text-xs font-bold text-white shadow-md transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
 	>
 		{#if reserving}
 			<svg

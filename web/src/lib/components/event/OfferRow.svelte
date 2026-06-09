@@ -80,7 +80,7 @@
 			{stateLabel === 'soldout'
 			? 'cursor-not-allowed border-hairline bg-canvas-soft/60 opacity-60 select-none'
 			: isSelected
-				? 'border-primary/40 bg-blue-accent-soft/30 shadow-2xs'
+				? 'bg-blue-accent-soft/30 border-primary/40 shadow-2xs'
 				: 'border-hairline bg-canvas hover:border-hairline-strong hover:shadow-2xs'}"
 	>
 		<!-- Left: Clickable details button to expand/collapse -->
@@ -106,7 +106,7 @@
 			<div class="text-right">
 				{#if stateLabel === 'soldout'}
 					<span
-						class="rounded-md bg-error-soft px-2.5 py-1 font-sans text-[10px] font-bold tracking-wider text-error-deep uppercase"
+						class="bg-error-soft text-error-deep rounded-md px-2.5 py-1 font-sans text-[10px] font-bold tracking-wider uppercase"
 					>
 						Sold Out
 					</span>
@@ -143,7 +143,7 @@
 					class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-base font-bold shadow-2xs transition-all active:scale-90
 						{isSelected
 						? 'border border-hairline bg-canvas text-ink hover:border-hairline-strong hover:bg-canvas-soft'
-						: 'bg-primary text-on-primary hover:bg-link-deep'}"
+						: 'hover:bg-link-deep bg-primary text-on-primary'}"
 				>
 					{isSelected ? '−' : '+'}
 				</button>
