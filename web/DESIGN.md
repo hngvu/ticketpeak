@@ -466,10 +466,10 @@ The typography system uses two primary typefaces:
 | ------------------------ | -------------------------------------------------------------------- | ---------------------------------------------- |
 | Level 0 — Flat           | Pure flat fill, no shadow.                                           | Layout sections, main backdrop panels.         |
 | Level 1 — Inset Hairline | 1px solid `{colors.hairline}`.                                       | Default borders on unselected event cards.     |
-| Level 2 — Subtle Drop    | Stacked shadow: `0px 1px 2px rgba(48,56,65,0.05)` + hairline border. | Selected ticket options, input fields.         |
-| Level 3 — Soft Stack     | Stacked shadow: `0px 4px 6px rgba(48,56,65,0.06)` + hairline border. | Interactive event cards, dashboard widgets.    |
-| Level 4 — Float Stack    | Stacked shadow: `0px 10px 15px rgba(48,56,65,0.08)` + hairline.      | Checkout drawer, active ticket preview cards.  |
-| Level 5 — Modal          | Shadow: `0px 20px 25px rgba(48,56,65,0.12)` + 1px hairline border.   | QR code tickets, purchase confirmation modals. |
+| Level 2 — Subtle Drop    | Stacked shadow: `0px 1px 2px oklch(0% 0 0 / 0.05)` + hairline border. | Selected ticket options, input fields.         |
+| Level 3 — Soft Stack     | Stacked shadow: `0px 4px 6px oklch(0% 0 0 / 0.06)` + hairline border. | Interactive event cards, dashboard widgets.    |
+| Level 4 — Float Stack    | Stacked shadow: `0px 10px 15px oklch(0% 0 0 / 0.08)` + hairline.      | Checkout drawer, active ticket preview cards.  |
+| Level 5 — Modal          | Shadow: `0px 20px 25px oklch(0% 0 0 / 0.12)` + 1px hairline border.   | QR code tickets, purchase confirmation modals. |
 
 ## Shapes
 
