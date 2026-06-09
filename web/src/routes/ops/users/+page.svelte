@@ -1,5 +1,7 @@
 <script lang="ts">
 	/* eslint-disable @typescript-eslint/no-explicit-any */
+	import { page } from '$app/state';
+	import PaginationBar from '$lib/components/catalog/PaginationBar.svelte';
 
 	let { data } = $props<{ data: any }>();
 
@@ -96,6 +98,53 @@
 		})
 	);
 
+	// Pagination
+	const itemsPerPage = 10;
+	const currentPage = $derived(Number(page.url.searchParams.get('page')) || 0);
+	const totalPages = $derived(Math.ceil(filteredUsers.length / itemsPerPage));
+
+	const paginatedUsers = $derived(
+		filteredUsers.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage)
+	);
+
+	// Selection
+	let selectedUserIds = $state<string[]>([]);
+	const allSelected = $derived(
+		paginatedUsers.length > 0 && paginatedUsers.every((u) => selectedUserIds.includes(u.id))
+	);
+
+	function toggleAll() {
+		if (allSelected) {
+			selectedUserIds = selectedUserIds.filter((id) => !paginatedUsers.some((u) => u.id === id));
+		} else {
+			const newSelections = paginatedUsers
+				.map((u) => u.id)
+				.filter((id) => !selectedUserIds.includes(id));
+			selectedUserIds = [...selectedUserIds, ...newSelections];
+		}
+	}
+
+	function toggleUserSelection(id: string) {
+		if (selectedUserIds.includes(id)) {
+			selectedUserIds = selectedUserIds.filter((i) => i !== id);
+		} else {
+			selectedUserIds = [...selectedUserIds, id];
+		}
+	}
+
+	// Reset selection and pagination when filters change
+	$effect(() => {
+		// This effect runs when userSearch or userRoleFilter changes
+		// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+		userSearch;
+		// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+		userRoleFilter;
+
+		selectedUserIds = [];
+		// Note: page reset usually happens via URL navigation, but if we're on page 5 and filter results to 1 page,
+		// the PaginationBar will handle showing page 1 (0).
+	});
+
 	function toggleUserBan(id: string) {
 		const usr = usersList.find((u) => u.id === id);
 		if (usr) {
@@ -108,29 +157,25 @@
 		return d.toLocaleString('en-US', {
 			month: 'short',
 			day: 'numeric',
-			year: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit'
+			year: 'numeric'
 		});
 	}
 </script>
 
-<div class="space-y-6 p-6">
-	<div class="animate-fade-in overflow-hidden rounded-lg border border-[#E4E4E7] bg-white">
+<div class="relative min-h-screen space-y-4 p-6 font-sans">
+	<div class="animate-fade-in overflow-hidden rounded-md border border-hairline bg-canvas">
 		<div
-			class="flex flex-col gap-4 border-b border-[#F4F4F5] px-6 py-4 sm:flex-row sm:items-center sm:justify-between"
+			class="flex flex-col gap-4 border-b border-hairline bg-canvas-soft-2 px-6 py-3 sm:flex-row sm:items-center sm:justify-between"
 		>
 			<div class="flex flex-1 items-center gap-3">
 				<div class="relative w-full max-w-xs">
-					<span
-						class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-[#71717A]"
-					>
+					<span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-mute">
 						<svg
-							class="h-4 w-4"
+							class="h-3.5 w-3.5"
 							fill="none"
 							viewBox="0 0 24 24"
 							stroke="currentColor"
-							stroke-width="2"
+							stroke-width="2.5"
 						>
 							<path
 								stroke-linecap="round"
@@ -141,14 +186,14 @@
 					</span>
 					<input
 						type="text"
-						placeholder="Search user email or name..."
+						placeholder="Search users..."
 						bind:value={userSearch}
-						class="w-full rounded-lg border border-[#E4E4E7] bg-[#FAFAFA] py-2 pr-4 pl-9 text-xs font-semibold text-[#111111] placeholder-[#71717A] transition outline-none focus:border-[#71717A] focus:bg-white"
+						class="w-full rounded-sm border border-hairline bg-canvas py-1.5 pr-4 pl-9 text-[13px] font-medium text-ink placeholder-mute transition outline-none focus:border-hairline-strong focus:bg-canvas"
 					/>
 				</div>
 				<select
 					bind:value={userRoleFilter}
-					class="rounded-lg border border-[#E4E4E7] bg-[#FAFAFA] px-3 py-2 text-xs font-semibold text-[#111111] transition outline-none focus:border-[#71717A] focus:bg-white"
+					class="rounded-sm border border-hairline bg-canvas px-3 py-1.5 text-[13px] font-medium text-ink transition outline-none focus:border-hairline-strong"
 				>
 					<option value="all">All Roles</option>
 					<option value="BUYER">Buyer</option>
@@ -157,60 +202,72 @@
 				</select>
 			</div>
 		</div>
+
 		<div class="overflow-x-auto">
-			<table class="w-full border-collapse text-left text-xs font-semibold text-[#71717A]">
+			<table class="w-full border-collapse text-left text-[13px] text-body">
 				<thead>
 					<tr
-						class="border-b border-[#E4E4E7] bg-[#FAFAFA] text-[10px] text-[#71717A] uppercase select-none"
+						class="border-b border-hairline bg-canvas-soft-2 font-mono text-[10px] uppercase tracking-wider text-mute select-none"
 					>
-						<th class="px-6 py-3.5">User Details</th>
-						<th class="px-6 py-3.5">Email Address</th>
-						<th class="px-6 py-3.5">Assigned Role</th>
-						<th class="px-6 py-3.5">Registered Date</th>
-						<th class="px-6 py-3.5">Security Status</th>
-						<th class="px-6 py-3.5 text-right font-bold">Moderation Actions</th>
+						<th class="w-10 px-6 py-2.5">
+							<input
+								type="checkbox"
+								checked={allSelected}
+								onchange={toggleAll}
+								class="h-3.5 w-3.5 cursor-pointer rounded-xs border-hairline accent-primary transition-all"
+							/>
+						</th>
+						<th class="px-6 py-2.5 font-medium">Name</th>
+						<th class="px-6 py-2.5 font-medium">Email</th>
+						<th class="px-6 py-2.5 font-medium">Role</th>
+						<th class="px-6 py-2.5 font-medium">Joined</th>
+						<th class="px-6 py-2.5 font-medium">Status</th>
+						<th class="px-6 py-2.5 text-right font-medium">Actions</th>
 					</tr>
 				</thead>
-				<tbody class="divide-y divide-[#F4F4F5] bg-white text-[#111111]">
-					{#each filteredUsers as user (user.id)}
-						<tr class="hover:bg-[#FAFAFA]">
-							<td class="px-6 py-4 font-bold">{user.name}</td>
-							<td class="px-6 py-4 font-medium text-[#71717A]">{user.email}</td>
-							<td class="px-6 py-4">
+				<tbody class="divide-y divide-hairline bg-canvas">
+					{#each paginatedUsers as user (user.id)}
+						<tr class="group transition-colors hover:bg-canvas-soft">
+							<td class="px-6 py-2.5">
+								<input
+									type="checkbox"
+									checked={selectedUserIds.includes(user.id)}
+									onchange={() => toggleUserSelection(user.id)}
+									class="h-3.5 w-3.5 cursor-pointer rounded-xs border-hairline accent-primary transition-all"
+								/>
+							</td>
+							<td class="px-6 py-2.5 font-medium text-ink">{user.name}</td>
+							<td class="px-6 py-2.5 font-mono text-mute">{user.email}</td>
+							<td class="px-6 py-2.5">
 								<span
-									class="inline-block rounded-md border border-[#E4E4E7] bg-[#F4F4F5] px-2 py-0.5 font-mono text-[9px] text-[#71717A]"
+									class="inline-flex items-center rounded-sm px-1.5 py-0.5 text-[11px] font-medium tracking-tight text-body ring-1 ring-hairline ring-inset"
 								>
 									{user.role}
 								</span>
 							</td>
-							<td class="px-6 py-4 font-medium text-[#71717A]"
-								>{formatDateTime(user.registeredAt)}</td
-							>
-							<td class="px-6 py-4">
+							<td class="px-6 py-2.5 font-mono text-mute">{formatDateTime(user.registeredAt)}</td>
+							<td class="px-6 py-2.5">
 								<span
-									class="inline-block rounded-md px-2.5 py-0.5 text-[9px] font-bold uppercase select-none {user.status ===
+									class="inline-flex items-center rounded-sm px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider {user.status ===
 									'ACTIVE'
-										? 'bg-emerald-50 text-emerald-600'
-										: 'bg-rose-50 text-rose-600'}"
+										? 'bg-success/10 text-success'
+										: 'bg-error/10 text-error'}"
 								>
 									{user.status}
 								</span>
 							</td>
-							<td class="px-6 py-4 text-right">
+							<td class="px-6 py-2.5 text-right">
 								<button
 									onclick={() => toggleUserBan(user.id)}
-									class="cursor-pointer rounded-md border px-3 py-1 text-xs font-bold transition-all active:scale-95 {user.status ===
-									'ACTIVE'
-										? 'border-rose-100 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white'
-										: 'border-emerald-100 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white'}"
+									class="cursor-pointer rounded-sm border border-hairline bg-canvas px-2.5 py-1 text-[11px] font-bold text-ink transition-all hover:border-hairline-strong active:scale-95"
 								>
-									{user.status === 'ACTIVE' ? 'Ban User' : 'Unban User'}
+									{user.status === 'ACTIVE' ? 'Ban' : 'Unban'}
 								</button>
 							</td>
 						</tr>
 					{:else}
 						<tr>
-							<td colspan="6" class="p-12 text-center text-[#71717A] font-medium"
+							<td colspan="7" class="p-12 text-center font-medium text-mute"
 								>No platform users found matching your search.</td
 							>
 						</tr>
@@ -218,5 +275,29 @@
 				</tbody>
 			</table>
 		</div>
+
+		{#if totalPages > 1}
+			<div class="flex items-center justify-center border-t border-hairline bg-canvas-soft-2 py-2">
+				<PaginationBar {currentPage} {totalPages} />
+			</div>
+		{/if}
 	</div>
+
+	<!-- Floating Selection Footer -->
+	{#if selectedUserIds.length > 0}
+		<div
+			class="fixed bottom-8 left-1/2 flex -translate-x-1/2 items-center gap-6 rounded-full border border-hairline bg-canvas px-6 py-3 shadow-xl ring-1 ring-ink/5"
+		>
+			<span class="text-sm font-medium text-ink">
+				{selectedUserIds.length} users selected
+			</span>
+			<div class="h-4 w-px bg-hairline"></div>
+			<button
+				class="rounded-full bg-ink px-4 py-1.5 text-xs font-bold text-on-primary transition-all hover:bg-ink/90 active:scale-95"
+			>
+				Bulk Actions
+			</button>
+		</div>
+	{/if}
 </div>
+
