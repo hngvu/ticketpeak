@@ -119,72 +119,143 @@ export const MOCK_CLASSIFICATIONS = [
 	}
 ];
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Mock Venues – matches VenueResponse API shape
+// ──────────────────────────────────────────────────────────────────────────────
+
 export const MOCK_VENUES = [
 	{
-		id: 'venue-my-dinh',
+		id: '018f4e1a-0003-4000-8000-000000000001',
 		name: 'Sân vận động Quốc gia Mỹ Đình',
-		slug: 'san-van-dong-my-dinh',
-		city: 'Hà Nội',
 		address: 'Đường Lê Đức Thọ, Mỹ Đình 1, Nam Từ Liêm',
-		capacity: 40000,
-		imageUrl:
-			'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80',
-		eventCount: 4
-	},
-	{
-		id: 'venue-quan-khu-7',
-		name: 'Sân vận động Quân khu 7',
-		slug: 'san-van-dong-quan-khu-7',
-		city: 'Hồ Chí Minh',
-		address: '202 Hoàng Văn Thụ, Phường 9, Phú Nhuận',
-		capacity: 25000,
-		imageUrl:
-			'https://images.unsplash.com/photo-1487466365836-440d8294a87a?auto=format&fit=crop&w=800&q=80',
-		eventCount: 3
-	},
-	{
-		id: 'venue-phu-tho',
-		name: 'Nhà thi đấu Phú Thọ',
-		slug: 'nha-thi-dau-phu-tho',
-		city: 'Hồ Chí Minh',
-		address: '1 Lữ Gia, Phường 15, Quận 11',
-		capacity: 8000,
-		imageUrl:
-			'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?auto=format&fit=crop&w=800&q=80',
-		eventCount: 2
-	},
-	{
-		id: 'venue-hanoi-opera',
-		name: 'Nhà hát Lớn Hà Nội',
-		slug: 'nha-hat-lon-ha-noi',
 		city: 'Hà Nội',
-		address: '1 Tràng Tiền, Phan Chu Trinh, Hoàn Kiếm',
-		capacity: 600,
-		imageUrl:
-			'https://images.unsplash.com/photo-1503095396549-807759245b35?auto=format&fit=crop&w=800&q=80',
-		eventCount: 3
+		country: 'Vietnam',
+		latitude: 21.020504,
+		longitude: 105.773824,
+		phone: '+84 24 3785 0789',
+		email: 'info@mydinhstadium.vn',
+		website: 'https://mydinhstadium.vn',
+		description: 'Sân vận động quốc gia lớn nhất Việt Nam, sức chứa 40.000 chỗ ngồi.',
+		thumbnailUrl:
+			'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80',
+		images: [],
+		status: 'ACTIVE' as const,
+		createdAt: '2025-06-01T08:00:00Z',
+		updatedAt: '2026-01-15T10:30:00Z'
 	},
 	{
-		id: 'venue-hoa-binh',
-		name: 'Nhà hát Hòa Bình',
-		slug: 'nha-hat-hoa-binh',
+		id: '018f4e1a-0004-4000-8000-000000000001',
+		name: 'Sân vận động Quân khu 7',
+		address: '202 Hoàng Văn Thụ, Phường 9, Phú Nhuận',
 		city: 'Hồ Chí Minh',
-		address: '240 Đường 3 Tháng 2, Phường 12, Quận 10',
-		capacity: 2300,
-		imageUrl:
-			'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?auto=format&fit=crop&w=800&q=80',
-		eventCount: 2
+		country: 'Vietnam',
+		latitude: 10.799511,
+		longitude: 106.666691,
+		phone: '+84 28 3844 1234',
+		email: 'contact@qk7stadium.vn',
+		website: null,
+		description: 'Sân vận động đa năng tại trung tâm TP.HCM, sức chứa 25.000.',
+		thumbnailUrl:
+			'https://images.unsplash.com/photo-1487466365836-440d8294a87a?auto=format&fit=crop&w=800&q=80',
+		images: [],
+		status: 'ACTIVE' as const,
+		createdAt: '2025-06-15T08:00:00Z',
+		updatedAt: '2026-02-10T14:20:00Z'
 	},
 	{
-		id: 'venue-da-nang-tuyen-son',
+		id: '018f4e1a-0005-4000-8000-000000000001',
+		name: 'Nhà thi đấu Phú Thọ',
+		address: '1 Lữ Gia, Phường 15, Quận 11',
+		city: 'Hồ Chí Minh',
+		country: 'Vietnam',
+		latitude: 10.763511,
+		longitude: 106.656811,
+		phone: '+84 28 3865 5678',
+		email: 'booking@phuthoarena.vn',
+		website: 'https://phuthoarena.vn',
+		description: 'Nhà thi đấu trong nhà hiện đại, phù hợp concert và sự kiện thể thao.',
+		thumbnailUrl:
+			'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?auto=format&fit=crop&w=800&q=80',
+		images: [],
+		status: 'ACTIVE' as const,
+		createdAt: '2025-07-20T08:00:00Z',
+		updatedAt: '2026-03-01T09:00:00Z'
+	},
+	{
+		id: '018f4e1a-0006-4000-8000-000000000001',
+		name: 'Nhà hát Lớn Hà Nội',
+		address: '1 Tràng Tiền, Phan Chu Trinh, Hoàn Kiếm',
+		city: 'Hà Nội',
+		country: 'Vietnam',
+		latitude: 21.024222,
+		longitude: 105.855833,
+		phone: '+84 24 3933 1488',
+		email: 'info@hanoiopera.org.vn',
+		website: 'https://hanoiopera.org.vn',
+		description: 'Công trình kiến trúc Pháp cổ điển, trung tâm văn hóa nghệ thuật Hà Nội.',
+		thumbnailUrl:
+			'https://images.unsplash.com/photo-1503095396549-807759245b35?auto=format&fit=crop&w=800&q=80',
+		images: [],
+		status: 'ACTIVE' as const,
+		createdAt: '2025-05-01T08:00:00Z',
+		updatedAt: '2026-03-20T10:30:00Z'
+	},
+	{
+		id: '018f4e1a-0001-4000-8000-000000000001',
+		name: 'Nhà hát Hòa Bình',
+		address: '240 Đường 3 Tháng 2, Phường 12, Quận 10',
+		city: 'Hồ Chí Minh',
+		country: 'Vietnam',
+		latitude: 10.776611,
+		longitude: 106.678311,
+		phone: '+84 28 3865 1234',
+		email: 'events@hoabinhtheatre.vn',
+		website: null,
+		description: 'Nhà hát lớn tại Quận 10, chuyên tổ chức concert và sân khấu nghệ thuật.',
+		thumbnailUrl:
+			'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?auto=format&fit=crop&w=800&q=80',
+		images: [],
+		status: 'ACTIVE' as const,
+		createdAt: '2025-08-10T08:00:00Z',
+		updatedAt: '2026-01-05T11:00:00Z'
+	},
+	{
+		id: '018f4e1a-0007-4000-8000-000000000001',
 		name: 'Cung thể thao Tuyên Sơn',
-		slug: 'cung-the-thao-tuyen-son',
-		city: 'Đà Nẵng',
 		address: 'Phường Hòa Cường Bắc, Hải Châu',
-		capacity: 7000,
-		imageUrl:
+		city: 'Đà Nẵng',
+		country: 'Vietnam',
+		latitude: 16.031511,
+		longitude: 108.225911,
+		phone: '+84 236 3621 789',
+		email: 'info@tuyensonarena.vn',
+		website: 'https://tuyensonarena.vn',
+		description: 'Trung tâm thể thao và sự kiện hàng đầu tại Đà Nẵng.',
+		thumbnailUrl:
 			'https://images.unsplash.com/photo-1472712739516-7ad2b786e1f7?auto=format&fit=crop&w=800&q=80',
-		eventCount: 2
+		images: [],
+		status: 'ACTIVE' as const,
+		createdAt: '2025-09-01T08:00:00Z',
+		updatedAt: '2026-02-28T15:00:00Z'
+	},
+	{
+		id: '019e90ee-6afa-70fc-aa55-2159192f0729',
+		name: 'Hollywood Bowl',
+		address: '2301 N Highland Ave, Los Angeles, CA 90068',
+		city: 'Los Angeles',
+		country: 'United States',
+		latitude: 34.112222,
+		longitude: -118.339811,
+		phone: '+1 323 850 2000',
+		email: 'info@hollywoodbowl.com',
+		website: 'https://hollywoodbowl.com',
+		description: 'Iconic outdoor amphitheater in the Hollywood Hills, seating 17,500.',
+		thumbnailUrl:
+			'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=800&q=80',
+		images: [],
+		status: 'ACTIVE' as const,
+		createdAt: '2025-12-01T08:00:00Z',
+		updatedAt: '2026-05-01T12:00:00Z'
 	}
 ];
 
@@ -241,7 +312,7 @@ export const MOCK_EVENTS = [
 		title: 'Sơn Tùng M-TP | Sky Decibel Live Tour HCMC',
 		slug: 'son-tung-decibel-hcm',
 		startAt: getFutureDate(3, 19),
-		venueId: 'venue-quan-khu-7',
+		venueId: '018f4e1a-0004-4000-8000-000000000001',
 		venueName: 'Sân vận động Quân khu 7',
 		cityName: 'Hồ Chí Minh',
 		classifications: [{ id: 'genre-pop', name: 'Pop', slug: 'pop' }],
@@ -252,7 +323,7 @@ export const MOCK_EVENTS = [
 		title: 'Đen Vâu Live Concert - Show của Đen 2026',
 		slug: 'show-cua-den-hn',
 		startAt: getFutureDate(10, 19),
-		venueId: 'venue-my-dinh',
+		venueId: '018f4e1a-0003-4000-8000-000000000001',
 		venueName: 'Sân vận động Quốc gia Mỹ Đình',
 		cityName: 'Hà Nội',
 		classifications: [{ id: 'genre-indie', name: 'Indie & Folk', slug: 'indie' }],
@@ -263,7 +334,7 @@ export const MOCK_EVENTS = [
 		title: 'Taylor Swift | The Eras Tour Vietnam Special',
 		slug: 'the-eras-tour-vietnam',
 		startAt: getFutureDate(18, 18),
-		venueId: 'venue-my-dinh',
+		venueId: '018f4e1a-0003-4000-8000-000000000001',
 		venueName: 'Sân vận động Quốc gia Mỹ Đình',
 		cityName: 'Hà Nội',
 		classifications: [{ id: 'genre-pop', name: 'Pop', slug: 'pop' }],
@@ -274,7 +345,7 @@ export const MOCK_EVENTS = [
 		title: 'V-League Classic Match: Hanoi FC vs HA Gia Lai',
 		slug: 'hanoi-fc-vs-hagl',
 		startAt: getFutureDate(1, 17),
-		venueId: 'venue-my-dinh',
+		venueId: '018f4e1a-0003-4000-8000-000000000001',
 		venueName: 'Sân vận động Quốc gia Mỹ Đình',
 		cityName: 'Hà Nội',
 		classifications: [{ id: 'genre-football', name: 'Football (Soccer)', slug: 'football' }],
@@ -285,7 +356,7 @@ export const MOCK_EVENTS = [
 		title: 'Broadway Musical: Les Misérables (Những Người Khốn Khổ)',
 		slug: 'les-miserables-vietnam',
 		startAt: getFutureDate(2, 19),
-		venueId: 'venue-hanoi-opera',
+		venueId: '018f4e1a-0006-4000-8000-000000000001',
 		venueName: 'Nhà hát Lớn Hà Nội',
 		cityName: 'Hà Nội',
 		classifications: [{ id: 'genre-musical', name: 'Musicals & Plays', slug: 'musical' }],
@@ -296,7 +367,7 @@ export const MOCK_EVENTS = [
 		title: 'Saigon Stand-Up Comedy Special Night 2026',
 		slug: 'saigon-comedy-special',
 		startAt: getFutureDate(4, 20),
-		venueId: 'venue-hoa-binh',
+		venueId: '018f4e1a-0001-4000-8000-000000000001',
 		venueName: 'Nhà hát Hòa Bình',
 		cityName: 'Hồ Chí Minh',
 		classifications: [{ id: 'genre-comedy', name: 'Stand-Up Comedy', slug: 'comedy' }],
@@ -307,7 +378,7 @@ export const MOCK_EVENTS = [
 		title: 'Vibe Nation Electronic Dance Music Festival',
 		slug: 'vibe-nation-edm-fest',
 		startAt: getFutureDate(8, 15),
-		venueId: 'venue-da-nang-tuyen-son',
+		venueId: '018f4e1a-0007-4000-8000-000000000001',
 		venueName: 'Cung thể thao Tuyên Sơn',
 		cityName: 'Đà Nẵng',
 		classifications: [{ id: 'genre-edm', name: 'EDM & Electronic', slug: 'edm' }],
@@ -318,7 +389,7 @@ export const MOCK_EVENTS = [
 		title: 'Rap Việt All-Stars Concert 2026 Live in HCMC',
 		slug: 'rap-viet-all-stars-2026',
 		startAt: getFutureDate(12, 19),
-		venueId: 'venue-quan-khu-7',
+		venueId: '018f4e1a-0004-4000-8000-000000000001',
 		venueName: 'Sân vận động Quân khu 7',
 		cityName: 'Hồ Chí Minh',
 		classifications: [{ id: 'genre-indie', name: 'Indie & Folk', slug: 'indie' }],
@@ -329,7 +400,7 @@ export const MOCK_EVENTS = [
 		title: 'Vietnam National Symphony Orchestra Concert Series',
 		slug: 'vnso-classical-concert',
 		startAt: getFutureDate(6, 19),
-		venueId: 'venue-hanoi-opera',
+		venueId: '018f4e1a-0006-4000-8000-000000000001',
 		venueName: 'Nhà hát Lớn Hà Nội',
 		cityName: 'Hà Nội',
 		classifications: [{ id: 'genre-dance', name: 'Classical Dance', slug: 'dance' }],
@@ -340,7 +411,7 @@ export const MOCK_EVENTS = [
 		title: 'VBA Playoff Finals: Saigon Heat vs Danang Dragons',
 		slug: 'saigon-heat-vs-danang-dragons',
 		startAt: getFutureDate(14, 18),
-		venueId: 'venue-phu-tho',
+		venueId: '018f4e1a-0005-4000-8000-000000000001',
 		venueName: 'Nhà thi đấu Phú Thọ',
 		cityName: 'Hồ Chí Minh',
 		classifications: [{ id: 'genre-basketball', name: 'Basketball', slug: 'basketball' }],
@@ -410,7 +481,7 @@ function _genRows(
 
 export const MOCK_MANIFEST_HANOI_OPERA = {
 	id: 'M100001',
-	venueId: 'venue-hanoi-opera',
+	venueId: '018f4e1a-0006-4000-8000-000000000001',
 	description: 'Concert Layout – Nhà hát Lớn Hà Nội',
 	totalCapacity: 580,
 	status: 'PUBLISHED',
@@ -429,8 +500,18 @@ export const MOCK_MANIFEST_HANOI_OPERA_LEVELS = [
 
 export const MOCK_MANIFEST_HANOI_OPERA_SECTIONS = [
 	{ id: 'SEC-VIP', manifestId: 'M100001', description: 'VIP Front Row', color: '#F59E0B' },
-	{ id: 'SEC-A', manifestId: 'M100001', description: 'Standard A – Orchestra Center', color: '#3B82F6' },
-	{ id: 'SEC-B', manifestId: 'M100001', description: 'Standard B – Orchestra Wings', color: '#10B981' },
+	{
+		id: 'SEC-A',
+		manifestId: 'M100001',
+		description: 'Standard A – Orchestra Center',
+		color: '#3B82F6'
+	},
+	{
+		id: 'SEC-B',
+		manifestId: 'M100001',
+		description: 'Standard B – Orchestra Wings',
+		color: '#10B981'
+	},
 	{ id: 'SEC-C', manifestId: 'M100001', description: 'Balcony Seats', color: '#8B5CF6' }
 ];
 
@@ -450,32 +531,52 @@ export const MOCK_MANIFEST_HANOI_OPERA_RS_AREAS = [
 		id: _haOperaVipAreaId,
 		manifestId: 'M100001',
 		levelId: 'L1',
-		x: 220, y: 140, width: 460, height: 120,
-		sectionId: 'SEC-VIP', priceLevelId: 'PL-VIP', curvature: 20,
+		x: 220,
+		y: 140,
+		width: 460,
+		height: 120,
+		sectionId: 'SEC-VIP',
+		priceLevelId: 'PL-VIP',
+		curvature: 20,
 		rows: _genRows(_haOperaVipAreaId, 'A', 65, 2, 16, 1, 240, 150, 'SEC-VIP', 'PL-VIP')
 	},
 	{
 		id: _haOperaCenterAreaId,
 		manifestId: 'M100001',
 		levelId: 'L1',
-		x: 220, y: 280, width: 460, height: 180,
-		sectionId: 'SEC-A', priceLevelId: 'PL-PREM', curvature: 10,
+		x: 220,
+		y: 280,
+		width: 460,
+		height: 180,
+		sectionId: 'SEC-A',
+		priceLevelId: 'PL-PREM',
+		curvature: 10,
 		rows: _genRows(_haOperaCenterAreaId, 'C', 67, 4, 16, 1, 240, 290, 'SEC-A', 'PL-PREM')
 	},
 	{
 		id: _haOperaWingAreaId,
 		manifestId: 'M100001',
 		levelId: 'L1',
-		x: 60, y: 280, width: 140, height: 140,
-		sectionId: 'SEC-B', priceLevelId: 'PL-STD', curvature: 0,
+		x: 60,
+		y: 280,
+		width: 140,
+		height: 140,
+		sectionId: 'SEC-B',
+		priceLevelId: 'PL-STD',
+		curvature: 0,
 		rows: _genRows(_haOperaWingAreaId, 'L', 76, 3, 6, 1, 70, 290, 'SEC-B', 'PL-STD')
 	},
 	{
 		id: _haOperaBalconyAreaId,
 		manifestId: 'M100001',
 		levelId: 'L2',
-		x: 120, y: 500, width: 660, height: 100,
-		sectionId: 'SEC-C', priceLevelId: 'PL-STD', curvature: 5,
+		x: 120,
+		y: 500,
+		width: 660,
+		height: 100,
+		sectionId: 'SEC-C',
+		priceLevelId: 'PL-STD',
+		curvature: 5,
 		rows: _genRows(_haOperaBalconyAreaId, 'P', 80, 2, 20, 1, 140, 510, 'SEC-C', 'PL-STD')
 	}
 ];
@@ -487,7 +588,10 @@ export const MOCK_MANIFEST_HANOI_OPERA_GA_AREAS = [
 		levelId: 'L1',
 		priceLevelId: 'PL-STD',
 		capacity: 50,
-		x: 60, y: 140, width: 140, height: 100
+		x: 60,
+		y: 140,
+		width: 140,
+		height: 100
 	}
 ];
 
@@ -495,7 +599,7 @@ export const MOCK_MANIFEST_HANOI_OPERA_GA_AREAS = [
 
 export const MOCK_MANIFEST_MY_DINH = {
 	id: 'M200001',
-	venueId: 'venue-my-dinh',
+	venueId: '018f4e1a-0003-4000-8000-000000000001',
 	description: 'Concert Stadium Layout – Mỹ Đình',
 	totalCapacity: 38000,
 	status: 'DRAFT',
@@ -503,7 +607,16 @@ export const MOCK_MANIFEST_MY_DINH = {
 	updatedAt: '2026-04-05T14:20:00Z',
 	objects: [
 		{ type: 'stage', text: 'MAIN STAGE', x: 350, y: 10, width: 500, height: 100 },
-		{ type: 'shape', shape: 'rect', x: 350, y: 120, width: 500, height: 30, color: '#E2E8F0', opacity: 0.4 },
+		{
+			type: 'shape',
+			shape: 'rect',
+			x: 350,
+			y: 120,
+			width: 500,
+			height: 30,
+			color: '#E2E8F0',
+			opacity: 0.4
+		},
 		{ type: 'label', text: 'BARRIER', x: 550, y: 125, fontSize: 10, color: '#94A3B8' },
 		{ type: 'label', text: 'FOH / Sound Tower', x: 600, y: 750, fontSize: 12, color: '#64748B' }
 	]
@@ -517,12 +630,12 @@ export const MOCK_MANIFEST_MY_DINH_LEVELS = [
 
 export const MOCK_MANIFEST_MY_DINH_SECTIONS = [
 	{ id: 'S-VIP', manifestId: 'M200001', description: 'VIP Floor Front', color: '#F59E0B' },
-	{ id: 'S-GA',  manifestId: 'M200001', description: 'General Admission Floor', color: '#EF4444' },
-	{ id: 'S-A',   manifestId: 'M200001', description: 'Stand A – North', color: '#3B82F6' },
-	{ id: 'S-B',   manifestId: 'M200001', description: 'Stand B – South', color: '#10B981' },
-	{ id: 'S-C',   manifestId: 'M200001', description: 'Stand C – East', color: '#6366F1' },
-	{ id: 'S-D',   manifestId: 'M200001', description: 'Stand D – West', color: '#EC4899' },
-	{ id: 'S-U',   manifestId: 'M200001', description: 'Upper Tier', color: '#8B5CF6' }
+	{ id: 'S-GA', manifestId: 'M200001', description: 'General Admission Floor', color: '#EF4444' },
+	{ id: 'S-A', manifestId: 'M200001', description: 'Stand A – North', color: '#3B82F6' },
+	{ id: 'S-B', manifestId: 'M200001', description: 'Stand B – South', color: '#10B981' },
+	{ id: 'S-C', manifestId: 'M200001', description: 'Stand C – East', color: '#6366F1' },
+	{ id: 'S-D', manifestId: 'M200001', description: 'Stand D – West', color: '#EC4899' },
+	{ id: 'S-U', manifestId: 'M200001', description: 'Upper Tier', color: '#8B5CF6' }
 ];
 
 export const MOCK_MANIFEST_MY_DINH_PRICE_LEVELS = [
@@ -532,64 +645,92 @@ export const MOCK_MANIFEST_MY_DINH_PRICE_LEVELS = [
 	{ id: 'P-ECO', manifestId: 'M200001', description: 'Economy – 600.000₫', color: '#8B5CF6' }
 ];
 
-const _mdVipId    = 'M200001-VIP';
+const _mdVipId = 'M200001-VIP';
 const _mdStandAId = 'M200001-STAND-A';
 const _mdStandBId = 'M200001-STAND-B';
-const _mdUpperId  = 'M200001-UPPER';
+const _mdUpperId = 'M200001-UPPER';
 
 export const MOCK_MANIFEST_MY_DINH_RS_AREAS = [
 	{
-		id: _mdVipId, manifestId: 'M200001', levelId: 'FL',
-		x: 300, y: 180, width: 600, height: 200,
-		sectionId: 'S-VIP', priceLevelId: 'P-VIP', curvature: 15,
+		id: _mdVipId,
+		manifestId: 'M200001',
+		levelId: 'FL',
+		x: 300,
+		y: 180,
+		width: 600,
+		height: 200,
+		sectionId: 'S-VIP',
+		priceLevelId: 'P-VIP',
+		curvature: 15,
 		rows: _genRows(_mdVipId, 'A', 65, 4, 20, 1, 320, 190, 'S-VIP', 'P-VIP')
 	},
 	{
-		id: _mdStandAId, manifestId: 'M200001', levelId: 'T1',
-		x: 100, y: 440, width: 400, height: 160,
-		sectionId: 'S-A', priceLevelId: 'P-STD', curvature: 0,
+		id: _mdStandAId,
+		manifestId: 'M200001',
+		levelId: 'T1',
+		x: 100,
+		y: 440,
+		width: 400,
+		height: 160,
+		sectionId: 'S-A',
+		priceLevelId: 'P-STD',
+		curvature: 0,
 		rows: _genRows(_mdStandAId, 'N', 78, 3, 14, 1, 120, 450, 'S-A', 'P-STD')
 	},
 	{
-		id: _mdStandBId, manifestId: 'M200001', levelId: 'T1',
-		x: 700, y: 440, width: 400, height: 160,
-		sectionId: 'S-B', priceLevelId: 'P-STD', curvature: 0,
+		id: _mdStandBId,
+		manifestId: 'M200001',
+		levelId: 'T1',
+		x: 700,
+		y: 440,
+		width: 400,
+		height: 160,
+		sectionId: 'S-B',
+		priceLevelId: 'P-STD',
+		curvature: 0,
 		rows: _genRows(_mdStandBId, 'S', 83, 3, 14, 1, 720, 450, 'S-B', 'P-STD')
 	},
 	{
-		id: _mdUpperId, manifestId: 'M200001', levelId: 'T2',
-		x: 100, y: 650, width: 1000, height: 120,
-		sectionId: 'S-U', priceLevelId: 'P-ECO', curvature: 8,
+		id: _mdUpperId,
+		manifestId: 'M200001',
+		levelId: 'T2',
+		x: 100,
+		y: 650,
+		width: 1000,
+		height: 120,
+		sectionId: 'S-U',
+		priceLevelId: 'P-ECO',
+		curvature: 8,
 		rows: _genRows(_mdUpperId, 'U', 85, 2, 30, 1, 120, 660, 'S-U', 'P-ECO')
 	}
 ];
 
 export const MOCK_MANIFEST_MY_DINH_GA_AREAS = [
 	{
-		id: 'M200001-GA-FLOOR', manifestId: 'M200001', levelId: 'FL',
-		priceLevelId: 'P-PRM', capacity: 15000,
-		x: 300, y: 400, width: 600, height: 20
+		id: 'M200001-GA-FLOOR',
+		manifestId: 'M200001',
+		levelId: 'FL',
+		priceLevelId: 'P-PRM',
+		capacity: 15000,
+		x: 300,
+		y: 400,
+		width: 600,
+		height: 20
 	},
 	{
-		id: 'M200001-GA-STAND', manifestId: 'M200001', levelId: 'T1',
-		priceLevelId: 'P-ECO', capacity: 8000,
-		x: 520, y: 440, width: 160, height: 160
+		id: 'M200001-GA-STAND',
+		manifestId: 'M200001',
+		levelId: 'T1',
+		priceLevelId: 'P-ECO',
+		capacity: 8000,
+		x: 520,
+		y: 440,
+		width: 160,
+		height: 160
 	}
 ];
 
 // ── Hollywood Bowl – Amphitheater Layout ──────────────────────────────────────
-
-export const MOCK_VENUE_HOLLYWOOD_BOWL = {
-	id: '019e90ee-6afa-70fc-aa55-2159192f0729',
-	name: 'Hollywood Bowl',
-	slug: 'hollywood-bowl',
-	city: 'Los Angeles',
-	address: '2301 N Highland Ave, Los Angeles, CA 90068',
-	capacity: 17500,
-	imageUrl:
-		'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=800&q=80',
-	eventCount: 5
-};
 
 export const MOCK_MANIFEST_HOLLYWOOD_BOWL = {
 	id: 'MHB0001',
@@ -599,36 +740,59 @@ export const MOCK_MANIFEST_HOLLYWOOD_BOWL = {
 	status: 'PUBLISHED',
 	createdAt: '2026-01-10T08:00:00Z',
 	updatedAt: '2026-05-01T12:00:00Z',
-	objects: [
-		{ type: 'stage', text: 'SHELL', x: 10, y: 320, width: 120, height: 160 }
-	]
+	// Stage SHELL nằm ngay trước vùng fan (fan center = 520,420; shell ở bên trái)
+	objects: [{ type: 'stage', text: 'SHELL', x: 460, y: 340, width: 120, height: 160 }]
 };
 
-export const MOCK_MANIFEST_HB_LEVELS: any[] = [];
+export const MOCK_MANIFEST_HB_LEVELS = [
+	{ id: 'L-ORCH', manifestId: 'MHB0001', description: 'Orchestra', color: '#3B82F6' },
+	{ id: 'L-TER',  manifestId: 'MHB0001', description: 'Terrace',   color: '#8B5CF6' },
+	{ id: 'L-BOX',  manifestId: 'MHB0001', description: 'Box',       color: '#F59E0B' },
+	{ id: 'L-GARD', manifestId: 'MHB0001', description: 'Garden',    color: '#94A3B8' }
+];
 
-export const MOCK_MANIFEST_HB_SECTIONS: any[] = [];
+export const MOCK_MANIFEST_HB_SECTIONS = [
+	{ id: 'SEC-BOX',  manifestId: 'MHB0001', description: 'Box Seats',   color: '#F59E0B' },
+	{ id: 'SEC-ORCH', manifestId: 'MHB0001', description: 'Orchestra',   color: '#3B82F6' },
+	{ id: 'SEC-TER',  manifestId: 'MHB0001', description: 'Terrace',     color: '#8B5CF6' },
+	{ id: 'SEC-GARD', manifestId: 'MHB0001', description: 'Garden Lawn', color: '#94A3B8' }
+];
 
 export const MOCK_MANIFEST_HB_PRICE_LEVELS = [
-	{ id: 'P-BOX',  manifestId: 'MHB0001', description: 'Box – $350',      color: '#F59E0B' },
-	{ id: 'P-PREM', manifestId: 'MHB0001', description: 'Premium – $220',  color: '#1E40AF' },
-	{ id: 'P-STD',  manifestId: 'MHB0001', description: 'Standard – $120', color: '#3B82F6' },
-	{ id: 'P-TER',  manifestId: 'MHB0001', description: 'Terrace – $85',   color: '#8B5CF6' },
-	{ id: 'P-GARD', manifestId: 'MHB0001', description: 'Garden – $55',    color: '#94A3B8' }
+	{ id: 'P-BOX', manifestId: 'MHB0001', description: 'Box – $350', color: '#F59E0B' },
+	{ id: 'P-PREM', manifestId: 'MHB0001', description: 'Premium – $220', color: '#1E40AF' },
+	{ id: 'P-STD', manifestId: 'MHB0001', description: 'Standard – $120', color: '#3B82F6' },
+	{ id: 'P-TER', manifestId: 'MHB0001', description: 'Terrace – $85', color: '#8B5CF6' },
+	{ id: 'P-GARD', manifestId: 'MHB0001', description: 'Garden – $55', color: '#94A3B8' }
 ];
 
 // Fan geometry helpers
-const _HB_CX = 70, _HB_CY = 400;
+// Center dịch về x=520 để toàn bộ fan nằm trong vùng tọa độ dương
+const _HB_CX = 520,
+	_HB_CY = 420;
 const _toRad = (d: number) => (d * Math.PI) / 180;
 
-function _fanPolygon(innerR: number, outerR: number, deg1: number, deg2: number, steps = 30): [number, number][] {
+function _fanPolygon(
+	innerR: number,
+	outerR: number,
+	deg1: number,
+	deg2: number,
+	steps = 30
+): [number, number][] {
 	const pts: [number, number][] = [];
 	for (let i = 0; i <= steps; i++) {
 		const a = _toRad(deg1 + ((deg2 - deg1) * i) / steps);
-		pts.push([Math.round(_HB_CX + innerR * Math.cos(a)), Math.round(_HB_CY + innerR * Math.sin(a))]);
+		pts.push([
+			Math.round(_HB_CX + innerR * Math.cos(a)),
+			Math.round(_HB_CY + innerR * Math.sin(a))
+		]);
 	}
 	for (let i = steps; i >= 0; i--) {
 		const a = _toRad(deg1 + ((deg2 - deg1) * i) / steps);
-		pts.push([Math.round(_HB_CX + outerR * Math.cos(a)), Math.round(_HB_CY + outerR * Math.sin(a))]);
+		pts.push([
+			Math.round(_HB_CX + outerR * Math.cos(a)),
+			Math.round(_HB_CY + outerR * Math.sin(a))
+		]);
 	}
 	return pts;
 }
@@ -674,81 +838,58 @@ function _fanSeats(
 
 const _hb = 'MHB0001';
 
-// Orchestra – inner 180, outer 360
-const _areaA = { id: `${_hb}-AREA-A`, manifestId: _hb, levelId: 'L-ORCH', priceLevelId: 'P-STD', color: '#60A5FA',
-	x: 0, y: 0, width: 0, height: 0, curvature: 0,
-	polygon: _fanPolygon(180, 360, -80, -60),
-	rows: _fanSeats(`${_hb}-AREA-A`, 65, 4, 6, 180, 360, -80, -60, null, 'P-STD') };
+// seatsPerRow = floor(span_deg × avg_r × π/180 / spacing_px)
+// spacing_px = 14 (gap rõ giữa các dot)
+// rowCount   = floor((outerR - innerR) / row_gap_px), row_gap_px = 20
+//
+// Orchestra innerR=180 outerR=360 avg_r=270 row_gap=20 → rows=9
+//   span 20°: arc = 20×270×π/180 = 94px → seats = floor(94/14) = 6
+//   span 25°: arc = 118px → seats = 8
+//   span 30°: arc = 141px → seats = 10
 
-const _areaB = { id: `${_hb}-AREA-B`, manifestId: _hb, levelId: 'L-ORCH', priceLevelId: 'P-STD', color: '#3B82F6',
-	x: 0, y: 0, width: 0, height: 0, curvature: 0,
-	polygon: _fanPolygon(180, 360, -60, -40),
-	rows: _fanSeats(`${_hb}-AREA-B`, 65, 5, 8, 180, 360, -60, -40, null, 'P-STD') };
+const _areaA  = { id:`${_hb}-AREA-A`,  manifestId:_hb, levelId:'L-ORCH', priceLevelId:'P-STD',  color:'#60A5FA', x:0,y:0,width:0,height:0,curvature:0, polygon:_fanPolygon(180,360,-80,-60), rows:_fanSeats(`${_hb}-AREA-A`, 65,9,6, 180,360,-80,-60,'SEC-ORCH','P-STD') };
+const _areaB  = { id:`${_hb}-AREA-B`,  manifestId:_hb, levelId:'L-ORCH', priceLevelId:'P-STD',  color:'#3B82F6', x:0,y:0,width:0,height:0,curvature:0, polygon:_fanPolygon(180,360,-60,-40), rows:_fanSeats(`${_hb}-AREA-B`, 65,9,6, 180,360,-60,-40,'SEC-ORCH','P-STD') };
+const _areaC  = { id:`${_hb}-AREA-C`,  manifestId:_hb, levelId:'L-ORCH', priceLevelId:'P-STD',  color:'#2563EB', x:0,y:0,width:0,height:0,curvature:0, polygon:_fanPolygon(180,360,-40,-15), rows:_fanSeats(`${_hb}-AREA-C`, 65,9,8, 180,360,-40,-15,'SEC-ORCH','P-STD') };
+const _areaD  = { id:`${_hb}-AREA-D`,  manifestId:_hb, levelId:'L-ORCH', priceLevelId:'P-PREM', color:'#1E40AF', x:0,y:0,width:0,height:0,curvature:0, polygon:_fanPolygon(180,360,-15, 15), rows:_fanSeats(`${_hb}-AREA-D`, 65,9,10,180,360,-15, 15,'SEC-ORCH','P-PREM') };
+const _areaE  = { id:`${_hb}-AREA-E`,  manifestId:_hb, levelId:'L-ORCH', priceLevelId:'P-STD',  color:'#2563EB', x:0,y:0,width:0,height:0,curvature:0, polygon:_fanPolygon(180,360, 15, 40), rows:_fanSeats(`${_hb}-AREA-E`, 65,9,8, 180,360, 15, 40,'SEC-ORCH','P-STD') };
+const _areaF  = { id:`${_hb}-AREA-F`,  manifestId:_hb, levelId:'L-ORCH', priceLevelId:'P-STD',  color:'#3B82F6', x:0,y:0,width:0,height:0,curvature:0, polygon:_fanPolygon(180,360, 40, 60), rows:_fanSeats(`${_hb}-AREA-F`, 65,9,6, 180,360, 40, 60,'SEC-ORCH','P-STD') };
+const _areaG  = { id:`${_hb}-AREA-G`,  manifestId:_hb, levelId:'L-ORCH', priceLevelId:'P-STD',  color:'#60A5FA', x:0,y:0,width:0,height:0,curvature:0, polygon:_fanPolygon(180,360, 60, 80), rows:_fanSeats(`${_hb}-AREA-G`, 65,9,6, 180,360, 60, 80,'SEC-ORCH','P-STD') };
 
-const _areaC = { id: `${_hb}-AREA-C`, manifestId: _hb, levelId: 'L-ORCH', priceLevelId: 'P-STD', color: '#2563EB',
-	x: 0, y: 0, width: 0, height: 0, curvature: 0,
-	polygon: _fanPolygon(180, 360, -40, -15),
-	rows: _fanSeats(`${_hb}-AREA-C`, 65, 5, 10, 180, 360, -40, -15, null, 'P-STD') };
+// Terrace innerR=370 outerR=520 avg_r=445 row_gap=25 → rows=6
+//   span 30°: arc=233px → seats=floor(233/14)=16
+//   span 40°: arc=310px → seats=22
+const _areaT1 = { id:`${_hb}-AREA-T1`, manifestId:_hb, levelId:'L-TER',  priceLevelId:'P-TER',  color:'#8B5CF6', x:0,y:0,width:0,height:0,curvature:0, polygon:_fanPolygon(370,520,-65,-35), rows:_fanSeats(`${_hb}-AREA-T1`,80,6,16,370,520,-65,-35,'SEC-TER','P-TER') };
+const _areaT2 = { id:`${_hb}-AREA-T2`, manifestId:_hb, levelId:'L-TER',  priceLevelId:'P-TER',  color:'#7C3AED', x:0,y:0,width:0,height:0,curvature:0, polygon:_fanPolygon(370,520,-35,  5), rows:_fanSeats(`${_hb}-AREA-T2`,80,6,22,370,520,-35,  5,'SEC-TER','P-TER') };
+const _areaT3 = { id:`${_hb}-AREA-T3`, manifestId:_hb, levelId:'L-TER',  priceLevelId:'P-TER',  color:'#8B5CF6', x:0,y:0,width:0,height:0,curvature:0, polygon:_fanPolygon(370,520,  5, 35), rows:_fanSeats(`${_hb}-AREA-T3`,80,6,16,370,520,  5, 35,'SEC-TER','P-TER') };
 
-const _areaD = { id: `${_hb}-AREA-D`, manifestId: _hb, levelId: 'L-ORCH', priceLevelId: 'P-PREM', color: '#1E40AF',
-	x: 0, y: 0, width: 0, height: 0, curvature: 0,
-	polygon: _fanPolygon(180, 360, -15, 15),
-	rows: _fanSeats(`${_hb}-AREA-D`, 65, 5, 12, 180, 360, -15, 15, null, 'P-PREM') };
-
-const _areaE = { id: `${_hb}-AREA-E`, manifestId: _hb, levelId: 'L-ORCH', priceLevelId: 'P-STD', color: '#2563EB',
-	x: 0, y: 0, width: 0, height: 0, curvature: 0,
-	polygon: _fanPolygon(180, 360, 15, 40),
-	rows: _fanSeats(`${_hb}-AREA-E`, 65, 5, 10, 180, 360, 15, 40, null, 'P-STD') };
-
-const _areaF = { id: `${_hb}-AREA-F`, manifestId: _hb, levelId: 'L-ORCH', priceLevelId: 'P-STD', color: '#3B82F6',
-	x: 0, y: 0, width: 0, height: 0, curvature: 0,
-	polygon: _fanPolygon(180, 360, 40, 60),
-	rows: _fanSeats(`${_hb}-AREA-F`, 65, 5, 8, 180, 360, 40, 60, null, 'P-STD') };
-
-const _areaG = { id: `${_hb}-AREA-G`, manifestId: _hb, levelId: 'L-ORCH', priceLevelId: 'P-STD', color: '#60A5FA',
-	x: 0, y: 0, width: 0, height: 0, curvature: 0,
-	polygon: _fanPolygon(180, 360, 60, 80),
-	rows: _fanSeats(`${_hb}-AREA-G`, 65, 4, 6, 180, 360, 60, 80, null, 'P-STD') };
-
-// Terrace – inner 370, outer 520
-const _areaT1 = { id: `${_hb}-AREA-T1`, manifestId: _hb, levelId: 'L-TER', priceLevelId: 'P-TER', color: '#8B5CF6',
-	x: 0, y: 0, width: 0, height: 0, curvature: 0,
-	polygon: _fanPolygon(370, 520, -65, -35),
-	rows: _fanSeats(`${_hb}-AREA-T1`, 80, 4, 10, 370, 520, -65, -35, null, 'P-TER') };
-
-const _areaT2 = { id: `${_hb}-AREA-T2`, manifestId: _hb, levelId: 'L-TER', priceLevelId: 'P-TER', color: '#7C3AED',
-	x: 0, y: 0, width: 0, height: 0, curvature: 0,
-	polygon: _fanPolygon(370, 520, -35, 5),
-	rows: _fanSeats(`${_hb}-AREA-T2`, 80, 4, 12, 370, 520, -35, 5, null, 'P-TER') };
-
-const _areaT3 = { id: `${_hb}-AREA-T3`, manifestId: _hb, levelId: 'L-TER', priceLevelId: 'P-TER', color: '#8B5CF6',
-	x: 0, y: 0, width: 0, height: 0, curvature: 0,
-	polygon: _fanPolygon(370, 520, 5, 35),
-	rows: _fanSeats(`${_hb}-AREA-T3`, 80, 4, 10, 370, 520, 5, 35, null, 'P-TER') };
-
-// Box – small premium area near stage, upper-left of fan
-const _areaBox = { id: `${_hb}-AREA-BOX`, manifestId: _hb, levelId: 'L-BOX', priceLevelId: 'P-BOX', color: '#F59E0B',
-	x: 0, y: 0, width: 0, height: 0, curvature: 0,
-	polygon: _fanPolygon(155, 275, -93, -77),
-	rows: _fanSeats(`${_hb}-AREA-BOX`, 65, 4, 6, 155, 275, -93, -77, null, 'P-BOX') };
-
-// Garden – lawn area to the right
-const _areaGard = { id: `${_hb}-AREA-GARD`, manifestId: _hb, levelId: 'L-GARD', priceLevelId: 'P-GARD', color: '#94A3B8',
-	x: 0, y: 0, width: 0, height: 0, curvature: 0,
-	polygon: [[850, 130], [1050, 130], [1050, 330], [850, 330]] as [number, number][],
-	rows: [] as any[] };
+// Box span=24° avg_r=237 → arc=99px → seats=7; rows=4
+const _areaBox  = { id:`${_hb}-AREA-BOX`,  manifestId:_hb, levelId:'L-BOX',  priceLevelId:'P-BOX',  color:'#F59E0B', x:0,y:0,width:0,height:0,curvature:0, polygon:_fanPolygon(185,290,-107,-83), rows:_fanSeats(`${_hb}-AREA-BOX`, 65,4,7,185,290,-107,-83,'SEC-BOX','P-BOX') };
+const _areaGard = { id:`${_hb}-AREA-GARD`, manifestId:_hb, levelId:'L-GARD', priceLevelId:'P-GARD', color:'#94A3B8', x:0,y:0,width:0,height:0,curvature:0, polygon:[[820,50],[1020,50],[1020,250],[820,250]] as [number,number][], rows:[] as any[] };
 
 export const MOCK_MANIFEST_HB_RS_AREAS = [
-	_areaA, _areaB, _areaC, _areaD, _areaE, _areaF, _areaG,
-	_areaT1, _areaT2, _areaT3,
-	_areaBox, _areaGard
+	_areaA,
+	_areaB,
+	_areaC,
+	_areaD,
+	_areaE,
+	_areaF,
+	_areaG,
+	_areaT1,
+	_areaT2,
+	_areaT3,
+	_areaBox,
+	_areaGard
 ];
 
 export const MOCK_MANIFEST_HB_GA_AREAS: any[] = [];
 
 // ── Convenience aggregates ────────────────────────────────────────────────────
 
-export const MOCK_MANIFESTS = [MOCK_MANIFEST_HANOI_OPERA, MOCK_MANIFEST_MY_DINH, MOCK_MANIFEST_HOLLYWOOD_BOWL];
+export const MOCK_MANIFESTS = [
+	MOCK_MANIFEST_HANOI_OPERA,
+	MOCK_MANIFEST_MY_DINH,
+	MOCK_MANIFEST_HOLLYWOOD_BOWL
+];
 
 export const MOCK_MANIFEST_LEVELS = {
 	M100001: MOCK_MANIFEST_HANOI_OPERA_LEVELS,
@@ -778,4 +919,63 @@ export const MOCK_MANIFEST_GA_AREAS = {
 	M100001: MOCK_MANIFEST_HANOI_OPERA_GA_AREAS,
 	M200001: MOCK_MANIFEST_MY_DINH_GA_AREAS,
 	MHB0001: MOCK_MANIFEST_HB_GA_AREAS
+};
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Venue ↔ Manifest convenience mappings
+// Used by ops/venues pages to serve mock data without hitting the backend API.
+// ──────────────────────────────────────────────────────────────────────────────
+
+/** Lookup a mock venue by its ID */
+export const MOCK_VENUE_BY_ID: Record<string, (typeof MOCK_VENUES)[number]> = Object.fromEntries(
+	MOCK_VENUES.map((v) => [v.id, v])
+);
+
+/** For each mock venue, list which manifests belong to it */
+export const MOCK_VENUE_MANIFESTS: Record<string, any[]> = {
+	'018f4e1a-0006-4000-8000-000000000001': [MOCK_MANIFEST_HANOI_OPERA],
+	'018f4e1a-0003-4000-8000-000000000001': [MOCK_MANIFEST_MY_DINH],
+	'019e90ee-6afa-70fc-aa55-2159192f0729': [MOCK_MANIFEST_HOLLYWOOD_BOWL]
+};
+
+/** Full mock bundle for the manifest editor (venue + manifest + levels + sections + priceLevels + areas) */
+export const MOCK_VENUE_MANIFEST_EDITOR_DATA: Record<
+	string,
+	{
+		venue: (typeof MOCK_VENUES)[number];
+		manifest: any;
+		levels: any[];
+		sections: any[];
+		priceLevels: any[];
+		rsAreas: any[];
+		gaAreas: any[];
+	}
+> = {
+	'018f4e1a-0006-4000-8000-000000000001': {
+		venue: MOCK_VENUE_BY_ID['018f4e1a-0006-4000-8000-000000000001'],
+		manifest: MOCK_MANIFEST_HANOI_OPERA,
+		levels: MOCK_MANIFEST_HANOI_OPERA_LEVELS,
+		sections: MOCK_MANIFEST_HANOI_OPERA_SECTIONS,
+		priceLevels: MOCK_MANIFEST_HANOI_OPERA_PRICE_LEVELS,
+		rsAreas: MOCK_MANIFEST_HANOI_OPERA_RS_AREAS,
+		gaAreas: MOCK_MANIFEST_HANOI_OPERA_GA_AREAS
+	},
+	'018f4e1a-0003-4000-8000-000000000001': {
+		venue: MOCK_VENUE_BY_ID['018f4e1a-0003-4000-8000-000000000001'],
+		manifest: MOCK_MANIFEST_MY_DINH,
+		levels: MOCK_MANIFEST_MY_DINH_LEVELS,
+		sections: MOCK_MANIFEST_MY_DINH_SECTIONS,
+		priceLevels: MOCK_MANIFEST_MY_DINH_PRICE_LEVELS,
+		rsAreas: MOCK_MANIFEST_MY_DINH_RS_AREAS,
+		gaAreas: MOCK_MANIFEST_MY_DINH_GA_AREAS
+	},
+	'019e90ee-6afa-70fc-aa55-2159192f0729': {
+		venue: MOCK_VENUE_BY_ID['019e90ee-6afa-70fc-aa55-2159192f0729'],
+		manifest: MOCK_MANIFEST_HOLLYWOOD_BOWL,
+		levels: MOCK_MANIFEST_HB_LEVELS,
+		sections: MOCK_MANIFEST_HB_SECTIONS,
+		priceLevels: MOCK_MANIFEST_HB_PRICE_LEVELS,
+		rsAreas: MOCK_MANIFEST_HB_RS_AREAS,
+		gaAreas: MOCK_MANIFEST_HB_GA_AREAS
+	}
 };
