@@ -44,13 +44,13 @@ body {
 
 ::-webkit-scrollbar-thumb,
 *::-webkit-scrollbar-thumb {
-	background: #cbd5e1 !important; /* slate-300 */
+	background: var(--color-hairline-strong) !important;
 	border-radius: 9999px !important;
 }
 
 ::-webkit-scrollbar-thumb:hover,
 *::-webkit-scrollbar-thumb:hover {
-	background: #94a3b8 !important; /* slate-400 */
+	background: var(--color-mute) !important;
 }
 
 /* Explicitly hide scrollbar buttons (arrows at top/bottom/left/right) on all scrollable elements */
@@ -64,7 +64,7 @@ body {
 /* Firefox compatibility */
 * {
 	scrollbar-width: thin !important;
-	scrollbar-color: #cbd5e1 transparent !important;
+	scrollbar-color: var(--color-hairline-strong) transparent !important;
 }
 
 /* Helper class to hide scrollbars completely while preserving scroll functionality */

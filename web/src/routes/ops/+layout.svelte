@@ -245,7 +245,7 @@
 									</div>
 									<IconChevronDown
 										size={12}
-										stroke={2}
+										stroke={1.5}
 										class="text-body transition-transform duration-200 {openFolders[cat.id]
 											? 'rotate-180'
 											: ''}"
@@ -381,7 +381,7 @@
 							<span class="text-[11px] font-medium text-body">
 								{breadcrumbParent}
 							</span>
-							<IconChevronRight size={10} stroke={3} class="text-body" />
+							<IconChevronRight size={10} stroke={1.5} class="text-body" />
 							<span class="text-xs font-semibold tracking-tight text-ink">
 								{breadcrumbChild}
 							</span>
@@ -398,7 +398,7 @@
 							<span
 								class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2.5 text-body"
 							>
-								<IconSearch size={14} stroke={2.5} />
+								<IconSearch size={14} stroke={1.5} />
 							</span>
 							<input
 								type="text"
@@ -418,7 +418,7 @@
 							class="relative rounded-md p-1.5 text-body transition-all hover:bg-canvas-soft hover:text-ink focus:outline-none"
 							aria-label="Notifications"
 						>
-							<IconBell size={18} stroke={2} />
+							<IconBell size={18} stroke={1.5} />
 							<span
 								class="absolute top-1.5 right-1.5 h-1 w-1 rounded-full bg-ink ring-1 ring-canvas"
 							></span>
@@ -429,7 +429,7 @@
 							class="rounded-md p-1.5 text-body transition-all hover:bg-canvas-soft hover:text-ink focus:outline-none"
 							aria-label="App switcher"
 						>
-							<IconLayoutGrid size={18} stroke={2} />
+							<IconLayoutGrid size={18} stroke={1.5} />
 						</button>
 					</div>
 				</header>
