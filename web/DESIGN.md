@@ -1,116 +1,98 @@
 ---
 version: alpha
-name: Ticketpeak-Blue-Slate-Design-System
-description: An elegant and premium design language for Ticketpeak — a modern event ticketing platform. It is built on a high-contrast palette of Curious Blue, Slate, Oxford Blue, and White Smoke, tailored to establish trust, energy, and readability for both buyers and organizers.
+name: Ticketpeak-Vercel-Enterprise-Design-System
+description: An elegant and premium design language for Ticketpeak — a modern event ticketing platform. It is built on a high-contrast palette using OKLCH color management, tailored to establish trust, energy, and readability for both buyers and organizers.
 
 colors:
-  primary: '#2185d5'
+  primary: 'oklch(60% 0.16 250)'
   on-primary: '#ffffff'
-  ink: '#303841'
-  body: '#3a4750'
-  mute: '#7a8894'
-  hairline: '#e5e8eb'
-  hairline-strong: '#b2c0cc'
-  canvas: '#ffffff'
-  canvas-soft: '#f3f3f3'
-  canvas-soft-2: '#e5e8eb'
-  link: '#2185d5'
-  link-deep: '#1966a3'
-  link-bg-soft: '#e6f3fc'
-  success: '#10b981'
-  error: '#ef4444'
-  error-soft: '#fee2e2'
-  error-deep: '#b91c1c'
-  warning: '#f59e0b'
-  warning-soft: '#fef3c7'
-  warning-deep: '#b45309'
-  blue-accent: '#2185d5'
-  blue-accent-soft: '#e6f3fc'
-  blue-accent-deep: '#1966a3'
-  gradient-discover-start: '#2185d5'
-  gradient-discover-end: '#60a5fa'
-  gradient-book-start: '#303841'
-  gradient-book-end: '#2185d5'
-  gradient-experience-start: '#3a4750'
-  gradient-experience-end: '#303841'
-  selection-bg: '#2185d5'
-  selection-fg: '#ffffff'
+  ink: 'oklch(20% 0 0)'
+  body: 'oklch(45% 0 0)'
+  mute: 'oklch(70% 0 0)'
+  hairline: 'oklch(92% 0 0)'
+  hairline-strong: 'oklch(85% 0 0)'
+  canvas: 'oklch(100% 0 0)'
+  canvas-soft: 'oklch(99% 0 0)'
+  canvas-soft-2: 'oklch(96% 0 0)'
+  success: 'oklch(65% 0.14 160)'
+  error: 'oklch(60% 0.18 25)'
+  warning: 'oklch(75% 0.12 80)'
 
 typography:
   display-xl:
-    fontFamily: Geist, Inter, system-ui, -apple-system, sans-serif
+    fontFamily: Geist Sans, system-ui, sans-serif
     fontSize: 48px
     fontWeight: 600
     lineHeight: 48px
     letterSpacing: -2.4px
   display-lg:
-    fontFamily: Geist, Inter, system-ui, -apple-system, sans-serif
+    fontFamily: Geist Sans, system-ui, sans-serif
     fontSize: 32px
     fontWeight: 600
     lineHeight: 40px
     letterSpacing: -1.28px
   display-md:
-    fontFamily: Geist, Inter, system-ui, -apple-system, sans-serif
+    fontFamily: Geist Sans, system-ui, sans-serif
     fontSize: 24px
     fontWeight: 600
     lineHeight: 32px
     letterSpacing: -0.96px
   display-sm:
-    fontFamily: Geist, Inter, system-ui, -apple-system, sans-serif
+    fontFamily: Geist Sans, system-ui, sans-serif
     fontSize: 20px
     fontWeight: 600
     lineHeight: 28px
     letterSpacing: -0.6px
   body-lg:
-    fontFamily: Geist, Inter, system-ui, -apple-system, sans-serif
+    fontFamily: Geist Sans, system-ui, sans-serif
     fontSize: 18px
     fontWeight: 400
     lineHeight: 28px
     letterSpacing: 0px
   body-md:
-    fontFamily: Geist, Inter, system-ui, -apple-system, sans-serif
+    fontFamily: Geist Sans, system-ui, sans-serif
     fontSize: 16px
     fontWeight: 400
     lineHeight: 24px
   body-md-strong:
-    fontFamily: Geist, Inter, system-ui, -apple-system, sans-serif
+    fontFamily: Geist Sans, system-ui, sans-serif
     fontSize: 16px
     fontWeight: 500
     lineHeight: 24px
   body-sm:
-    fontFamily: Geist, Inter, system-ui, -apple-system, sans-serif
+    fontFamily: Geist Sans, system-ui, sans-serif
     fontSize: 14px
     fontWeight: 400
     lineHeight: 20px
     letterSpacing: -0.28px
   body-sm-strong:
-    fontFamily: Geist, Inter, system-ui, -apple-system, sans-serif
+    fontFamily: Geist Sans, system-ui, sans-serif
     fontSize: 14px
     fontWeight: 500
     lineHeight: 20px
     letterSpacing: -0.28px
   caption:
-    fontFamily: Geist, Inter, system-ui, -apple-system, sans-serif
+    fontFamily: Geist Sans, system-ui, sans-serif
     fontSize: 12px
     fontWeight: 400
     lineHeight: 16px
   caption-mono:
-    fontFamily: Geist Mono, ui-monospace, SFMono-Regular, Menlo, Monaco, monospace
+    fontFamily: Geist Mono, ui-monospace, monospace
     fontSize: 12px
     fontWeight: 400
     lineHeight: 16px
   code:
-    fontFamily: Geist Mono, ui-monospace, SFMono-Regular, Menlo, Monaco, monospace
+    fontFamily: Geist Mono, ui-monospace, monospace
     fontSize: 13px
     fontWeight: 400
     lineHeight: 20px
   button-md:
-    fontFamily: Geist, Inter, system-ui, -apple-system, sans-serif
+    fontFamily: Geist Sans, system-ui, sans-serif
     fontSize: 14px
     fontWeight: 500
     lineHeight: 20px
   button-lg:
-    fontFamily: Geist, Inter, system-ui, -apple-system, sans-serif
+    fontFamily: Geist Sans, system-ui, sans-serif
     fontSize: 16px
     fontWeight: 500
     lineHeight: 24px
@@ -317,7 +299,7 @@ components:
     typography: '{typography.body-sm}'
     padding: '{spacing.4xl} {spacing.lg}'
   link-inline:
-    textColor: '{colors.link}'
+    textColor: '{colors.primary}'
     typography: '{typography.body-md}'
   banner-marketing:
     backgroundColor: '{colors.canvas-soft}'
@@ -390,18 +372,17 @@ components:
 
 ## Overview
 
-Ticketpeak is a premium, high-energy event ticketing platform. Its design system establishes instant trust, professionalism, and modern appeal using a structured, high-contrast palette: near-white `{colors.canvas-soft}` body background, deep oxford-charcoal `{colors.ink}` typography, professional slate `{colors.body}` details, and a vibrant brand-defining Curious Blue `{colors.primary}` acting as the focal point for every key conversion.
+Ticketpeak is a premium, high-energy event ticketing platform. Its design system establishes instant trust, professionalism, and modern appeal using a structured, high-contrast palette: near-white `{colors.canvas-soft}` body background, deep `{colors.ink}` typography, professional `{colors.body}` details, and a vibrant brand-defining `{colors.primary}` acting as the focal point for every key conversion.
 
-Colors are deployed with strict hierarchy: light-mode viewports sit on a clean off-white `{colors.canvas-soft}` backdrop, separating content containers using razor-sharp `{colors.hairline}` borders. Dark-mode overlays or high-impact immersive zones utilize a complete polarity flip to `{colors.ink}` (Oxford Blue `#303841`), offering stunning depth, visual relief, and premium brand aesthetics.
+Colors are deployed with strict hierarchy: light-mode viewports sit on a clean off-white `{colors.canvas-soft}` backdrop, separating content containers using razor-sharp `{colors.hairline}` borders. Dark-mode overlays or high-impact immersive zones utilize a complete polarity flip to `{colors.ink}`, offering stunning depth, visual relief, and premium brand aesthetics.
 
-Typography drives the platform's editorial voice. The high-end geometric sans (such as Inter or Satoshi) carries displays, body, buttons, and structural navigation, optimized with subtle negative letter-spacing for headlines. A monospaced voice (JetBrains Mono or IBM Plex Mono) is introduced for technical descriptors, ticket metadata, barcodes, and dates, underscoring the automated smart-ticketing identity of the platform.
+Typography drives the platform's editorial voice. Geist Sans carries displays, body, buttons, and structural navigation, optimized with subtle negative letter-spacing for headlines. Geist Mono is introduced for technical descriptors, ticket metadata, barcodes, and dates, underscoring the automated smart-ticketing identity of the platform.
 
 Surfaces use a four-step depth ladder: `{colors.canvas}` (pure white for buyer-facing event cards), `{colors.canvas-soft}` (default main body background), `{colors.canvas-soft-2}` (slightly deeper inset blocks and headers), and `{colors.primary}` or `{colors.ink}` (for immersive dark actions and dashboard panels).
 
 **Key Characteristics:**
 
-- **Action-Driven Primary CTA:** The Curious Blue `{colors.primary}` serves as the signature action trigger, reserved exclusively for conversion targets (e.g., "Buy Tickets", "Checkout", "Publish Event").
-- **Duo-Tone Gradients:** Three bespoke brand gradients—Discover (Curious Blue to Light Sky), Book (Oxford Blue to Curious Blue), and Experience (Slate Gray to Oxford Blue)—supply visual energy, applied strictly to high-priority banners, interactive badges, and hero imagery backdrops.
+- **Action-Driven Primary CTA:** The `{colors.primary}` serves as the signature action trigger, reserved exclusively for conversion targets (e.g., "Buy Tickets", "Checkout", "Publish Event").
 - **Strict Semantic Hierarchy:** Soft background colors and high-contrast texts for Success, Error, and Warning ensure clear buyer confirmation and dashboard feedback loops.
 - **Calm, High-End Elevation:** No heavy, single drop-shadows. Instead, elevation uses stacked multi-stop shadows layered with very fine 1px inline borders to keep cards looking crisp and structurally anchored.
 - **The Punctuation & Letter-Spacing Signature:** Bold section displays use sentence-case titles accompanied by negative tracking for an elegant, architectural look.
@@ -410,39 +391,31 @@ Surfaces use a four-step depth ladder: `{colors.canvas}` (pure white for buyer-f
 
 ### Brand & Accent
 
-- **Primary Brand / Action** (`{colors.primary}` — `#2185d5`): Curious Blue. This high-energy, high-trust blue is reserved for primary CTAs, main action paths, and core interactive states.
-- **Deep Ink Base** (`{colors.ink}` — `#303841`): Oxford Blue. Our primary dark anchor. Used for high-contrast headers, dark body typography, and polarity-flipped immersive bands.
-- **Slate UI Body** (`{colors.body}` — `#3a4750`): Limed Spruce. Used as secondary text, structural borders, and support elements to maintain visual depth without overpowering the primary ink.
-- **Mute Slate** (`{colors.mute}` — `#7a8894`): A lighter slate gray used for helper texts, disabled states, and placeholder elements.
+- **Primary Brand / Action** (`{colors.primary}` — `oklch(60% 0.16 250)`): A high-energy, high-trust blue reserved for primary CTAs, main action paths, and core interactive states.
+- **Deep Ink Base** (`{colors.ink}` — `oklch(20% 0 0)`): Our primary dark anchor. Used for high-contrast headers, dark body typography, and polarity-flipped immersive bands.
+- **Slate UI Body** (`{colors.body}` — `oklch(45% 0 0)`): Used as secondary text, structural borders, and support elements to maintain visual depth.
+- **Mute Slate** (`{colors.mute}` — `oklch(70% 0 0)`): A lighter gray used for helper texts, disabled states, and placeholder elements.
 
 ### Surface
 
-- **Canvas** (`{colors.canvas}` — `#ffffff`): Pure white card, dropdown, and modal backgrounds to raise components cleanly off the page base.
-- **Canvas Soft** (`{colors.canvas-soft}` — `#f3f3f3`): White Smoke. The default page background tone. Establishes a soft, premium canvas for all sections.
-- **Canvas Soft 2** (`{colors.canvas-soft-2}` — `#e5e8eb`): Slightly deeper gray used for section headers, table headers, and form-input fills.
-- **Hairline** (`{colors.hairline}` — `#e5e8eb`): Faint 1px separators — ticket listings, card dividing borders, and layout lines.
-- **Hairline Strong** (`{colors.hairline-strong}` — `#b2c0cc`): A medium gray-slate divider used to define boundaries on light cards.
+- **Canvas** (`{colors.canvas}` — `oklch(100% 0 0)`): Pure white card, dropdown, and modal backgrounds to raise components cleanly off the page base.
+- **Canvas Soft** (`{colors.canvas-soft}` — `oklch(99% 0 0)`): The default page background tone. Establishes a soft, premium canvas for all sections.
+- **Canvas Soft 2** (`{colors.canvas-soft-2}` — `oklch(96% 0 0)`): Slightly deeper gray used for section headers, table headers, and form-input fills.
+- **Hairline** (`{colors.hairline}` — `oklch(92% 0 0)`): Faint 1px separators — ticket listings, card dividing borders, and layout lines.
+- **Hairline Strong** (`{colors.hairline-strong}` — `oklch(85% 0 0)`): A medium gray divider used to define boundaries on light cards.
 
 ### Text
 
-- **Ink** (`{colors.ink}` — `#303841`): Main headlines and high-importance body blocks in light mode.
-- **Body** (`{colors.body}` — `#3a4750`): Main text content, ticket listings, and sub-headers.
-- **Mute** (`{colors.mute}` — `#7a8894`): Placeholders, metadata, and footnote disclaimers.
+- **Ink** (`{colors.ink}` — `oklch(20% 0 0)`): Main headlines and high-importance body blocks in light mode.
+- **Body** (`{colors.body}` — `oklch(45% 0 0)`): Main text content, ticket listings, and sub-headers.
+- **Mute** (`{colors.mute}` — `oklch(70% 0 0)`): Placeholders, metadata, and footnote disclaimers.
 - **On Primary** (`{colors.on-primary}` — `#ffffff`): Text color overlaying brand-primary or dark ink blocks.
 
 ### Semantic
 
-- **Success** (`{colors.success}` — `#10b981`): Trustworthy emerald green used for checkout confirmation, valid QR scans, and successful payouts.
-- **Error** (`{colors.error}` — `#ef4444`): Soft-red background with warning-red text for invalid QR codes, sold-out notices, and form validation blocks.
-- **Warning** (`{colors.warning}` — `#f59e0b`): Cautionary amber used for pending reservations, expiring checkouts, and low-ticket count warnings.
-
-### Brand Gradients
-
-Ticketpeak uses a tailored three-stage event workflow gradient system:
-
-- **Discover** (`{colors.gradient-discover-start}` `#2185d5` → `{colors.gradient-discover-end}` `#60a5fa`): Vibrant blue to bright sky blue. Denotes trending, popular events, and general public discovery.
-- **Book** (`{colors.gradient-book-start}` `#303841` → `{colors.gradient-book-end}` `#2185d5`): Deep charcoal to vibrant blue. Denotes the checkout flow, secure payments, and partner management interfaces.
-- **Experience** (`{colors.gradient-experience-start}` `#3a4750` → `{colors.gradient-experience-end}` `#303841`): Deep slate to dark charcoal. Denotes ticket scanning, organizer analytics, and post-event reporting.
+- **Success** (`{colors.success}` — `oklch(65% 0.14 160)`): Trustworthy green used for checkout confirmation, valid QR scans, and successful payouts.
+- **Error** (`{colors.error}` — `oklch(60% 0.18 25)`): Red used for invalid QR codes, sold-out notices, and form validation blocks.
+- **Warning** (`{colors.warning}` — `oklch(75% 0.12 80)`): Cautionary amber used for pending reservations, expiring checkouts, and low-ticket count warnings.
 
 ## Typography
 
@@ -450,8 +423,8 @@ Ticketpeak uses a tailored three-stage event workflow gradient system:
 
 The typography system uses two primary typefaces:
 
-1. **Geometric Sans-Serif** (_Inter_ or _Satoshi_): The main display, body, button, and link carrier. Configured up to weight 600. Large hero sizes use tight negative tracking (`-2.4px` for display-xl) to look exceptionally bold, modern, and cohesive.
-2. **Technical Monospace** (_JetBrains Mono_ or _IBM Plex Mono_): Used exclusively for ticket metadata, date indicators, QR codes, pricing structures, and dashboard tables. Denotes reliability and high-speed technology.
+1. **Geist Sans**: The main display, body, button, and link carrier. Configured up to weight 600. Large hero sizes use tight negative tracking (`-2.4px` for display-xl) to look exceptionally bold, modern, and cohesive.
+2. **Geist Mono**: Used exclusively for ticket metadata, date indicators, QR codes, pricing structures, and dashboard tables. Denotes reliability and high-speed technology.
 
 ### Hierarchy
 
@@ -511,7 +484,7 @@ The typography system uses two primary typefaces:
 
 ### Buttons
 
-- **`button-primary`**: Curious Blue background (`{colors.primary}`), white text (`{colors.on-primary}`), large size (`{typography.button-lg}`), rounded pill (`{rounded.pill}`). The ultimate checkout and purchase trigger.
+- **`button-primary`**: Brand primary background (`{colors.primary}`), white text (`{colors.on-primary}`), large size (`{typography.button-lg}`), rounded pill (`{rounded.pill}`). The ultimate checkout and purchase trigger.
 - **`button-secondary`**: Pure white background (`{colors.canvas}`), charcoal text (`{colors.ink}`), rounded pill (`{rounded.pill}`), bordered with `{colors.hairline}`. For secondary navigations.
 
 ### Event Cards
@@ -530,10 +503,10 @@ The typography system uses two primary typefaces:
 
 ### Do:
 
-- **Use Curious Blue selectively:** Reserve `{colors.primary}` (`#2185d5`) for active buttons, transactional links, and primary QR status feedback.
+- **Use primary blue selectively:** Reserve `{colors.primary}` (`oklch(60% 0.16 250)`) for active buttons, transactional links, and primary QR status feedback.
 - **Keep margins structured:** Standardize layouts around the 4px base spacing to avoid visual misalignment.
 - **Integrate the Monospace face:** Set ticket IDs, ticket dates, currencies, and scan counters strictly in `{typography.caption-mono}` or `{typography.code}`.
-- **Leverage polarity flips:** Use deep Oxford Blue (`{colors.ink}`) sections to call attention to exclusive events, checkout phases, or organizer headers.
+- **Leverage polarity flips:** Use deep `{colors.ink}` sections to call attention to exclusive events, checkout phases, or organizer headers.
 
 ### Don't:
 
