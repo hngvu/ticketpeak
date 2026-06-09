@@ -5,7 +5,7 @@ description: An elegant and premium design language for Ticketpeak — a modern 
 
 colors:
   primary: 'oklch(60% 0.16 250)'
-  on-primary: '#ffffff'
+  on-primary: 'oklch(100% 0 0)'
   ink: 'oklch(20% 0 0)'
   body: 'oklch(45% 0 0)'
   mute: 'oklch(70% 0 0)'
@@ -409,7 +409,7 @@ Surfaces use a four-step depth ladder: `{colors.canvas}` (pure white for buyer-f
 - **Ink** (`{colors.ink}` — `oklch(20% 0 0)`): Main headlines and high-importance body blocks in light mode.
 - **Body** (`{colors.body}` — `oklch(45% 0 0)`): Main text content, ticket listings, and sub-headers.
 - **Mute** (`{colors.mute}` — `oklch(70% 0 0)`): Placeholders, metadata, and footnote disclaimers.
-- **On Primary** (`{colors.on-primary}` — `#ffffff`): Text color overlaying brand-primary or dark ink blocks.
+- **On Primary** (`{colors.on-primary}` — `oklch(100% 0 0)`): Text color overlaying brand-primary or dark ink blocks.
 
 ### Semantic
 
