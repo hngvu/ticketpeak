@@ -53,7 +53,7 @@ public class ReservationItem {
     @Column(name = "seating_mode", nullable = false, length = 32)
     SeatingMode seatingMode;
 
-    @Column(name = "area_id", length = 64)
+    @Column(name = "section_id", length = 64)
     String sectionId;
 
     @Column(name = "seat_id", length = 64)

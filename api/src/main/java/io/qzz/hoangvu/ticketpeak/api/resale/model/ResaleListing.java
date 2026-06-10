@@ -51,7 +51,7 @@ public class ResaleListing {
     @Column(name = "seat_id", length = 64)
     String seatId;
 
-    @Column(name = "area_id", length = 64)
+    @Column(name = "section_id", length = 64)
     String sectionId;
 
     @Enumerated(EnumType.STRING)

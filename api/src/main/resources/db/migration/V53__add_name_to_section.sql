@@ -1,0 +1,1 @@
+ALTER TABLE section ADD COLUMN name VARCHAR(255);
