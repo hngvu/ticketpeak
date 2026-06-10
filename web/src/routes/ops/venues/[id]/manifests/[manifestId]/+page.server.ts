@@ -12,7 +12,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 
 	const { id: venueId, manifestId } = params;
 
-	// "new" mode — auto-create manifest with defaults and go straight to canvas
+	// ── "new" mode: auto-create a blank manifest then redirect ────────────────
 	if (manifestId === 'new') {
 		try {
 			const venue = await apiFetch<any>(fetch, `/api/venues/${venueId}`, {
@@ -39,9 +39,52 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 		}
 	}
 
-	// Check if this is a mock venue – serve directly without API calls
+	// ── Mock venue path: serve data without hitting the API ───────────────────
 	const mockData = MOCK_VENUE_MANIFEST_EDITOR_DATA[venueId];
 	if (mockData && mockData.manifest.id === manifestId) {
+		// Build rsSections: one entry per RS section, with rows+seats nested inside.
+		// Each section carries: id, name, color, levelId, polygon (from uiData), rows[].
+		// Each row carries: id, sectionId, name, seats[].
+		// Each seat carries the full SeatResponse shape.
+		const rsSections = mockData.sections
+			.filter((s: any) => s.type === 'RS')
+			.map((sec: any) => {
+				const secRows = mockData.rows
+					.filter((r: any) => r.sectionId === sec.id)
+					.map((row: any) => ({
+						...row,
+						seats: mockData.seats.filter((seat: any) => seat.rowId === row.id)
+					}));
+				return {
+					id: sec.id,
+					name: sec.name ?? null,
+					color: sec.color ?? null,
+					levelId: sec.levelId ?? null,
+					// polygon lives in uiData.polygon for fan sections,
+					// or can be computed from uiData rect for box sections
+					polygon: (sec.uiData?.polygon as [number, number][] | undefined) ?? [],
+					rows: secRows
+				};
+			});
+
+		// Build gaSections: one entry per GA section.
+		const gaSections = mockData.sections
+			.filter((s: any) => s.type === 'GA')
+			.map((sec: any) => ({
+				id: sec.id,
+				name: sec.name ?? null,
+				levelId: sec.levelId ?? null,
+				priceLevelId: null,
+				capacity: sec.capacity ?? 0,
+				color: sec.color ?? null,
+				// support both polygon and rect uiData
+				polygon: (sec.uiData?.polygon as [number, number][] | undefined) ?? [],
+				x: (sec.uiData?.x as number | undefined) ?? 0,
+				y: (sec.uiData?.y as number | undefined) ?? 0,
+				width: (sec.uiData?.width as number | undefined) ?? 200,
+				height: (sec.uiData?.height as number | undefined) ?? 100
+			}));
+
 		return {
 			isNew: false,
 			venue: mockData.venue,
@@ -49,14 +92,14 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 			levels: mockData.levels,
 			sections: mockData.sections,
 			priceLevels: mockData.priceLevels,
-			gaAreas: mockData.gaAreas,
-			rsAreas: mockData.rsAreas
+			gaSections,
+			rsSections
 		};
 	}
 
+	// ── Real API path ──────────────────────────────────────────────────────────
 	try {
-		// 1. Fetch basic info concurrently
-		const [venue, manifest, levels, sections, priceLevels, gaAreas, rsAreas] = await Promise.all([
+		const [venue, manifest, levels, sections, priceLevels] = await Promise.all([
 			apiFetch<any>(fetch, `/api/venues/${venueId}`, {
 				headers: { Authorization: `Bearer ${accessToken}` }
 			}),
@@ -65,56 +108,71 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 			}),
 			apiFetch<any[]>(fetch, `/api/ops/venues/manifests/${manifestId}/levels`, {
 				headers: { Authorization: `Bearer ${accessToken}` }
-			}).catch(() => []),
+			}).catch(() => [] as any[]),
 			apiFetch<any[]>(fetch, `/api/ops/venues/manifests/${manifestId}/sections`, {
 				headers: { Authorization: `Bearer ${accessToken}` }
-			}).catch(() => []),
+			}).catch(() => [] as any[]),
 			apiFetch<any[]>(fetch, `/api/ops/venues/manifests/${manifestId}/price-levels`, {
 				headers: { Authorization: `Bearer ${accessToken}` }
-			}).catch(() => []),
-			apiFetch<any[]>(fetch, `/api/ops/venues/manifests/${manifestId}/ga-areas`, {
-				headers: { Authorization: `Bearer ${accessToken}` }
-			}).catch(() => []),
-			apiFetch<any[]>(fetch, `/api/ops/venues/manifests/${manifestId}/rs-areas`, {
-				headers: { Authorization: `Bearer ${accessToken}` }
-			}).catch(() => [])
+			}).catch(() => [] as any[])
 		]);
 
-		// 2. Fetch rows and seats for each RS area recursively
-		const rsAreasWithDetails = await Promise.all(
-			rsAreas.map(async (area: any) => {
-				try {
-					const rows = await apiFetch<any[]>(fetch, `/api/ops/venues/rs-areas/${area.id}/rows`, {
-						headers: { Authorization: `Bearer ${accessToken}` }
-					});
-					const rowsWithSeats = await Promise.all(
-						rows.map(async (row: any) => {
-							try {
-								const seats = await apiFetch<any[]>(fetch, `/api/ops/venues/rows/${row.id}/seats`, {
-									headers: { Authorization: `Bearer ${accessToken}` }
-								});
-								return { ...row, seats };
-							} catch {
-								return { ...row, seats: [] };
-							}
-						})
-					);
-					return { ...area, rows: rowsWithSeats };
-				} catch {
-					return { ...area, rows: [] };
-				}
+		// Build rsSections: fetch rows → seats per RS section
+		const rsSectionList: any[] = (sections ?? []).filter((s: any) => s.type === 'RS');
+		const rsSections = await Promise.all(
+			rsSectionList.map(async (sec: any) => {
+				const rows = await apiFetch<any[]>(
+					fetch,
+					`/api/ops/venues/manifests/${manifestId}/sections/${sec.id}/rows`,
+					{ headers: { Authorization: `Bearer ${accessToken}` } }
+				).catch(() => [] as any[]);
+
+				const rowsWithSeats = await Promise.all(
+					rows.map(async (row: any) => {
+						const seats = await apiFetch<any[]>(fetch, `/api/ops/venues/rows/${row.id}/seats`, {
+							headers: { Authorization: `Bearer ${accessToken}` }
+						}).catch(() => [] as any[]);
+						return { ...row, seats };
+					})
+				);
+
+				return {
+					id: sec.id,
+					name: sec.name ?? null,
+					color: sec.color ?? null,
+					levelId: sec.levelId ?? null,
+					polygon: (sec.uiData?.polygon as [number, number][] | undefined) ?? [],
+					rows: rowsWithSeats
+				};
 			})
 		);
+
+		// Build gaSections from GA sections (no rows/seats)
+		const gaSections = (sections ?? [])
+			.filter((s: any) => s.type === 'GA')
+			.map((sec: any) => ({
+				id: sec.id,
+				name: sec.name ?? null,
+				levelId: sec.levelId ?? null,
+				priceLevelId: null,
+				capacity: sec.capacity ?? 0,
+				color: sec.color ?? null,
+				polygon: (sec.uiData?.polygon as [number, number][] | undefined) ?? [],
+				x: (sec.uiData?.x as number | undefined) ?? 0,
+				y: (sec.uiData?.y as number | undefined) ?? 0,
+				width: (sec.uiData?.width as number | undefined) ?? 200,
+				height: (sec.uiData?.height as number | undefined) ?? 100
+			}));
 
 		return {
 			isNew: false,
 			venue,
 			manifest,
-			levels,
-			sections,
-			priceLevels,
-			gaAreas,
-			rsAreas: rsAreasWithDetails
+			levels: levels ?? [],
+			sections: sections ?? [],
+			priceLevels: priceLevels ?? [],
+			gaSections,
+			rsSections
 		};
 	} catch (err: any) {
 		console.error('[OPS MANIFEST EDITOR LOAD ERROR]:', err);

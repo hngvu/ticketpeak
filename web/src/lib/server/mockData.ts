@@ -421,65 +421,130 @@ export const MOCK_EVENTS = [
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Venue Manifest Mock Data
-// Mirrors the API response shapes for rendering seat maps on the web.
-// Hierarchy: Manifest → Level, Section, PriceLevel, RSArea → SeatRow → Seat, GAArea
+// Mirrors the exact API response shapes (ManifestResponse, LevelResponse,
+// SectionResponse, SeatRowResponse, SeatResponse, PriceLevelResponse).
+//
+// Hierarchy: Manifest → Level, Section, PriceLevel
+//            RS Section → SeatRow → Seat
+//            GA Section (no rows/seats; capacity stored on section)
 // ──────────────────────────────────────────────────────────────────────────────
 
-/** Helper: generate a rectangular block of seats */
+// TypeScript types matching the API DTOs exactly
+type SeatStatus = 'AVAILABLE' | 'UNAVAILABLE' | 'RESERVED' | 'SOLD';
+type SectionType = 'GA' | 'RS';
+type ManifestStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+
+interface MockSeat {
+	id: string;
+	rowId: string;
+	name: string;
+	positionX: number | null;
+	positionY: number;
+	status: SeatStatus;
+	priceLevelId: string | null;
+	sectionId: string | null;
+}
+
+interface MockSeatRow {
+	id: string;
+	sectionId: string;
+	name: string;
+}
+
+interface MockSection {
+	id: string;
+	type: SectionType;
+	name: string | null;
+	color: string | null;
+	levelId: string | null;
+	capacity: number | null;
+	uiData: Record<string, unknown> | null;
+}
+
+interface MockLevel {
+	id: string;
+	manifestId: string;
+	description: string;
+	color: string | null;
+}
+
+interface MockPriceLevel {
+	id: string;
+	manifestId: string;
+	description: string | null;
+	color: string | null;
+}
+
+interface MockManifest {
+	id: string;
+	venueId: string;
+	description: string;
+	totalCapacity: number;
+	status: ManifestStatus;
+	createdAt: string;
+	updatedAt: string;
+	objects: Record<string, unknown>[] | null;
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/**
+ * Generate a rectangular block of seats for one row.
+ * Matches SeatResponse: id, rowId, name, positionX, positionY, status, priceLevelId, sectionId
+ */
 function _genSeats(
 	rowId: string,
 	startNum: number,
 	count: number,
 	startX: number,
 	rowY: number,
-	sectionId?: string,
-	priceLevelId?: string
-) {
+	sectionId: string | null = null,
+	priceLevelId: string | null = null
+): MockSeat[] {
 	return Array.from({ length: count }, (_, i) => ({
 		id: `${rowId}-s${String(startNum + i).padStart(3, '0')}`,
 		rowId,
 		name: String(startNum + i).padStart(3, '0'),
 		positionX: startX + i * 18,
 		positionY: rowY,
-		status: 'AVAILABLE' as const,
-		accessibility: false,
-		obstructedView: false,
-		aisle: false,
-		priceLevelId: priceLevelId || null,
-		sectionId: sectionId || null
+		status: 'AVAILABLE' as SeatStatus,
+		priceLevelId,
+		sectionId
 	}));
 }
 
-/** Helper: generate rows within an RS area */
+/**
+ * Generate rows + seats for a rectangular seating section.
+ * Row names are uppercase letters (A, B, C…) starting from startRowCharCode.
+ */
 function _genRows(
-	areaId: string,
-	rowPrefix: string,
-	startRowCode: number,
+	sectionId: string,
+	startRowCharCode: number,
 	rowCount: number,
 	seatsPerRow: number,
 	startSeatNum: number,
 	startX: number,
 	startY: number,
-	sectionId?: string,
-	priceLevelId?: string
-) {
-	return Array.from({ length: rowCount }, (_, rIdx) => {
-		const rowName = String.fromCharCode(startRowCode + rIdx);
-		const rowId = `${areaId}-row-${rowName}`;
+	sectionId2: string | null = null,
+	priceLevelId: string | null = null
+): { rows: MockSeatRow[]; seats: MockSeat[] } {
+	const rows: MockSeatRow[] = [];
+	const seats: MockSeat[] = [];
+	for (let rIdx = 0; rIdx < rowCount; rIdx++) {
+		const rowName = String.fromCharCode(startRowCharCode + rIdx);
+		const rowId = `${sectionId}-row-${rowName}`;
 		const rowY = startY + rIdx * 22;
-		return {
-			id: rowId,
-			rsAreaId: areaId,
-			name: rowName,
-			positionY: rowY,
-			seats: _genSeats(rowId, startSeatNum, seatsPerRow, startX, rowY, sectionId, priceLevelId)
-		};
-	});
+		rows.push({ id: rowId, sectionId, name: rowName });
+		seats.push(
+			..._genSeats(rowId, startSeatNum, seatsPerRow, startX, rowY, sectionId2, priceLevelId)
+		);
+	}
+	return { rows, seats };
 }
 
-// ── Nhà hát Lớn Hà Nội – Concert Layout ─────────────────────────────────────
+// ─── Nhà hát Lớn Hà Nội – Concert Layout (M100001) ───────────────────────────
 
-export const MOCK_MANIFEST_HANOI_OPERA = {
+export const MOCK_MANIFEST_HANOI_OPERA: MockManifest = {
 	id: 'M100001',
 	venueId: '018f4e1a-0006-4000-8000-000000000001',
 	description: 'Concert Layout – Nhà hát Lớn Hà Nội',
@@ -493,246 +558,89 @@ export const MOCK_MANIFEST_HANOI_OPERA = {
 	]
 };
 
-export const MOCK_MANIFEST_HANOI_OPERA_LEVELS = [
+export const MOCK_MANIFEST_HANOI_OPERA_LEVELS: MockLevel[] = [
 	{ id: 'L1', manifestId: 'M100001', description: 'Orchestra (Tầng trệt)', color: '#3B82F6' },
 	{ id: 'L2', manifestId: 'M100001', description: 'Balcony (Tầng lầu)', color: '#8B5CF6' }
 ];
 
-export const MOCK_MANIFEST_HANOI_OPERA_SECTIONS = [
-	{ id: 'SEC-VIP', manifestId: 'M100001', description: 'VIP Front Row', color: '#F59E0B' },
-	{
-		id: 'SEC-A',
-		manifestId: 'M100001',
-		description: 'Standard A – Orchestra Center',
-		color: '#3B82F6'
-	},
-	{
-		id: 'SEC-B',
-		manifestId: 'M100001',
-		description: 'Standard B – Orchestra Wings',
-		color: '#10B981'
-	},
-	{ id: 'SEC-C', manifestId: 'M100001', description: 'Balcony Seats', color: '#8B5CF6' }
-];
-
-export const MOCK_MANIFEST_HANOI_OPERA_PRICE_LEVELS = [
+export const MOCK_MANIFEST_HANOI_OPERA_PRICE_LEVELS: MockPriceLevel[] = [
 	{ id: 'PL-VIP', manifestId: 'M100001', description: 'VIP – 2.500.000₫', color: '#F59E0B' },
 	{ id: 'PL-PREM', manifestId: 'M100001', description: 'Premium – 1.500.000₫', color: '#3B82F6' },
 	{ id: 'PL-STD', manifestId: 'M100001', description: 'Standard – 800.000₫', color: '#10B981' }
 ];
 
-const _haOperaVipAreaId = 'M100001-VIP';
-const _haOperaCenterAreaId = 'M100001-CENTER';
-const _haOperaWingAreaId = 'M100001-WING';
-const _haOperaBalconyAreaId = 'M100001-BALCONY';
-
-export const MOCK_MANIFEST_HANOI_OPERA_RS_AREAS = [
+// Sections (SectionResponse): id, type, name, color, levelId, capacity, uiData
+export const MOCK_MANIFEST_HANOI_OPERA_SECTIONS: MockSection[] = [
 	{
-		id: _haOperaVipAreaId,
-		manifestId: 'M100001',
+		id: 'SEC-VIP',
+		type: 'RS',
+		name: 'VIP',
+		color: '#F59E0B',
 		levelId: 'L1',
-		x: 220,
-		y: 140,
-		width: 460,
-		height: 120,
-		sectionId: 'SEC-VIP',
-		priceLevelId: 'PL-VIP',
-		curvature: 20,
-		rows: _genRows(_haOperaVipAreaId, 'A', 65, 2, 16, 1, 240, 150, 'SEC-VIP', 'PL-VIP')
+		capacity: 32,
+		uiData: { x: 220, y: 140, width: 460, height: 120, curvature: 20 }
 	},
 	{
-		id: _haOperaCenterAreaId,
-		manifestId: 'M100001',
+		id: 'SEC-A',
+		type: 'RS',
+		name: 'Orchestra A',
+		color: '#3B82F6',
 		levelId: 'L1',
-		x: 220,
-		y: 280,
-		width: 460,
-		height: 180,
-		sectionId: 'SEC-A',
-		priceLevelId: 'PL-PREM',
-		curvature: 10,
-		rows: _genRows(_haOperaCenterAreaId, 'C', 67, 4, 16, 1, 240, 290, 'SEC-A', 'PL-PREM')
+		capacity: 64,
+		uiData: { x: 220, y: 280, width: 460, height: 180, curvature: 10 }
 	},
 	{
-		id: _haOperaWingAreaId,
-		manifestId: 'M100001',
+		id: 'SEC-B',
+		type: 'RS',
+		name: 'Side Wings',
+		color: '#10B981',
 		levelId: 'L1',
-		x: 60,
-		y: 280,
-		width: 140,
-		height: 140,
-		sectionId: 'SEC-B',
-		priceLevelId: 'PL-STD',
-		curvature: 0,
-		rows: _genRows(_haOperaWingAreaId, 'L', 76, 3, 6, 1, 70, 290, 'SEC-B', 'PL-STD')
+		capacity: 18,
+		uiData: { x: 60, y: 280, width: 140, height: 140 }
 	},
 	{
-		id: _haOperaBalconyAreaId,
-		manifestId: 'M100001',
+		id: 'SEC-C',
+		type: 'RS',
+		name: 'Balcony',
+		color: '#8B5CF6',
 		levelId: 'L2',
-		x: 120,
-		y: 500,
-		width: 660,
-		height: 100,
-		sectionId: 'SEC-C',
-		priceLevelId: 'PL-STD',
-		curvature: 5,
-		rows: _genRows(_haOperaBalconyAreaId, 'P', 80, 2, 20, 1, 140, 510, 'SEC-C', 'PL-STD')
-	}
-];
-
-export const MOCK_MANIFEST_HANOI_OPERA_GA_AREAS = [
+		capacity: 40,
+		uiData: { x: 120, y: 500, width: 660, height: 100, curvature: 5 }
+	},
 	{
-		id: 'M100001-GA-LOBBY',
-		manifestId: 'M100001',
+		id: 'SEC-GA',
+		type: 'GA',
+		name: 'Standing Area',
+		color: '#94A3B8',
 		levelId: 'L1',
-		priceLevelId: 'PL-STD',
 		capacity: 50,
-		x: 60,
-		y: 140,
-		width: 140,
-		height: 100
+		uiData: { x: 60, y: 140, width: 140, height: 100 }
 	}
 ];
 
-// ── Sân vận động Mỹ Đình – Concert Stadium Layout ───────────────────────────
+// Rows & Seats
+const _haVip = _genRows('SEC-VIP', 65, 2, 16, 1, 240, 150, 'SEC-VIP', 'PL-VIP');
+const _haCtr = _genRows('SEC-A', 67, 4, 16, 1, 240, 290, 'SEC-A', 'PL-PREM');
+const _haWng = _genRows('SEC-B', 76, 3, 6, 1, 70, 290, 'SEC-B', 'PL-STD');
+const _haBlc = _genRows('SEC-C', 80, 2, 20, 1, 140, 510, 'SEC-C', 'PL-STD');
 
-export const MOCK_MANIFEST_MY_DINH = {
-	id: 'M200001',
-	venueId: '018f4e1a-0003-4000-8000-000000000001',
-	description: 'Concert Stadium Layout – Mỹ Đình',
-	totalCapacity: 38000,
-	status: 'DRAFT',
-	createdAt: '2026-02-10T09:00:00Z',
-	updatedAt: '2026-04-05T14:20:00Z',
-	objects: [
-		{ type: 'stage', text: 'MAIN STAGE', x: 350, y: 10, width: 500, height: 100 },
-		{
-			type: 'shape',
-			shape: 'rect',
-			x: 350,
-			y: 120,
-			width: 500,
-			height: 30,
-			color: '#E2E8F0',
-			opacity: 0.4
-		},
-		{ type: 'label', text: 'BARRIER', x: 550, y: 125, fontSize: 10, color: '#94A3B8' },
-		{ type: 'label', text: 'FOH / Sound Tower', x: 600, y: 750, fontSize: 12, color: '#64748B' }
-	]
-};
-
-export const MOCK_MANIFEST_MY_DINH_LEVELS = [
-	{ id: 'FL', manifestId: 'M200001', description: 'Floor (Sân)', color: '#EF4444' },
-	{ id: 'T1', manifestId: 'M200001', description: 'Tier 1 – Lower Stand', color: '#3B82F6' },
-	{ id: 'T2', manifestId: 'M200001', description: 'Tier 2 – Upper Stand', color: '#8B5CF6' }
+export const MOCK_MANIFEST_HANOI_OPERA_ROWS: MockSeatRow[] = [
+	..._haVip.rows,
+	..._haCtr.rows,
+	..._haWng.rows,
+	..._haBlc.rows
 ];
 
-export const MOCK_MANIFEST_MY_DINH_SECTIONS = [
-	{ id: 'S-VIP', manifestId: 'M200001', description: 'VIP Floor Front', color: '#F59E0B' },
-	{ id: 'S-GA', manifestId: 'M200001', description: 'General Admission Floor', color: '#EF4444' },
-	{ id: 'S-A', manifestId: 'M200001', description: 'Stand A – North', color: '#3B82F6' },
-	{ id: 'S-B', manifestId: 'M200001', description: 'Stand B – South', color: '#10B981' },
-	{ id: 'S-C', manifestId: 'M200001', description: 'Stand C – East', color: '#6366F1' },
-	{ id: 'S-D', manifestId: 'M200001', description: 'Stand D – West', color: '#EC4899' },
-	{ id: 'S-U', manifestId: 'M200001', description: 'Upper Tier', color: '#8B5CF6' }
+export const MOCK_MANIFEST_HANOI_OPERA_SEATS: MockSeat[] = [
+	..._haVip.seats,
+	..._haCtr.seats,
+	..._haWng.seats,
+	..._haBlc.seats
 ];
 
-export const MOCK_MANIFEST_MY_DINH_PRICE_LEVELS = [
-	{ id: 'P-VIP', manifestId: 'M200001', description: 'VIP – 5.000.000₫', color: '#F59E0B' },
-	{ id: 'P-PRM', manifestId: 'M200001', description: 'Premium – 3.000.000₫', color: '#EF4444' },
-	{ id: 'P-STD', manifestId: 'M200001', description: 'Standard – 1.200.000₫', color: '#3B82F6' },
-	{ id: 'P-ECO', manifestId: 'M200001', description: 'Economy – 600.000₫', color: '#8B5CF6' }
-];
+// ─── Hollywood Bowl – Summer Concert Series (MHB0001) ─────────────────────────
 
-const _mdVipId = 'M200001-VIP';
-const _mdStandAId = 'M200001-STAND-A';
-const _mdStandBId = 'M200001-STAND-B';
-const _mdUpperId = 'M200001-UPPER';
-
-export const MOCK_MANIFEST_MY_DINH_RS_AREAS = [
-	{
-		id: _mdVipId,
-		manifestId: 'M200001',
-		levelId: 'FL',
-		x: 300,
-		y: 180,
-		width: 600,
-		height: 200,
-		sectionId: 'S-VIP',
-		priceLevelId: 'P-VIP',
-		curvature: 15,
-		rows: _genRows(_mdVipId, 'A', 65, 4, 20, 1, 320, 190, 'S-VIP', 'P-VIP')
-	},
-	{
-		id: _mdStandAId,
-		manifestId: 'M200001',
-		levelId: 'T1',
-		x: 100,
-		y: 440,
-		width: 400,
-		height: 160,
-		sectionId: 'S-A',
-		priceLevelId: 'P-STD',
-		curvature: 0,
-		rows: _genRows(_mdStandAId, 'N', 78, 3, 14, 1, 120, 450, 'S-A', 'P-STD')
-	},
-	{
-		id: _mdStandBId,
-		manifestId: 'M200001',
-		levelId: 'T1',
-		x: 700,
-		y: 440,
-		width: 400,
-		height: 160,
-		sectionId: 'S-B',
-		priceLevelId: 'P-STD',
-		curvature: 0,
-		rows: _genRows(_mdStandBId, 'S', 83, 3, 14, 1, 720, 450, 'S-B', 'P-STD')
-	},
-	{
-		id: _mdUpperId,
-		manifestId: 'M200001',
-		levelId: 'T2',
-		x: 100,
-		y: 650,
-		width: 1000,
-		height: 120,
-		sectionId: 'S-U',
-		priceLevelId: 'P-ECO',
-		curvature: 8,
-		rows: _genRows(_mdUpperId, 'U', 85, 2, 30, 1, 120, 660, 'S-U', 'P-ECO')
-	}
-];
-
-export const MOCK_MANIFEST_MY_DINH_GA_AREAS = [
-	{
-		id: 'M200001-GA-FLOOR',
-		manifestId: 'M200001',
-		levelId: 'FL',
-		priceLevelId: 'P-PRM',
-		capacity: 15000,
-		x: 300,
-		y: 400,
-		width: 600,
-		height: 20
-	},
-	{
-		id: 'M200001-GA-STAND',
-		manifestId: 'M200001',
-		levelId: 'T1',
-		priceLevelId: 'P-ECO',
-		capacity: 8000,
-		x: 520,
-		y: 440,
-		width: 160,
-		height: 160
-	}
-];
-
-// ── Hollywood Bowl – Amphitheater Layout ──────────────────────────────────────
-
-export const MOCK_MANIFEST_HOLLYWOOD_BOWL = {
+export const MOCK_MANIFEST_HOLLYWOOD_BOWL: MockManifest = {
 	id: 'MHB0001',
 	venueId: '019e90ee-6afa-70fc-aa55-2159192f0729',
 	description: 'Summer Concert Series – Hollywood Bowl',
@@ -740,25 +648,17 @@ export const MOCK_MANIFEST_HOLLYWOOD_BOWL = {
 	status: 'PUBLISHED',
 	createdAt: '2026-01-10T08:00:00Z',
 	updatedAt: '2026-05-01T12:00:00Z',
-	// Stage SHELL nằm ngay trước vùng fan (fan center = 520,420; shell ở bên trái)
 	objects: [{ type: 'stage', text: 'SHELL', x: 460, y: 340, width: 120, height: 160 }]
 };
 
-export const MOCK_MANIFEST_HB_LEVELS = [
+export const MOCK_MANIFEST_HB_LEVELS: MockLevel[] = [
 	{ id: 'L-ORCH', manifestId: 'MHB0001', description: 'Orchestra', color: '#3B82F6' },
-	{ id: 'L-TER',  manifestId: 'MHB0001', description: 'Terrace',   color: '#8B5CF6' },
-	{ id: 'L-BOX',  manifestId: 'MHB0001', description: 'Box',       color: '#F59E0B' },
-	{ id: 'L-GARD', manifestId: 'MHB0001', description: 'Garden',    color: '#94A3B8' }
+	{ id: 'L-TER', manifestId: 'MHB0001', description: 'Terrace', color: '#8B5CF6' },
+	{ id: 'L-BOX', manifestId: 'MHB0001', description: 'Box', color: '#F59E0B' },
+	{ id: 'L-GARD', manifestId: 'MHB0001', description: 'Garden', color: '#94A3B8' }
 ];
 
-export const MOCK_MANIFEST_HB_SECTIONS = [
-	{ id: 'SEC-BOX',  manifestId: 'MHB0001', description: 'Box Seats',   color: '#F59E0B' },
-	{ id: 'SEC-ORCH', manifestId: 'MHB0001', description: 'Orchestra',   color: '#3B82F6' },
-	{ id: 'SEC-TER',  manifestId: 'MHB0001', description: 'Terrace',     color: '#8B5CF6' },
-	{ id: 'SEC-GARD', manifestId: 'MHB0001', description: 'Garden Lawn', color: '#94A3B8' }
-];
-
-export const MOCK_MANIFEST_HB_PRICE_LEVELS = [
+export const MOCK_MANIFEST_HB_PRICE_LEVELS: MockPriceLevel[] = [
 	{ id: 'P-BOX', manifestId: 'MHB0001', description: 'Box – $350', color: '#F59E0B' },
 	{ id: 'P-PREM', manifestId: 'MHB0001', description: 'Premium – $220', color: '#1E40AF' },
 	{ id: 'P-STD', manifestId: 'MHB0001', description: 'Standard – $120', color: '#3B82F6' },
@@ -766,12 +666,15 @@ export const MOCK_MANIFEST_HB_PRICE_LEVELS = [
 	{ id: 'P-GARD', manifestId: 'MHB0001', description: 'Garden – $55', color: '#94A3B8' }
 ];
 
-// Fan geometry helpers
-// Center dịch về x=520 để toàn bộ fan nằm trong vùng tọa độ dương
-const _HB_CX = 520,
-	_HB_CY = 420;
-const _toRad = (d: number) => (d * Math.PI) / 180;
+// ── Fan-shape geometry helpers ────────────────────────────────────────────────
+// The amphitheater is fan-shaped. Sections are arc slices described by polygons
+// stored in uiData.polygon ([x,y][] in canvas coordinates).
+// Center of the fan (stage focus point):
+const _HB_CX = 520;
+const _HB_CY = 420;
+const _toRad = (deg: number) => (deg * Math.PI) / 180;
 
+/** Build an arc polygon (innerR → outerR, deg1 → deg2) as [x,y][] pairs. */
 function _fanPolygon(
 	innerR: number,
 	outerR: number,
@@ -797,8 +700,13 @@ function _fanPolygon(
 	return pts;
 }
 
+/**
+ * Generate fan-shaped rows + seats for an arc section.
+ * Seat positions are computed in polar coordinates around (_HB_CX, _HB_CY).
+ * Matches SeatResponse exactly (no extra fields).
+ */
 function _fanSeats(
-	areaId: string,
+	sectionId: string,
 	startCharCode: number,
 	rowCount: number,
 	seatsPerRow: number,
@@ -806,119 +714,234 @@ function _fanSeats(
 	outerR: number,
 	deg1: number,
 	deg2: number,
-	sectionId: string | null,
 	priceLevelId: string
-) {
-	return Array.from({ length: rowCount }, (_, rIdx) => {
+): { rows: MockSeatRow[]; seats: MockSeat[] } {
+	const rows: MockSeatRow[] = [];
+	const seats: MockSeat[] = [];
+	const rPadding = 12; // pixels
+	const aPadding = 2; // degrees
+	for (let rIdx = 0; rIdx < rowCount; rIdx++) {
 		const rowName = String.fromCharCode(startCharCode + rIdx);
-		const rowId = `${areaId}-row-${rowName}`;
-		const r = innerR + ((outerR - innerR) * rIdx) / (rowCount - 1 || 1);
-		const midAngle = _toRad((deg1 + deg2) / 2);
-		const rowY = Math.round(_HB_CY + r * Math.sin(midAngle));
-		const seats = Array.from({ length: seatsPerRow }, (_, sIdx) => {
-			const deg = deg1 + ((deg2 - deg1) * sIdx) / (seatsPerRow - 1 || 1);
+		const rowId = `${sectionId}-row-${rowName}`;
+		const r =
+			innerR +
+			rPadding +
+			((outerR - rPadding - (innerR + rPadding)) * rIdx) / Math.max(rowCount - 1, 1);
+		rows.push({ id: rowId, sectionId, name: rowName });
+		for (let sIdx = 0; sIdx < seatsPerRow; sIdx++) {
+			const deg =
+				deg1 +
+				aPadding +
+				((deg2 - aPadding - (deg1 + aPadding)) * sIdx) / Math.max(seatsPerRow - 1, 1);
 			const a = _toRad(deg);
-			return {
+			seats.push({
 				id: `${rowId}-s${String(sIdx + 1).padStart(3, '0')}`,
 				rowId,
 				name: String(sIdx + 1).padStart(3, '0'),
 				positionX: Math.round(_HB_CX + r * Math.cos(a)),
 				positionY: Math.round(_HB_CY + r * Math.sin(a)),
-				status: 'AVAILABLE' as const,
-				accessibility: false,
-				obstructedView: false,
-				aisle: false,
+				status: 'AVAILABLE',
 				priceLevelId,
 				sectionId
-			};
-		});
-		return { id: rowId, rsAreaId: areaId, name: rowName, positionY: rowY, seats };
-	});
+			});
+		}
+	}
+	return { rows, seats };
 }
 
-const _hb = 'MHB0001';
+const _HB = 'MHB0001';
 
-// seatsPerRow = floor(span_deg × avg_r × π/180 / spacing_px)
-// spacing_px = 14 (gap rõ giữa các dot)
-// rowCount   = floor((outerR - innerR) / row_gap_px), row_gap_px = 20
-//
-// Orchestra innerR=180 outerR=360 avg_r=270 row_gap=20 → rows=9
-//   span 20°: arc = 20×270×π/180 = 94px → seats = floor(94/14) = 6
-//   span 25°: arc = 118px → seats = 8
-//   span 30°: arc = 141px → seats = 10
+// Generate rows & seats per arc section
+const _hbA = _fanSeats(`${_HB}-AREA-A`, 65, 9, 6, 180, 360, -80, -61, 'P-STD');
+const _hbB = _fanSeats(`${_HB}-AREA-B`, 65, 9, 6, 180, 360, -59, -41, 'P-STD');
+const _hbC = _fanSeats(`${_HB}-AREA-C`, 65, 9, 8, 180, 360, -39, -16, 'P-STD');
+const _hbD = _fanSeats(`${_HB}-AREA-D`, 65, 9, 10, 180, 360, -14, 14, 'P-PREM');
+const _hbE = _fanSeats(`${_HB}-AREA-E`, 65, 9, 8, 180, 360, 16, 39, 'P-STD');
+const _hbF = _fanSeats(`${_HB}-AREA-F`, 65, 9, 6, 180, 360, 41, 59, 'P-STD');
+const _hbG = _fanSeats(`${_HB}-AREA-G`, 65, 9, 6, 180, 360, 61, 80, 'P-STD');
+const _hbT1 = _fanSeats(`${_HB}-AREA-T1`, 80, 6, 16, 370, 520, -65, -36, 'P-TER');
+const _hbT2 = _fanSeats(`${_HB}-AREA-T2`, 80, 6, 22, 370, 520, -34, 4, 'P-TER');
+const _hbT3 = _fanSeats(`${_HB}-AREA-T3`, 80, 6, 16, 370, 520, 6, 35, 'P-TER');
+const _hbBox = _fanSeats(`${_HB}-AREA-BOX`, 65, 4, 7, 185, 290, -107, -83, 'P-BOX');
 
-const _areaA  = { id:`${_hb}-AREA-A`,  manifestId:_hb, levelId:'L-ORCH', priceLevelId:'P-STD',  color:'#60A5FA', x:0,y:0,width:0,height:0,curvature:0, polygon:_fanPolygon(180,360,-80,-60), rows:_fanSeats(`${_hb}-AREA-A`, 65,9,6, 180,360,-80,-60,'SEC-ORCH','P-STD') };
-const _areaB  = { id:`${_hb}-AREA-B`,  manifestId:_hb, levelId:'L-ORCH', priceLevelId:'P-STD',  color:'#3B82F6', x:0,y:0,width:0,height:0,curvature:0, polygon:_fanPolygon(180,360,-60,-40), rows:_fanSeats(`${_hb}-AREA-B`, 65,9,6, 180,360,-60,-40,'SEC-ORCH','P-STD') };
-const _areaC  = { id:`${_hb}-AREA-C`,  manifestId:_hb, levelId:'L-ORCH', priceLevelId:'P-STD',  color:'#2563EB', x:0,y:0,width:0,height:0,curvature:0, polygon:_fanPolygon(180,360,-40,-15), rows:_fanSeats(`${_hb}-AREA-C`, 65,9,8, 180,360,-40,-15,'SEC-ORCH','P-STD') };
-const _areaD  = { id:`${_hb}-AREA-D`,  manifestId:_hb, levelId:'L-ORCH', priceLevelId:'P-PREM', color:'#1E40AF', x:0,y:0,width:0,height:0,curvature:0, polygon:_fanPolygon(180,360,-15, 15), rows:_fanSeats(`${_hb}-AREA-D`, 65,9,10,180,360,-15, 15,'SEC-ORCH','P-PREM') };
-const _areaE  = { id:`${_hb}-AREA-E`,  manifestId:_hb, levelId:'L-ORCH', priceLevelId:'P-STD',  color:'#2563EB', x:0,y:0,width:0,height:0,curvature:0, polygon:_fanPolygon(180,360, 15, 40), rows:_fanSeats(`${_hb}-AREA-E`, 65,9,8, 180,360, 15, 40,'SEC-ORCH','P-STD') };
-const _areaF  = { id:`${_hb}-AREA-F`,  manifestId:_hb, levelId:'L-ORCH', priceLevelId:'P-STD',  color:'#3B82F6', x:0,y:0,width:0,height:0,curvature:0, polygon:_fanPolygon(180,360, 40, 60), rows:_fanSeats(`${_hb}-AREA-F`, 65,9,6, 180,360, 40, 60,'SEC-ORCH','P-STD') };
-const _areaG  = { id:`${_hb}-AREA-G`,  manifestId:_hb, levelId:'L-ORCH', priceLevelId:'P-STD',  color:'#60A5FA', x:0,y:0,width:0,height:0,curvature:0, polygon:_fanPolygon(180,360, 60, 80), rows:_fanSeats(`${_hb}-AREA-G`, 65,9,6, 180,360, 60, 80,'SEC-ORCH','P-STD') };
-
-// Terrace innerR=370 outerR=520 avg_r=445 row_gap=25 → rows=6
-//   span 30°: arc=233px → seats=floor(233/14)=16
-//   span 40°: arc=310px → seats=22
-const _areaT1 = { id:`${_hb}-AREA-T1`, manifestId:_hb, levelId:'L-TER',  priceLevelId:'P-TER',  color:'#8B5CF6', x:0,y:0,width:0,height:0,curvature:0, polygon:_fanPolygon(370,520,-65,-35), rows:_fanSeats(`${_hb}-AREA-T1`,80,6,16,370,520,-65,-35,'SEC-TER','P-TER') };
-const _areaT2 = { id:`${_hb}-AREA-T2`, manifestId:_hb, levelId:'L-TER',  priceLevelId:'P-TER',  color:'#7C3AED', x:0,y:0,width:0,height:0,curvature:0, polygon:_fanPolygon(370,520,-35,  5), rows:_fanSeats(`${_hb}-AREA-T2`,80,6,22,370,520,-35,  5,'SEC-TER','P-TER') };
-const _areaT3 = { id:`${_hb}-AREA-T3`, manifestId:_hb, levelId:'L-TER',  priceLevelId:'P-TER',  color:'#8B5CF6', x:0,y:0,width:0,height:0,curvature:0, polygon:_fanPolygon(370,520,  5, 35), rows:_fanSeats(`${_hb}-AREA-T3`,80,6,16,370,520,  5, 35,'SEC-TER','P-TER') };
-
-// Box span=24° avg_r=237 → arc=99px → seats=7; rows=4
-const _areaBox  = { id:`${_hb}-AREA-BOX`,  manifestId:_hb, levelId:'L-BOX',  priceLevelId:'P-BOX',  color:'#F59E0B', x:0,y:0,width:0,height:0,curvature:0, polygon:_fanPolygon(185,290,-107,-83), rows:_fanSeats(`${_hb}-AREA-BOX`, 65,4,7,185,290,-107,-83,'SEC-BOX','P-BOX') };
-const _areaGard = { id:`${_hb}-AREA-GARD`, manifestId:_hb, levelId:'L-GARD', priceLevelId:'P-GARD', color:'#94A3B8', x:0,y:0,width:0,height:0,curvature:0, polygon:[[820,50],[1020,50],[1020,250],[820,250]] as [number,number][], rows:[] as any[] };
-
-export const MOCK_MANIFEST_HB_RS_AREAS = [
-	_areaA,
-	_areaB,
-	_areaC,
-	_areaD,
-	_areaE,
-	_areaF,
-	_areaG,
-	_areaT1,
-	_areaT2,
-	_areaT3,
-	_areaBox,
-	_areaGard
+// Sections: each arc + flat garden GA area
+export const MOCK_MANIFEST_HB_SECTIONS: MockSection[] = [
+	{
+		id: `${_HB}-AREA-A`,
+		type: 'RS',
+		name: 'ORCH A',
+		color: '#60A5FA',
+		levelId: 'L-ORCH',
+		capacity: _hbA.seats.length,
+		uiData: { polygon: _fanPolygon(180, 360, -80, -61) }
+	},
+	{
+		id: `${_HB}-AREA-B`,
+		type: 'RS',
+		name: 'ORCH B',
+		color: '#3B82F6',
+		levelId: 'L-ORCH',
+		capacity: _hbB.seats.length,
+		uiData: { polygon: _fanPolygon(180, 360, -59, -41) }
+	},
+	{
+		id: `${_HB}-AREA-C`,
+		type: 'RS',
+		name: 'ORCH C',
+		color: '#2563EB',
+		levelId: 'L-ORCH',
+		capacity: _hbC.seats.length,
+		uiData: { polygon: _fanPolygon(180, 360, -39, -16) }
+	},
+	{
+		id: `${_HB}-AREA-D`,
+		type: 'RS',
+		name: 'ORCH D',
+		color: '#1E40AF',
+		levelId: 'L-ORCH',
+		capacity: _hbD.seats.length,
+		uiData: { polygon: _fanPolygon(180, 360, -14, 14) }
+	},
+	{
+		id: `${_HB}-AREA-E`,
+		type: 'RS',
+		name: 'ORCH E',
+		color: '#2563EB',
+		levelId: 'L-ORCH',
+		capacity: _hbE.seats.length,
+		uiData: { polygon: _fanPolygon(180, 360, 16, 39) }
+	},
+	{
+		id: `${_HB}-AREA-F`,
+		type: 'RS',
+		name: 'ORCH F',
+		color: '#3B82F6',
+		levelId: 'L-ORCH',
+		capacity: _hbF.seats.length,
+		uiData: { polygon: _fanPolygon(180, 360, 41, 59) }
+	},
+	{
+		id: `${_HB}-AREA-G`,
+		type: 'RS',
+		name: 'ORCH G',
+		color: '#60A5FA',
+		levelId: 'L-ORCH',
+		capacity: _hbG.seats.length,
+		uiData: { polygon: _fanPolygon(180, 360, 61, 80) }
+	},
+	{
+		id: `${_HB}-AREA-T1`,
+		type: 'RS',
+		name: 'TER 1',
+		color: '#8B5CF6',
+		levelId: 'L-TER',
+		capacity: _hbT1.seats.length,
+		uiData: { polygon: _fanPolygon(370, 520, -65, -36) }
+	},
+	{
+		id: `${_HB}-AREA-T2`,
+		type: 'RS',
+		name: 'TER 2',
+		color: '#7C3AED',
+		levelId: 'L-TER',
+		capacity: _hbT2.seats.length,
+		uiData: { polygon: _fanPolygon(370, 520, -34, 4) }
+	},
+	{
+		id: `${_HB}-AREA-T3`,
+		type: 'RS',
+		name: 'TER 3',
+		color: '#8B5CF6',
+		levelId: 'L-TER',
+		capacity: _hbT3.seats.length,
+		uiData: { polygon: _fanPolygon(370, 520, 6, 35) }
+	},
+	{
+		id: `${_HB}-AREA-BOX`,
+		type: 'RS',
+		name: 'BOX',
+		color: '#F59E0B',
+		levelId: 'L-BOX',
+		capacity: _hbBox.seats.length,
+		uiData: { polygon: _fanPolygon(185, 290, -107, -83) }
+	},
+	// Garden is a flat GA area (no rows/seats – capacity managed externally)
+	{
+		id: `${_HB}-AREA-GARD`,
+		type: 'GA',
+		name: 'Garden',
+		color: '#94A3B8',
+		levelId: 'L-GARD',
+		capacity: 8000,
+		uiData: {
+			polygon: [
+				[820, 50],
+				[1020, 50],
+				[1020, 250],
+				[820, 250]
+			] as [number, number][]
+		}
+	}
 ];
 
-export const MOCK_MANIFEST_HB_GA_AREAS: any[] = [];
+export const MOCK_MANIFEST_HB_ROWS: MockSeatRow[] = [
+	..._hbA.rows,
+	..._hbB.rows,
+	..._hbC.rows,
+	..._hbD.rows,
+	..._hbE.rows,
+	..._hbF.rows,
+	..._hbG.rows,
+	..._hbT1.rows,
+	..._hbT2.rows,
+	..._hbT3.rows,
+	..._hbBox.rows
+];
+
+export const MOCK_MANIFEST_HB_SEATS: MockSeat[] = [
+	..._hbA.seats,
+	..._hbB.seats,
+	..._hbC.seats,
+	..._hbD.seats,
+	..._hbE.seats,
+	..._hbF.seats,
+	..._hbG.seats,
+	..._hbT1.seats,
+	..._hbT2.seats,
+	..._hbT3.seats,
+	..._hbBox.seats
+];
 
 // ── Convenience aggregates ────────────────────────────────────────────────────
 
-export const MOCK_MANIFESTS = [
+export const MOCK_MANIFESTS: MockManifest[] = [
 	MOCK_MANIFEST_HANOI_OPERA,
-	MOCK_MANIFEST_MY_DINH,
 	MOCK_MANIFEST_HOLLYWOOD_BOWL
 ];
 
-export const MOCK_MANIFEST_LEVELS = {
+export const MOCK_MANIFEST_LEVELS: Record<string, MockLevel[]> = {
 	M100001: MOCK_MANIFEST_HANOI_OPERA_LEVELS,
-	M200001: MOCK_MANIFEST_MY_DINH_LEVELS,
 	MHB0001: MOCK_MANIFEST_HB_LEVELS
 };
 
-export const MOCK_MANIFEST_SECTIONS = {
+export const MOCK_MANIFEST_SECTIONS: Record<string, MockSection[]> = {
 	M100001: MOCK_MANIFEST_HANOI_OPERA_SECTIONS,
-	M200001: MOCK_MANIFEST_MY_DINH_SECTIONS,
 	MHB0001: MOCK_MANIFEST_HB_SECTIONS
 };
 
-export const MOCK_MANIFEST_PRICE_LEVELS = {
+export const MOCK_MANIFEST_ROWS: Record<string, MockSeatRow[]> = {
+	M100001: MOCK_MANIFEST_HANOI_OPERA_ROWS,
+	MHB0001: MOCK_MANIFEST_HB_ROWS
+};
+
+export const MOCK_MANIFEST_SEATS: Record<string, MockSeat[]> = {
+	M100001: MOCK_MANIFEST_HANOI_OPERA_SEATS,
+	MHB0001: MOCK_MANIFEST_HB_SEATS
+};
+
+export const MOCK_MANIFEST_PRICE_LEVELS: Record<string, MockPriceLevel[]> = {
 	M100001: MOCK_MANIFEST_HANOI_OPERA_PRICE_LEVELS,
-	M200001: MOCK_MANIFEST_MY_DINH_PRICE_LEVELS,
 	MHB0001: MOCK_MANIFEST_HB_PRICE_LEVELS
-};
-
-export const MOCK_MANIFEST_RS_AREAS: Record<string, any[]> = {
-	M100001: MOCK_MANIFEST_HANOI_OPERA_RS_AREAS,
-	M200001: MOCK_MANIFEST_MY_DINH_RS_AREAS,
-	MHB0001: MOCK_MANIFEST_HB_RS_AREAS
-};
-
-export const MOCK_MANIFEST_GA_AREAS = {
-	M100001: MOCK_MANIFEST_HANOI_OPERA_GA_AREAS,
-	M200001: MOCK_MANIFEST_MY_DINH_GA_AREAS,
-	MHB0001: MOCK_MANIFEST_HB_GA_AREAS
 };
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -932,23 +955,26 @@ export const MOCK_VENUE_BY_ID: Record<string, (typeof MOCK_VENUES)[number]> = Ob
 );
 
 /** For each mock venue, list which manifests belong to it */
-export const MOCK_VENUE_MANIFESTS: Record<string, any[]> = {
+export const MOCK_VENUE_MANIFESTS: Record<string, MockManifest[]> = {
 	'018f4e1a-0006-4000-8000-000000000001': [MOCK_MANIFEST_HANOI_OPERA],
-	'018f4e1a-0003-4000-8000-000000000001': [MOCK_MANIFEST_MY_DINH],
 	'019e90ee-6afa-70fc-aa55-2159192f0729': [MOCK_MANIFEST_HOLLYWOOD_BOWL]
 };
 
-/** Full mock bundle for the manifest editor (venue + manifest + levels + sections + priceLevels + areas) */
+/**
+ * Full mock bundle for the manifest editor page.
+ * Keyed by venueId (the route param [id]).
+ * Matches the shape returned by the real +page.server.ts load function.
+ */
 export const MOCK_VENUE_MANIFEST_EDITOR_DATA: Record<
 	string,
 	{
 		venue: (typeof MOCK_VENUES)[number];
-		manifest: any;
-		levels: any[];
-		sections: any[];
-		priceLevels: any[];
-		rsAreas: any[];
-		gaAreas: any[];
+		manifest: MockManifest;
+		levels: MockLevel[];
+		sections: MockSection[];
+		priceLevels: MockPriceLevel[];
+		rows: MockSeatRow[];
+		seats: MockSeat[];
 	}
 > = {
 	'018f4e1a-0006-4000-8000-000000000001': {
@@ -957,17 +983,8 @@ export const MOCK_VENUE_MANIFEST_EDITOR_DATA: Record<
 		levels: MOCK_MANIFEST_HANOI_OPERA_LEVELS,
 		sections: MOCK_MANIFEST_HANOI_OPERA_SECTIONS,
 		priceLevels: MOCK_MANIFEST_HANOI_OPERA_PRICE_LEVELS,
-		rsAreas: MOCK_MANIFEST_HANOI_OPERA_RS_AREAS,
-		gaAreas: MOCK_MANIFEST_HANOI_OPERA_GA_AREAS
-	},
-	'018f4e1a-0003-4000-8000-000000000001': {
-		venue: MOCK_VENUE_BY_ID['018f4e1a-0003-4000-8000-000000000001'],
-		manifest: MOCK_MANIFEST_MY_DINH,
-		levels: MOCK_MANIFEST_MY_DINH_LEVELS,
-		sections: MOCK_MANIFEST_MY_DINH_SECTIONS,
-		priceLevels: MOCK_MANIFEST_MY_DINH_PRICE_LEVELS,
-		rsAreas: MOCK_MANIFEST_MY_DINH_RS_AREAS,
-		gaAreas: MOCK_MANIFEST_MY_DINH_GA_AREAS
+		rows: MOCK_MANIFEST_HANOI_OPERA_ROWS,
+		seats: MOCK_MANIFEST_HANOI_OPERA_SEATS
 	},
 	'019e90ee-6afa-70fc-aa55-2159192f0729': {
 		venue: MOCK_VENUE_BY_ID['019e90ee-6afa-70fc-aa55-2159192f0729'],
@@ -975,7 +992,7 @@ export const MOCK_VENUE_MANIFEST_EDITOR_DATA: Record<
 		levels: MOCK_MANIFEST_HB_LEVELS,
 		sections: MOCK_MANIFEST_HB_SECTIONS,
 		priceLevels: MOCK_MANIFEST_HB_PRICE_LEVELS,
-		rsAreas: MOCK_MANIFEST_HB_RS_AREAS,
-		gaAreas: MOCK_MANIFEST_HB_GA_AREAS
+		rows: MOCK_MANIFEST_HB_ROWS,
+		seats: MOCK_MANIFEST_HB_SEATS
 	}
 };

@@ -19,14 +19,14 @@
 			? data.priceLevels
 			: [{ id: 'STANDARD', description: 'Standard Tier', color: '#3B82F6' }]
 	);
-	let gaAreas = $state<any[]>(data.gaAreas || []);
-	let rsAreas = $state<any[]>(data.rsAreas || []);
+	let gaSections = $state<any[]>(data.gaSections || []);
+	let rsSections = $state<any[]>(data.rsSections || []);
 	let brushPriceLevelId = $state(data.priceLevels?.[0]?.id || 'STANDARD');
 	let brushSectionId = $state('');
 
 	let layoutObjects = $state<any[]>(data.manifest?.objects || []);
 	let selectedObjectId = $state<number | null>(null);
-	let selectedGaAreaId = $state<string>('');
+	let selectedGaSectionId = $state<string>('');
 
 	let activeMode = $state<'scaling' | 'inventory' | 'floor-edit'>('scaling');
 	let selectionTool = $state<'seat' | 'row' | 'section'>('seat');
@@ -38,12 +38,14 @@
 	let showAssistantDialog = $state(false);
 	let assistantPrompt = $state('');
 
+	// onlyAvailable: filter by seat.status. onlyAccessible/onlyObstructed: UI-only,
+	// these fields no longer exist in the API model so filters are intentional no-ops.
 	let onlyAvailable = $state(false);
 	let onlyAccessible = $state(false);
 	let onlyObstructed = $state(false);
 
 	let selectedSeatIds = $state<string[]>([]);
-	let selectedRsAreaId = $state('');
+	let selectedRsSectionId = $state('');
 	let isSaving = $state(false);
 	let saveMessage = $state('');
 	let errorMessage = $state('');
@@ -90,38 +92,56 @@
 	let viewportY = $state(0);
 	let viewportW = $state(800);
 	let viewportH = $state(600);
+	let currentScale = $state(1);
 
-	// Seat radius thích ứng theo zoom — luôn đủ nhìn thấy (tối thiểu 3px trên màn hình)
-	const MIN_SCREEN_PX = 3.5;
 	function getSeatRadius(_sc: number) {
-		return 3; // 3 world-units — vừa khớp với spacing ~7-10px của fan layout
+		return 3; // 3 world-units
 	}
-	// Semantic zoom thresholds
-	const SEC_FADE_START = 0.4; // bắt đầu fade section fill
-	const SEC_FADE_END   = 1.2; // section fill = 0
+	let fitScale = $state(1);
+
+	function _showSeats(sc: number) {
+		return sc >= fitScale * 1.5;
+	}
+	function _secProgress(sc: number) {
+		const start = fitScale * 1.4,
+			end = fitScale * 2.2;
+		return Math.max(0, Math.min(1, (sc - start) / (end - start)));
+	}
 
 	const bounds = $derived.by(() => {
 		let xs: number[] = [];
 		let ys: number[] = [];
-		rsAreas.forEach((area) => {
-			(area.rows || []).forEach((row: any) => {
+		rsSections.forEach((section) => {
+			// include polygon points for proper bounding when seats are fan-shaped
+			if (section.polygon?.length) {
+				for (const [px, py] of section.polygon as [number, number][]) {
+					xs.push(px);
+					ys.push(py);
+				}
+			}
+			(section.rows || []).forEach((row: any) => {
 				(row.seats || []).forEach((seat: any) => {
-					if (seat.positionX !== undefined) xs.push(seat.positionX);
-					if (seat.positionY !== undefined) ys.push(seat.positionY);
+					if (seat.positionX != null) xs.push(seat.positionX);
+					if (seat.positionY != null) ys.push(seat.positionY);
 				});
 			});
 		});
-		gaAreas.forEach((ga, idx) => {
-			const x = ga.x || 50 + idx * 220,
-				y = ga.y || 50;
-			xs.push(x, x + (ga.width || 200));
-			ys.push(y, y + (ga.height || 100));
+		gaSections.forEach((ga, idx) => {
+			if (ga.polygon?.length) {
+				for (const [px, py] of ga.polygon as [number, number][]) {
+					xs.push(px);
+					ys.push(py);
+				}
+			} else {
+				const x = ga.x || 50 + idx * 220,
+					y = ga.y || 50;
+				xs.push(x, x + (ga.width || 200));
+				ys.push(y, y + (ga.height || 100));
+			}
 		});
 		layoutObjects.forEach((obj: any) => {
-			if (obj.x !== undefined) xs.push(obj.x);
-			if (obj.y !== undefined) ys.push(obj.y);
-			if (obj.x !== undefined && obj.width) xs.push(obj.x + obj.width);
-			if (obj.y !== undefined && obj.height) ys.push(obj.y + obj.height);
+			if (obj.x != null) xs.push(obj.x, obj.x + (obj.width || 0));
+			if (obj.y != null) ys.push(obj.y, obj.y + (obj.height || 0));
 		});
 		const minX = xs.length ? Math.min(...xs) - 80 : 0;
 		const maxX = xs.length ? Math.max(...xs) + 80 : 800;
@@ -132,9 +152,9 @@
 
 	const totalCapacity = $derived.by(() => {
 		let total = 0;
-		gaAreas.forEach((ga) => (total += Number(ga.capacity || 0)));
-		rsAreas.forEach((area) => {
-			(area.rows || []).forEach((row: any) => {
+		gaSections.forEach((ga) => (total += Number(ga.capacity || 0)));
+		rsSections.forEach((section) => {
+			(section.rows || []).forEach((row: any) => {
 				total += (row.seats || []).length;
 			});
 		});
@@ -144,8 +164,8 @@
 	const seatCountsByPriceLevel = $derived.by(() => {
 		const counts: Record<string, number> = {};
 		let unassigned = 0;
-		rsAreas.forEach((area) => {
-			(area.rows || []).forEach((row: any) => {
+		rsSections.forEach((section) => {
+			(section.rows || []).forEach((row: any) => {
 				(row.seats || []).forEach((seat: any) => {
 					if (seat.priceLevelId) counts[seat.priceLevelId] = (counts[seat.priceLevelId] || 0) + 1;
 					else unassigned++;
@@ -255,6 +275,7 @@
 	function updateViewport() {
 		if (!stage) return;
 		const s = stage.scaleX() || 1;
+		currentScale = s;
 		viewportX = -stage.x() / s;
 		viewportY = -stage.y() / s;
 		viewportW = stage.width() / s;
@@ -268,8 +289,8 @@
 			sh = stage.height() - pad * 2;
 		const bw = bounds.width || 1,
 			bh = bounds.height || 1;
-		// Không giới hạn scale tối đa để map luôn vừa viewport
 		const scale = Math.min(sw / bw, sh / bh);
+		fitScale = scale;
 		stage.scale({ x: scale, y: scale });
 		stage.x(pad + (sw - bw * scale) / 2 - bounds.minX * scale);
 		stage.y(pad + (sh - bh * scale) / 2 - bounds.minY * scale);
@@ -330,17 +351,11 @@
 		updateViewport();
 	}
 
-	// Pan bằng chuột trái luôn — stage luôn draggable
-	// Brush/eraser/select vẫn hoạt động vì cancelBubble trên seat circles
 	$effect(() => {
 		if (!stage?.container()) return;
-		stage.draggable(true); // luôn pan được
+		stage.draggable(true);
 		stage.container().style.cursor =
-			activeTool === 'brush'
-				? 'copy'
-				: activeTool === 'eraser'
-					? 'cell'
-					: 'grab';
+			activeTool === 'brush' ? 'copy' : activeTool === 'eraser' ? 'cell' : 'grab';
 		drawSeatingMap();
 	});
 
@@ -352,9 +367,9 @@
 		if (activeMode || onlyAvailable || onlyAccessible || onlyObstructed) drawSeatingMap();
 	});
 
-	const RS_PAD = 22;
+	const RS_PAD = 32;
 
-	function computeRsAreaBounds(rows: any[]) {
+	function computeSectionBounds(rows: any[]) {
 		let minX = Infinity,
 			maxX = -Infinity,
 			minY = Infinity,
@@ -379,27 +394,12 @@
 		};
 	}
 
-	function applyRsAreaBounds(area: any, ob: any, nb: any) {
-		(area.rows || []).forEach((row: any, ri: number) => {
-			const ry = row.positionY ?? 200 + ri * 50;
-			row.positionY = Math.round(nb.boxY + ((ry - ob.boxY) / ob.boxH) * nb.boxH);
-			(row.seats || []).forEach((seat: any, si: number) => {
-				const sx = seat.positionX ?? 100 + si * 32,
-					sy = seat.positionY ?? ry;
-				seat.positionX = Math.round(nb.boxX + ((sx - ob.boxX) / ob.boxW) * nb.boxW);
-				seat.positionY = Math.round(nb.boxY + ((sy - ob.boxY) / ob.boxH) * nb.boxH);
-			});
-		});
-		area.x = Math.round(nb.boxX);
-		area.y = Math.round(nb.boxY);
-		area.width = Math.round(nb.boxW);
-		area.height = Math.round(nb.boxH);
-	}
-
-	function getAreaColor(area: any): string {
-		if (area.color) return area.color;
+	function getSectionColor(section: any): string {
+		// 1. section carries its own color from the section (set by +page.server.ts)
+		if (section.color) return section.color;
+		// 2. dominant sectionId on seats → section color
 		const cnt: Record<string, number> = {};
-		for (const row of area.rows || [])
+		for (const row of section.rows || [])
 			for (const seat of row.seats || [])
 				if (seat.sectionId) cnt[seat.sectionId] = (cnt[seat.sectionId] || 0) + 1;
 		let max = 0,
@@ -411,10 +411,11 @@
 			}
 		if (dom) {
 			const s = sections.find((s) => s.id === dom);
-			if (s) return s.color;
+			if (s?.color) return s.color;
 		}
+		// 3. dominant priceLevelId on seats → price level color
 		const pc: Record<string, number> = {};
-		for (const row of area.rows || [])
+		for (const row of section.rows || [])
 			for (const seat of row.seats || [])
 				if (seat.priceLevelId) pc[seat.priceLevelId] = (pc[seat.priceLevelId] || 0) + 1;
 		let pmax = 0,
@@ -426,7 +427,7 @@
 			}
 		if (pdom) {
 			const p = priceLevels.find((p) => p.id === pdom);
-			if (p) return p.color;
+			if (p?.color) return p.color;
 		}
 		return '#3B82F6';
 	}
@@ -439,19 +440,11 @@
 		const sc = stage.scaleX() || 1;
 		const SEAT_R = getSeatRadius(sc);
 
-		// Luôn render cả section outline lẫn seats ở mọi mức zoom
-		// Section fill: đậm khi zoom out (overview), mờ dần khi zoom vào
-		// Section stroke: luôn visible ít nhất 0.3
-		// Seats: luôn render, opacity đủ thấy từ xa
-		const secProgress = Math.max(0, Math.min(1, (sc - SEC_FADE_START) / (SEC_FADE_END - SEC_FADE_START)));
-		const secFill   = Math.max(0,   0.85 * (1 - secProgress));   // 0.85 → 0
-		const secStroke = Math.max(0.3, 1.0  - secProgress * 0.7);   // 1.0 → 0.3
-		const seatOp    = Math.min(1,   0.55 + sc * 0.7);             // 0.55 → 1.0
-		const showLabel = sc < 0.9;
-		const showSeats = sc >= SEC_FADE_END * 0.4; // show seats from 0.48 zoom
-
-		// Background: blank, không grid
-		// drawBackgroundGrid() đã bỏ
+		const secProgress = _secProgress(sc);
+		const secFill = Math.max(0, 0.85 * (1 - secProgress));
+		const secStroke = Math.max(0.3, 1.0 - secProgress * 0.7);
+		const showLabel = sc < fitScale * 2.0;
+		const showSeats = _showSeats(sc);
 
 		// ── Layout Objects ─────────────────────────────────────────────────
 		layoutObjects.forEach((obj, idx) => {
@@ -522,7 +515,7 @@
 							strokeWidth: isSel ? 3 : 1
 						})
 					);
-				} else
+				} else {
 					g.add(
 						new Konva.Rect({
 							width: ow,
@@ -534,24 +527,25 @@
 							cornerRadius: obj.cornerRadius || 4
 						})
 					);
+				}
 			}
 			g.on('click tap', (e: any) => {
 				e.cancelBubble = true;
 				selectedObjectId = idx;
-				selectedGaAreaId = '';
-				selectedRsAreaId = '';
+				selectedGaSectionId = '';
+				selectedRsSectionId = '';
 				drawSeatingMap();
 			});
 			layer.add(g);
 		});
 
 		// ── GA Areas ───────────────────────────────────────────────────────
-		gaAreas.forEach((ga, idx) => {
+		gaSections.forEach((ga, idx) => {
 			const x = ga.x || 50 + idx * 220,
 				y = ga.y || 50,
 				gw = ga.width || 200,
 				gh = ga.height || 100;
-			const isSel = selectedGaAreaId === ga.id;
+			const isSel = selectedGaSectionId === ga.id;
 			const g = new Konva.Group({ x, y, draggable: false, id: ga.id });
 			g.add(
 				new Konva.Rect({
@@ -563,9 +557,11 @@
 					cornerRadius: 12
 				})
 			);
+			// label: prefer ga.name, fall back to cleaned id
+			const gaLabel = (ga.name || ga.id.replace(manifestIdVal + '-', '')).toUpperCase();
 			g.add(
 				new Konva.Text({
-					text: (ga.name || ga.id.replace(manifestIdVal + '-', '')).toUpperCase(),
+					text: gaLabel,
 					fontSize: Math.max(14, Math.min(gw, gh) * 0.2),
 					fontStyle: 'bold',
 					fill: '#94A3B8',
@@ -578,8 +574,8 @@
 			);
 			g.on('click tap', (e: any) => {
 				e.cancelBubble = true;
-				selectedGaAreaId = ga.id;
-				selectedRsAreaId = '';
+				selectedGaSectionId = ga.id;
+				selectedRsSectionId = '';
 				selectedObjectId = null;
 				drawSeatingMap();
 			});
@@ -587,23 +583,26 @@
 		});
 
 		// ── RS Areas ───────────────────────────────────────────────────────
-		rsAreas.forEach((area) => {
-			const rows = area.rows || [];
-			const b = computeRsAreaBounds(rows);
+		rsSections.forEach((section) => {
+			const rows = section.rows || [];
+			const b = computeSectionBounds(rows);
 			if (!b) return;
 			const { boxX, boxY, boxW, boxH } = b;
-			const isSel = selectedRsAreaId === area.id;
-			const aColor = getAreaColor(area);
-			const aLabel = area.id.replace(manifestIdVal + '-', '');
-			const ag = new Konva.Group({ x: boxX, y: boxY, draggable: false, id: 'group-' + area.id });
+			const isSel = selectedRsSectionId === section.id;
+			const secColor = getSectionColor(section);
+			const ag = new Konva.Group({ x: boxX, y: boxY, draggable: false, id: 'group-' + section.id });
 
-			const hull = area.polygon?.length >= 6
-				? area.polygon.flatMap((p: [number, number]) => [p[0] - boxX, p[1] - boxY])
-				: _hullPoints(rows, boxX, boxY, RS_PAD - 4);
+			// Shape: prefer section.polygon (arc sections), else compute hull from seats
+			const hull =
+				section.polygon?.length >= 6
+					? (section.polygon as [number, number][]).flatMap(([px, py]) => [px - boxX, py - boxY])
+					: _hullPoints(rows, boxX, boxY, RS_PAD - 4);
+
 			const shapeAttrs = {
 				fill: isSel ? `rgba(241,245,249,${secFill + 0.05})` : `rgba(248,250,252,${secFill})`,
 				stroke: isSel ? `rgba(15,23,42,${secStroke})` : `rgba(160,180,210,${secStroke})`,
 				strokeWidth: (isSel ? 2 : 1) / sc,
+				hitStrokeWidth: 0,
 				closed: true
 			};
 			if (hull.length >= 6) ag.add(new Konva.Line({ ...shapeAttrs, points: hull }));
@@ -613,47 +612,67 @@
 				);
 
 			if (showLabel) {
-				const lw = boxW * 0.8,
-					lh = 28;
+				// Label: section.name (from section.name) is the primary source now
+				const cleanId = (id: string) =>
+					id
+						.replace(new RegExp('^' + manifestIdVal + '[-_]?', 'i'), '')
+						.replace(/^(section|sec|section)[-_]/i, '')
+						.replace(/[-_]/g, ' ')
+						.replace(/\b\w/g, (c) => c.toUpperCase())
+						.trim();
+
+				// Find the section object matching this section
+				const sec = sections.find((s) => s.id === section.id);
+				const rawLabel = section.name || sec?.name || sec?.description || cleanId(section.id);
+				const labelText = rawLabel.toUpperCase();
+				const chars = labelText.length;
+				const maxFontByWidth = (boxW * 0.78) / Math.max(chars * 0.58, 1);
+				const maxFontByHeight = boxH * 0.28;
+				const fontSize = Math.max(8, Math.min(22, maxFontByWidth, maxFontByHeight));
+
 				ag.add(
 					new Konva.Text({
-						text: aLabel.toUpperCase(),
-						fontSize: Math.max(8, Math.min(18, lw / (aLabel.length * 0.65 + 1))),
+						text: labelText,
+						fontSize,
 						fontStyle: 'bold',
-						fill: '#8090A8',
-						opacity: secStroke * 0.7,
+						fontFamily: 'Inter, system-ui, sans-serif',
+						fill: '#4A5568',
+						opacity: Math.max(0.75, 1 - secProgress * 0.35),
 						align: 'center',
 						verticalAlign: 'middle',
-						x: boxW / 2 - lw / 2,
-						y: boxH / 2 - lh / 2,
-						width: lw,
-						height: lh
+						x: 0,
+						y: 0,
+						width: boxW,
+						height: boxH,
+						wrap: 'none',
+						ellipsis: true,
+						listening: false
 					})
 				);
 			}
 
-			if (showSeats)
+			if (showSeats) {
 				rows.forEach((row: any, ri: number) => {
 					const rowY = row.positionY ?? 200 + ri * 50;
 					(row.seats || []).forEach((seat: any, si: number) => {
 						const sx = seat.positionX ?? 100 + si * 32;
 						const sy = seat.positionY ?? rowY;
 
+						// onlyAvailable: real filter. onlyAccessible/onlyObstructed: fields removed
+						// from API — these checkboxes exist in UI but have no effect (always false).
 						let isFiltered = false;
 						if (onlyAvailable && seat.status !== 'AVAILABLE') isFiltered = true;
-						if (onlyAccessible && !seat.accessibility) isFiltered = true;
-						if (onlyObstructed && !seat.obstructedView) isFiltered = true;
 
 						const isSeatSel = selectedSeatIds.includes(seat.id);
-						let color = aColor;
+						let color = secColor;
 						if (!isSeatSel && activeMode !== 'inventory' && seat.status !== 'UNAVAILABLE') {
 							const sec = seat.sectionId ? sections.find((s) => s.id === seat.sectionId) : null;
-							if (sec) color = sec.color;
+							if (sec?.color) color = sec.color;
 							else {
 								const pl = seat.priceLevelId
 									? priceLevels.find((p) => p.id === seat.priceLevelId)
 									: null;
-								if (pl) color = pl.color;
+								if (pl?.color) color = pl.color;
 							}
 						}
 						if (isSeatSel) color = '#1A1A1A';
@@ -661,7 +680,6 @@
 							color = seat.status === 'AVAILABLE' ? '#10B981' : '#EF4444';
 						else if (seat.status === 'UNAVAILABLE') color = '#E2E8F0';
 
-						// radius cố định theo canvas units — tỷ lệ thuận với zoom
 						const sg = new Konva.Group({
 							x: sx - boxX,
 							y: sy - boxY,
@@ -673,12 +691,10 @@
 								radius: SEAT_R,
 								fill: color,
 								opacity: isFiltered ? 0.15 : 1,
-								stroke: isSeatSel ? '#FFFFFF' : seat.obstructedView ? '#EF4444' : 'transparent',
+								stroke: isSeatSel ? '#FFFFFF' : 'transparent',
 								strokeWidth: isSeatSel ? 1.5 / sc : 0
 							})
 						);
-						if (seat.accessibility)
-							sg.add(new Konva.Circle({ radius: SEAT_R * 0.4, fill: '#FFFFFF' }));
 
 						const circle = sg.getChildren()[0];
 						circle.on('click tap', (e: any) => {
@@ -695,15 +711,22 @@
 								drawSeatingMap();
 								return;
 							}
+							const isRight = e.evt?.button === 2 || e.evt?.which === 3;
+							if (selectionTool === 'seat') {
+								if (isRight) {
+									selectedSeatIds = selectedSeatIds.filter((x) => x !== seat.id);
+									drawSeatingMap();
+								}
+								return;
+							}
 							let ids: string[] = [];
-							if (selectionTool === 'seat') ids = [seat.id];
-							else if (selectionTool === 'row') ids = row.seats.map((s: any) => s.id);
-							else if (selectionTool === 'section')
-								rows.forEach((r: any) => ids.push(...(r.seats || []).map((s: any) => s.id)));
-							const allSel = ids.every((id) => selectedSeatIds.includes(id));
-							selectedSeatIds = allSel
-								? selectedSeatIds.filter((id) => !ids.includes(id))
-								: Array.from(new Set([...selectedSeatIds, ...ids]));
+							if (selectionTool === 'row') ids = row.seats.map((s: any) => s.id);
+							else rows.forEach((r: any) => ids.push(...(r.seats || []).map((s: any) => s.id)));
+							if (isRight) {
+								selectedSeatIds = selectedSeatIds.filter((x) => !ids.includes(x));
+							} else {
+								selectedSeatIds = Array.from(new Set([...selectedSeatIds, ...ids]));
+							}
 							drawSeatingMap();
 						});
 						circle.on('mouseenter', () => {
@@ -720,26 +743,13 @@
 						});
 						ag.add(sg);
 					});
-				}); // end if (showSeats)
+				});
+			}
 
 			layer.add(ag);
 		});
 
-		// ── Transformers: đã xóa — objects/areas fixed, không drag/resize
-
 		layer.batchDraw();
-	}
-
-	function drawBackgroundGrid() {
-		if (!stage || !layer) return;
-		for (let i = -10; i < 80; i++) {
-			layer.add(
-				new Konva.Line({ points: [i * 40, -2000, i * 40, 4000], stroke: '#F1F5F9', strokeWidth: 1 })
-			);
-			layer.add(
-				new Konva.Line({ points: [-2000, i * 40, 4000, i * 40], stroke: '#F1F5F9', strokeWidth: 1 })
-			);
-		}
 	}
 
 	function setupCanvasEvents() {
@@ -750,8 +760,8 @@
 		stage.on('mousedown touchstart', (e: any) => {
 			if (e.target === stage) {
 				selectedObjectId = null;
-				selectedGaAreaId = '';
-				selectedRsAreaId = '';
+				selectedGaSectionId = '';
+				selectedRsSectionId = '';
 				drawSeatingMap();
 			}
 			isDown = true;
@@ -773,17 +783,22 @@
 						else if (brushPriceLevelId) paintSeat(id, brushPriceLevelId);
 						drawSeatingMap();
 					} else if (activeTool === 'select') {
-						if (isShiftPressed)
+						const isRight = e.evt?.button === 2 || e.evt?.which === 3;
+						if (isRight) {
+							selectedSeatIds = selectedSeatIds.filter((x) => x !== id);
+						} else if (isShiftPressed) {
 							selectedSeatIds = selectedSeatIds.includes(id)
 								? selectedSeatIds.filter((x) => x !== id)
 								: [...selectedSeatIds, id];
-						else if (!selectedSeatIds.includes(id)) selectedSeatIds = [...selectedSeatIds, id];
+						} else if (!selectedSeatIds.includes(id)) {
+							selectedSeatIds = [...selectedSeatIds, id];
+						}
 						drawSeatingMap();
 					}
 				}
 				return;
 			}
-			if (activeTool !== 'select' || e.target !== stage) return;
+			if (activeTool !== 'select') return;
 			brushActive = false;
 			const pos = stage.getPointerPosition();
 			if (!pos) return;
@@ -849,8 +864,8 @@
 				rw = selectionRect.width(),
 				rh = selectionRect.height();
 			const sel: string[] = [];
-			rsAreas.forEach((area) =>
-				(area.rows || []).forEach((row: any) =>
+			rsSections.forEach((section) =>
+				(section.rows || []).forEach((row: any) =>
 					(row.seats || []).forEach((seat: any) => {
 						const sx = seat.positionX ?? 0,
 							sy = seat.positionY ?? row.positionY ?? 0;
@@ -858,39 +873,35 @@
 							if (selectionTool === 'seat') sel.push(seat.id);
 							else if (selectionTool === 'row') row.seats.forEach((s: any) => sel.push(s.id));
 							else
-								(area.rows || []).forEach((r: any) => r.seats.forEach((s: any) => sel.push(s.id)));
+								(section.rows || []).forEach((r: any) =>
+									r.seats.forEach((s: any) => sel.push(s.id))
+								);
 						}
 					})
 				)
 			);
 			selectedSeatIds =
-				sel.length > 0
-					? isShiftPressed
-						? Array.from(new Set([...selectedSeatIds, ...sel]))
-						: sel
-					: isShiftPressed
-						? selectedSeatIds
-						: [];
+				sel.length > 0 ? Array.from(new Set([...selectedSeatIds, ...sel])) : selectedSeatIds;
 			drawSeatingMap();
 		});
 	}
 
 	function findSeatById(id: string) {
-		for (const area of rsAreas)
-			for (const row of area.rows || []) {
+		for (const section of rsSections)
+			for (const row of section.rows || []) {
 				const seat = (row.seats || []).find((s: any) => s.id === id);
-				if (seat) return { area, row, seat };
+				if (seat) return { section, row, seat };
 			}
 		return null;
 	}
 	function removeSeatById(id: string) {
 		selectedSeatIds = selectedSeatIds.filter((x) => x !== id);
-		rsAreas.forEach((area) => {
-			if (!area.rows) return;
-			area.rows.forEach((row: any) => {
+		rsSections.forEach((section) => {
+			if (!section.rows) return;
+			section.rows.forEach((row: any) => {
 				if (row.seats) row.seats = row.seats.filter((s: any) => s.id !== id);
 			});
-			area.rows = area.rows.filter((row: any) => row.seats?.length > 0);
+			section.rows = section.rows.filter((row: any) => row.seats?.length > 0);
 		});
 	}
 	function paintSeat(id: string, plId: string) {
@@ -903,12 +914,12 @@
 	}
 	function deleteSelectedSeats() {
 		if (!selectedSeatIds.length) return;
-		rsAreas.forEach((area) => {
-			if (!area.rows) return;
-			area.rows.forEach((row: any) => {
+		rsSections.forEach((section) => {
+			if (!section.rows) return;
+			section.rows.forEach((row: any) => {
 				if (row.seats) row.seats = row.seats.filter((s: any) => !selectedSeatIds.includes(s.id));
 			});
-			area.rows = area.rows.filter((r: any) => r.seats?.length > 0);
+			section.rows = section.rows.filter((r: any) => r.seats?.length > 0);
 		});
 		selectedSeatIds = [];
 		drawSeatingMap();
@@ -954,34 +965,18 @@
 		}
 	});
 
-	function applyCurvature(area: any, curvature: number) {
-		area.curvature = curvature;
-		(area.rows || []).forEach((row: any) => {
-			const seats = row.seats || [];
-			if (seats.length <= 1) return;
-			const xs = seats.map((s: any) => s.positionX);
-			const cx2 = (Math.min(...xs) + Math.max(...xs)) / 2;
-			seats.forEach((seat: any) => {
-				seat.positionY = Math.round(
-					row.positionY + (curvature * (seat.positionX - cx2) ** 2) / 2000
-				);
-			});
-		});
-		drawSeatingMap();
-	}
-
 	function generateSeatingBlock() {
-		if (!selectedRsAreaId) {
+		if (!selectedRsSectionId) {
 			errorMessage = 'Select a Reserved Seating Area first.';
 			return;
 		}
-		const area = rsAreas.find((a) => a.id === selectedRsAreaId);
-		if (!area) return;
-		const rows = area.rows || [];
+		const section = rsSections.find((a) => a.id === selectedRsSectionId);
+		if (!section) return;
+		const rows = section.rows || [];
 		const startCode = blockRowPrefix.toUpperCase().charCodeAt(0);
 		for (let ri = 0; ri < blockRowsCount; ri++) {
 			const rowName = String.fromCharCode(startCode + ri);
-			const rowId = `${selectedRsAreaId}-row-${rowName}-${Date.now()}`;
+			const rowId = `${selectedRsSectionId}-row-${rowName}-${Date.now()}`;
 			const rowY = 220 + rows.length * 48;
 			let cnt = blockSeatsPerRow,
 				off = 0;
@@ -994,54 +989,39 @@
 				cnt = Math.max(1, blockSeatsPerRow - d * 2);
 				off = d * 16;
 			} else if (blockShape === 'staggered') off = ri % 2 === 1 ? 16 : 0;
-			const newRow: any = { id: rowId, name: rowName, positionY: rowY, seats: [] };
+			// Seats: only fields matching SeatResponse (no accessibility/obstructedView/aisle)
+			const newRow: any = { id: rowId, sectionId: section.id, name: rowName, seats: [] };
 			for (let si = 0; si < cnt; si++) {
 				const num = blockSeatStartNum + si;
 				newRow.seats.push({
 					id: `${rowId}-seat-${num}`,
+					rowId,
 					name: String(num).padStart(3, '0'),
 					positionX: 120 + si * 32 + off,
+					positionY: rowY,
 					status: 'AVAILABLE',
-					accessibility: false,
-					obstructedView: false,
-					aisle: false
+					priceLevelId: brushPriceLevelId || null,
+					sectionId: section.id
 				});
 			}
 			rows.push(newRow);
 		}
-		area.rows = rows;
-		rsAreas = [...rsAreas];
+		section.rows = rows;
+		rsSections = [...rsSections];
 		drawSeatingMap();
 		errorMessage = '';
 	}
 
-	function toggleSelectedAttribute(attr: 'accessibility' | 'obstructedView' | 'aisle' | 'status') {
-		if (!selectedSeatIds.length) return;
-		rsAreas.forEach((area) =>
-			(area.rows || []).forEach((row: any) =>
-				(row.seats || []).forEach((seat: any) => {
-					if (selectedSeatIds.includes(seat.id)) {
-						if (attr === 'status')
-							seat.status = seat.status === 'AVAILABLE' ? 'UNAVAILABLE' : 'AVAILABLE';
-						else seat[attr] = !seat[attr];
-					}
-				})
-			)
-		);
-		rsAreas = [...rsAreas];
-		drawSeatingMap();
-	}
-
 	function setInventoryStatus(status: 'AVAILABLE' | 'UNAVAILABLE') {
 		if (!selectedSeatIds.length) return;
-		rsAreas.forEach((area) =>
-			(area.rows || []).forEach((row: any) =>
+		rsSections.forEach((section) =>
+			(section.rows || []).forEach((row: any) =>
 				(row.seats || []).forEach((seat: any) => {
 					if (selectedSeatIds.includes(seat.id)) seat.status = status;
 				})
 			)
 		);
-		rsAreas = [...rsAreas];
+		rsSections = [...rsSections];
 		saveMessage = `Marked ${selectedSeatIds.length} seats as ${status}`;
 		selectedSeatIds = [];
 		drawSeatingMap();
@@ -1049,14 +1029,14 @@
 
 	function assignPriceLevelToSelected(plId: string) {
 		if (!selectedSeatIds.length) return;
-		rsAreas.forEach((area) =>
-			(area.rows || []).forEach((row: any) =>
+		rsSections.forEach((section) =>
+			(section.rows || []).forEach((row: any) =>
 				(row.seats || []).forEach((seat: any) => {
 					if (selectedSeatIds.includes(seat.id)) seat.priceLevelId = plId;
 				})
 			)
 		);
-		rsAreas = [...rsAreas];
+		rsSections = [...rsSections];
 		saveMessage = `Assigned ${plId}!`;
 		selectedSeatIds = [];
 		drawSeatingMap();
@@ -1081,20 +1061,12 @@
 		errorMessage = '';
 	}
 
-	function deleteSelectedObject() {
-		if (selectedObjectId === null) return;
-		layoutObjects = layoutObjects.filter((_, i) => i !== selectedObjectId);
-		selectedObjectId = null;
-		saveMessage = 'Object removed.';
-		drawSeatingMap();
-	}
-
 	function runAssistantPrompt() {
 		if (!assistantPrompt) return;
 		const q = assistantPrompt.toLowerCase();
 		let ids: string[] = [];
 		if (q.includes('vip') || q.includes('gold'))
-			rsAreas.forEach((a) =>
+			rsSections.forEach((a) =>
 				(a.rows || []).forEach((r: any) =>
 					(r.seats || []).forEach((s: any) => {
 						if (s.priceLevelId?.toLowerCase().match(/vip|gold/)) ids.push(s.id);
@@ -1102,7 +1074,7 @@
 				)
 			);
 		else if (q.includes('standard') || q.includes('p1'))
-			rsAreas.forEach((a) =>
+			rsSections.forEach((a) =>
 				(a.rows || []).forEach((r: any) =>
 					(r.seats || []).forEach((s: any) => {
 						if (s.priceLevelId?.toLowerCase().match(/standard|p1/)) ids.push(s.id);
@@ -1112,14 +1084,14 @@
 		else if (q.includes('row')) {
 			const m = q.match(/row\s+([a-z0-9]+)/i);
 			if (m)
-				rsAreas.forEach((a) =>
+				rsSections.forEach((a) =>
 					(a.rows || []).forEach((r: any) => {
 						if (r.name.toUpperCase() === m[1].toUpperCase())
 							ids.push(...(r.seats || []).map((s: any) => s.id));
 					})
 				);
 		} else if (q.includes('all'))
-			rsAreas.forEach((a) =>
+			rsSections.forEach((a) =>
 				(a.rows || []).forEach((r: any) => ids.push(...(r.seats || []).map((s: any) => s.id)))
 			);
 		if (ids.length > 0) {
@@ -1136,18 +1108,26 @@
 			content = '',
 			mime = 'text/plain';
 		if (fmt === 'json') {
-			content = JSON.stringify({ levels, sections, priceLevels, gaAreas, rsAreas }, null, 2);
+			content = JSON.stringify({ levels, sections, priceLevels, gaSections, rsSections }, null, 2);
 			mime = 'application/json';
 			fn += '.json';
 		} else if (fmt === 'csv') {
-			const rows = ['SeatID,AreaID,Row,SeatName,PositionX,PositionY,Status'];
-			rsAreas.forEach((a) =>
+			const rows = ['SeatID,AreaID,Row,SeatName,PositionX,PositionY,Status,PriceLevelId,SectionId'];
+			rsSections.forEach((a) =>
 				(a.rows || []).forEach((r: any) =>
 					(r.seats || []).forEach((s: any) =>
 						rows.push(
-							[s.id, a.id, r.name, s.name, s.positionX, s.positionY ?? r.positionY, s.status].join(
-								','
-							)
+							[
+								s.id,
+								a.id,
+								r.name,
+								s.name,
+								s.positionX,
+								s.positionY ?? r.positionY,
+								s.status,
+								s.priceLevelId || '',
+								s.sectionId || ''
+							].join(',')
 						)
 					)
 				)
@@ -1157,11 +1137,11 @@
 			fn += '.csv';
 		} else {
 			let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${bounds.minX} ${bounds.minY} ${bounds.width} ${bounds.height}">\n`;
-			rsAreas.forEach((a) =>
+			rsSections.forEach((a) =>
 				(a.rows || []).forEach((r: any) =>
 					(r.seats || []).forEach((s: any) => {
 						const sec = s.sectionId ? sections.find((sc: any) => sc.id === s.sectionId) : null;
-						svg += `  <circle cx="${s.positionX}" cy="${s.positionY ?? r.positionY}" r="8" fill="${s.status === 'UNAVAILABLE' ? '#E2E8F0' : sec?.color || '#3B82F6'}" />\n`;
+						svg += `  <circle cx="${s.positionX}" cy="${s.positionY ?? r.positionY}" r="8" fill="${s.status === 'UNAVAILABLE' ? '#E2E8F0' : sec?.color || a.color || '#3B82F6'}" />\n`;
 					})
 				)
 			);
@@ -1183,6 +1163,7 @@
 		saveMessage = 'Saving...';
 		errorMessage = '';
 		try {
+			// 1. Update manifest metadata
 			await fetch(`/api/ops/venues/manifests/${manifestIdVal}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
@@ -1192,73 +1173,36 @@
 					objects: layoutObjects
 				})
 			});
+			// 2. Upsert levels
 			for (const lvl of levels)
 				await fetch(`/api/ops/venues/manifests/${manifestIdVal}/levels`, {
 					method: 'PUT',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify(lvl)
 				});
+			// 3. Upsert sections (includes GA sections via type field)
 			for (const sec of sections)
 				await fetch(`/api/ops/venues/manifests/${manifestIdVal}/sections`, {
 					method: 'PUT',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify(sec)
 				});
+			// 4. Upsert price levels
 			for (const pl of priceLevels)
 				await fetch(`/api/ops/venues/manifests/${manifestIdVal}/price-levels`, {
 					method: 'PUT',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify(pl)
 				});
-			for (const ga of gaAreas)
-				await fetch(`/api/ops/venues/manifests/${manifestIdVal}/ga-areas`, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						id: ga.id,
-						levelId: ga.levelId,
-						sectionId: ga.sectionId,
-						priceLevelId: ga.priceLevelId,
-						capacity: Number(ga.capacity),
-						x: ga.x ?? null,
-						y: ga.y ?? null,
-						width: ga.width || 200,
-						height: ga.height || 100
-					})
-				});
-			for (const area of rsAreas) {
-				let ax = Infinity,
-					bx = -Infinity,
-					ay = Infinity,
-					by = -Infinity;
-				(area.rows || []).forEach((r: any) =>
-					(r.seats || []).forEach((s: any) => {
-						const sx = s.positionX || 0,
-							sy = s.positionY ?? (r.positionY || 0);
-						if (sx < ax) ax = sx;
-						if (sx > bx) bx = sx;
-						if (sy < ay) ay = sy;
-						if (sy > by) by = sy;
-					})
-				);
-				const p = 25;
-				await fetch(`/api/ops/venues/manifests/${manifestIdVal}/rs-areas`, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						id: area.id,
-						levelId: area.levelId,
-						x: isFinite(ax) ? ax - p : 0,
-						y: isFinite(ay) ? ay - p : 0,
-						width: isFinite(bx) ? bx - ax + p * 2 : 0,
-						height: isFinite(by) ? by - ay + p * 2 : 0
-					})
-				});
-				for (const row of area.rows || []) {
-					await fetch(`/api/ops/venues/rs-areas/${area.id}/rows`, {
+			// 5. Save RS section rows & seats using correct API endpoints:
+			//    POST /api/ops/venues/sections/{sectionId}/rows
+			//    POST /api/ops/venues/rows/{rowId}/seats
+			for (const section of rsSections) {
+				for (const row of section.rows || []) {
+					await fetch(`/api/ops/venues/sections/${section.id}/rows`, {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({ id: row.id, name: row.name, positionY: row.positionY })
+						body: JSON.stringify({ id: row.id, name: row.name })
 					});
 					for (const seat of row.seats || [])
 						await fetch(`/api/ops/venues/rows/${row.id}/seats`, {
@@ -1267,14 +1211,11 @@
 							body: JSON.stringify({
 								id: seat.id,
 								name: seat.name,
-								positionX: seat.positionX,
-								positionY: seat.positionY ?? row.positionY,
-								accessibility: seat.accessibility,
-								obstructedView: seat.obstructedView,
-								aisle: seat.aisle,
+								positionX: seat.positionX ?? null,
+								positionY: seat.positionY,
 								status: seat.status,
 								priceLevelId: seat.priceLevelId || null,
-								sectionId: seat.sectionId || null
+								sectionId: seat.sectionId || section.id
 							})
 						});
 				}
@@ -1336,12 +1277,9 @@
 			{/each}
 		</div>
 		<div class="flex items-center gap-2">
-			{#if saveMessage}
-				<span class="text-[10px] font-bold text-emerald-600">{saveMessage}</span>
-			{/if}
-			{#if errorMessage}
-				<span class="text-[10px] font-bold text-rose-600">{errorMessage}</span>
-			{/if}
+			{#if saveMessage}<span class="text-[10px] font-bold text-emerald-600">{saveMessage}</span
+				>{/if}
+			{#if errorMessage}<span class="text-[10px] font-bold text-rose-600">{errorMessage}</span>{/if}
 			<div class="relative">
 				<button
 					onclick={() => (showExportDropdown = !showExportDropdown)}
@@ -1389,18 +1327,6 @@
 				{/if}
 			</div>
 			<button
-				class="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-600"
-			>
-				<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-					><path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-					/></svg
-				>
-			</button>
-			<button
 				onclick={saveLayout}
 				disabled={isSaving}
 				class="rounded-lg bg-slate-900 px-3 py-1.5 text-[10px] font-extrabold text-white hover:bg-black disabled:opacity-50"
@@ -1413,22 +1339,26 @@
 		<!-- ── Left Sidebar: Price Levels ──────────────────────────── -->
 		<aside class="flex w-[280px] shrink-0 flex-col border-r border-slate-200 bg-white">
 			<div class="flex items-center justify-between border-b border-slate-200 px-4 py-2.5">
-				<h3 class="text-[10px] font-black tracking-widest text-slate-400 uppercase">Price Levels</h3>
+				<h3 class="text-[10px] font-black tracking-widest text-slate-400 uppercase">
+					Price Levels
+				</h3>
 				<button
-					onclick={() => priceLevels.push({ id: 'NEW', description: 'New Level', color: '#3B82F6' })}
+					onclick={() =>
+						priceLevels.push({ id: 'NEW', description: 'New Level', color: '#3B82F6' })}
 					class="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
 				>
 					<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-						><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"
+						><path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2.5"
+							d="M12 4v16m8-8H4"
 						/></svg
 					>
 				</button>
 			</div>
 			<div class="flex-1 space-y-px overflow-y-auto px-3 py-2">
-				<!-- Unassigned row -->
-				<div
-					class="flex items-center gap-2 rounded-lg px-2.5 py-2 text-[11px] {selectedSeatIds.length > 0 ? 'bg-amber-50' : ''}"
-				>
+				<div class="flex items-center gap-2 rounded-lg px-2.5 py-2 text-[11px]">
 					<span
 						class="flex h-3 w-3 shrink-0 items-center justify-center rounded-full border-2 border-slate-300 bg-white"
 					></span>
@@ -1482,8 +1412,6 @@
 					</div>
 				{/each}
 			</div>
-
-			<!-- ── Financial Information ── -->
 			<div class="border-t border-slate-200 bg-slate-50/50 px-4 py-3">
 				<h4 class="mb-2 text-[9px] font-black tracking-widest text-slate-400 uppercase">
 					Financial Information
@@ -1491,7 +1419,9 @@
 				<div class="space-y-1.5 text-[11px]">
 					<div class="flex items-center justify-between">
 						<span class="font-medium text-slate-500">Sellable Capacity</span>
-						<span class="font-bold text-slate-800">{financialInfo.sellableCapacity.toLocaleString()}</span>
+						<span class="font-bold text-slate-800"
+							>{financialInfo.sellableCapacity.toLocaleString()}</span
+						>
 					</div>
 					<div class="flex items-center justify-between">
 						<span class="font-medium text-slate-500">Average per seat</span>
@@ -1499,10 +1429,17 @@
 					</div>
 					<div class="flex items-center justify-between">
 						<span class="font-medium text-slate-500">Potential Revenue</span>
-						<span class="font-bold text-emerald-700">${financialInfo.potentialRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+						<span class="font-bold text-emerald-700"
+							>${financialInfo.potentialRevenue.toLocaleString(undefined, {
+								minimumFractionDigits: 2,
+								maximumFractionDigits: 2
+							})}</span
+						>
 					</div>
 				</div>
-				<label class="mt-2 flex cursor-pointer items-center gap-1.5 text-[10px] text-slate-400 hover:text-slate-600">
+				<label
+					class="mt-2 flex cursor-pointer items-center gap-1.5 text-[10px] text-slate-400 hover:text-slate-600"
+				>
 					<input type="checkbox" class="h-3 w-3 rounded border-slate-300" checked />
 					Exclude kills from seat counts
 				</label>
@@ -1511,12 +1448,19 @@
 
 		<!-- ── Canvas ──────────────────────────────────────────────── -->
 		<main class="relative flex flex-1 flex-col overflow-hidden bg-[#FAFAFA]">
-			<!-- Sell Order button -->
 			<button
 				class="absolute top-3 left-1/2 z-30 -translate-x-1/2 rounded-lg border border-slate-200 bg-white px-5 py-2 text-xs font-bold text-slate-800 shadow-sm transition hover:bg-slate-50 hover:shadow-md"
 			>
-				<svg class="-ml-0.5 mr-1.5 inline-block h-3.5 w-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-					><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"
+				<svg
+					class="mr-1.5 -ml-0.5 inline-block h-3.5 w-3.5 text-emerald-600"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+					><path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2.5"
+						d="M5 13l4 4L19 7"
 					/></svg
 				>Sell Order
 			</button>
@@ -1527,67 +1471,8 @@
 				role="application"
 				aria-label="Seatmap"
 				class="relative w-full flex-1 overflow-hidden"
+				oncontextmenu={(e) => e.preventDefault()}
 			></div>
-
-			<!-- Selection/filter bar -->
-			<div
-				class="absolute bottom-3 left-1/2 z-30 -translate-x-1/2 flex items-center gap-1 rounded-xl border border-slate-200/80 bg-white/95 px-2 py-1.5 shadow-lg backdrop-blur-md"
-			>
-				<button
-					onclick={() => (activeTool = 'select')}
-					class="rounded-lg px-2.5 py-1 text-[10px] font-bold {activeTool === 'select' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-700'}"
-					>Select <span class="ml-0.5 rounded bg-slate-200 px-1 text-[8px] text-slate-500">V</span></button
-				>
-				<button
-					onclick={() => (activeTool = 'pan')}
-					class="rounded-lg px-2.5 py-1 text-[10px] font-bold {activeTool === 'pan' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-700'}"
-					>Pan <span class="ml-0.5 rounded bg-slate-200 px-1 text-[8px] text-slate-500">Space</span></button
-				>
-				<div class="mx-0.5 h-4 w-px bg-slate-200"></div>
-				<button
-					onclick={() => (activeTool = 'brush')}
-					class="rounded-lg px-2.5 py-1 text-[10px] font-bold {activeTool === 'brush' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-700'}"
-					>Brush <span class="ml-0.5 rounded bg-slate-200 px-1 text-[8px] text-slate-500">B</span></button
-				>
-				<button
-					onclick={() => (activeTool = 'eraser')}
-					class="rounded-lg px-2.5 py-1 text-[10px] font-bold {activeTool === 'eraser' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-700'}"
-					>Eraser <span class="ml-0.5 rounded bg-slate-200 px-1 text-[8px] text-slate-500">E</span></button
-				>
-				{#if activeTool === 'brush'}
-					<div class="mx-1 h-4 w-px bg-slate-200"></div>
-					<select
-						bind:value={brushPriceLevelId}
-						class="rounded-md border-0 bg-transparent px-1 py-0.5 text-[10px] font-semibold text-slate-700 outline-none"
-						>{#each priceLevels as pl}<option value={pl.id}>{pl.description || pl.id}</option
-							>{/each}</select
-					>
-				{/if}
-				{#if selectedSeatIds.length > 0}
-					<div class="mx-1 h-4 w-px bg-slate-200"></div>
-					<div class="flex items-center gap-0.5">
-						<button
-							onclick={() => toggleSelectedAttribute('accessibility')}
-							class="rounded-md px-1.5 py-1 text-[10px] font-bold text-slate-600 hover:bg-slate-100"
-							title="Toggle Accessibility"
-							>♿</button
-						>
-						<button
-							onclick={() => toggleSelectedAttribute('obstructedView')}
-							class="rounded-md px-1.5 py-1 text-[10px] font-bold text-slate-600 hover:bg-slate-100"
-							title="Toggle Obstructed View"
-							>!</button
-						>
-						<button
-							onclick={() => toggleSelectedAttribute('aisle')}
-							class="rounded-md px-1.5 py-1 text-[10px] font-bold text-slate-600 hover:bg-slate-100"
-							title="Toggle Aisle"
-							>↔</button
-						>
-						<span class="ml-1 text-[10px] font-bold text-slate-400">({selectedSeatIds.length})</span>
-					</div>
-				{/if}
-			</div>
 
 			<!-- Zoom controls -->
 			<div
@@ -1598,48 +1483,59 @@
 					onclick={zoomIn}
 					class="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
 					title="Zoom In"
-					><svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-						><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"
-						/></svg
-					></button
 				>
+					<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+						><path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2.5"
+							d="M12 4v16m8-8H4"
+						/></svg
+					>
+				</button>
 				<button
 					type="button"
 					onclick={zoomOut}
 					class="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
 					title="Zoom Out"
-					><svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-						><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4"
-						/></svg
-					></button
 				>
+					<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+						><path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2.5"
+							d="M20 12H4"
+						/></svg
+					>
+				</button>
 				<div class="h-px w-4 bg-slate-200"></div>
 				<button
 					type="button"
 					onclick={fitToView}
 					class="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
 					title="Fit to View"
-					><svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+				>
+					<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"
 						><path
 							stroke-linecap="round"
 							stroke-linejoin="round"
 							stroke-width="2"
 							d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
 						/></svg
-					></button
-				>
+					>
+				</button>
 			</div>
 
 			<!-- Mini-map -->
 			<div
-				class="absolute right-4 bottom-52 z-30 flex h-32 w-44 flex-col overflow-hidden rounded-xl border border-slate-200/80 bg-white/90 p-2 shadow-lg backdrop-blur-md"
+				class="absolute right-16 bottom-20 z-30 flex h-32 w-44 flex-col overflow-hidden rounded-xl border border-slate-200/80 bg-white/90 p-2 shadow-lg backdrop-blur-md"
 			>
 				<div
 					class="flex items-center justify-between pb-1 text-[8px] font-bold tracking-wider text-slate-400 uppercase"
 				>
 					<span>Map</span>
 					<span class="rounded bg-slate-100 px-1 py-0.5 font-mono text-[7px] text-slate-500"
-						>{stage ? Math.round(stage.scaleX() * 100) : 100}%</span
+						>{Math.round(currentScale * 100)}%</span
 					>
 				</div>
 				<div
@@ -1655,50 +1551,127 @@
 							viewBox="{bounds.minX} {bounds.minY} {bounds.width} {bounds.height}"
 							class="pointer-events-none h-full w-full"
 						>
-							{#each rsAreas as area}
-								{@const aColor = (() => {
-									const pl = priceLevels.find((p) => p.id === area.priceLevelId);
-									return pl?.color || area.color || '#94A3B8';
-								})()}
-								{#if area.polygon?.length >= 6}
+							{#each rsSections as section}
+								{@const secColor = section.color || '#94A3B8'}
+								{#if section.polygon?.length >= 6}
 									<polygon
-										points={area.polygon.map((p: [number,number]) => p.join(',')).join(' ')}
-										fill="none"
-										stroke={aColor}
-										stroke-opacity="0.5"
+										points={section.polygon.map((p: [number, number]) => p.join(',')).join(' ')}
+										fill={secColor}
+										fill-opacity="0.08"
+										stroke={secColor}
+										stroke-opacity="0.55"
 										stroke-width="1.5"
+										vector-effect="non-scaling-stroke"
 									/>
 								{:else}
-									{#each area.rows || [] as row}
+									{#each section.rows || [] as row}
 										{#each row.seats || [] as seat}
 											<circle
 												cx={seat.positionX ?? 0}
 												cy={seat.positionY ?? row.positionY ?? 0}
 												r={Math.max(1.5, Math.min(bounds.width / 220, 4))}
-												fill={aColor}
-												fill-opacity="0.35"
+												fill={secColor}
+												fill-opacity="0.45"
 											/>
 										{/each}
 									{/each}
 								{/if}
 							{/each}
-							{#each gaAreas as ga}
+							{#each gaSections as ga}
 								<rect
-									x={ga.x || 50} y={ga.y || 50}
-									width={ga.width || 200} height={ga.height || 100}
-									fill="none" stroke="#334155" stroke-opacity="0.3" stroke-width="1.5"
+									x={ga.x || 50}
+									y={ga.y || 50}
+									width={ga.width || 200}
+									height={ga.height || 100}
+									fill="none"
+									stroke="#334155"
+									stroke-opacity="0.35"
+									stroke-width="1.5"
+									rx="3"
 								/>
 							{/each}
+							{#each layoutObjects as obj}
+								{#if obj.type === 'stage'}
+									<rect
+										x={obj.x ?? 100}
+										y={obj.y ?? 100}
+										width={obj.width ?? 200}
+										height={obj.height ?? 100}
+										fill="#334155"
+										stroke="#64748B"
+										stroke-width="1.5"
+										rx="4"
+									/>
+								{:else if obj.type === 'label'}
+									<rect
+										x={(obj.x ?? 0) - 4}
+										y={(obj.y ?? 0) - 4}
+										width={8}
+										height={8}
+										fill={obj.color || '#0F172A'}
+										stroke={obj.color || '#0F172A'}
+										stroke-opacity="0.5"
+										stroke-width="1"
+										rx="1"
+									/>
+								{:else}
+									<rect
+										x={obj.x ?? 100}
+										y={obj.y ?? 100}
+										width={obj.width ?? 200}
+										height={obj.height ?? 100}
+										fill={obj.color || '#94A3B8'}
+										fill-opacity="0.25"
+										stroke={obj.color || '#64748B'}
+										stroke-opacity="0.7"
+										stroke-width="1.5"
+										rx="3"
+									/>
+								{/if}
+							{/each}
 							<rect
-								x={viewportX} y={viewportY}
-								width={viewportW} height={viewportH}
-								fill="rgba(239,68,68,0.06)" stroke="#EF4444" stroke-width="5"
-								stroke-dasharray="8 6" rx="3"
+								x={viewportX}
+								y={viewportY}
+								width={viewportW}
+								height={viewportH}
+								fill="rgba(239,68,68,0.06)"
+								stroke="#EF4444"
+								stroke-width="5"
+								stroke-dasharray="8 6"
+								rx="3"
 							/>
 						</svg>
 					</button>
 				</div>
 			</div>
+
+			{#if selectedSeatIds.length > 0}
+				<div
+					class="absolute top-3 left-3 z-30 flex items-center gap-3 rounded-xl border border-slate-200 bg-white/95 px-4 py-2.5 shadow-lg backdrop-blur-md"
+				>
+					<div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100">
+						<svg class="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+							><path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"
+							/></svg
+						>
+					</div>
+					<span class="text-xs font-bold text-slate-800"
+						>{selectedSeatIds.length} seats selected</span
+					>
+					<button
+						onclick={() => {
+							selectedSeatIds = [];
+							drawSeatingMap();
+						}}
+						class="ml-2 rounded-lg border border-slate-200 px-3 py-1.5 text-[10px] font-bold text-slate-600 transition hover:bg-slate-50 hover:text-slate-800"
+						>Clear</button
+					>
+				</div>
+			{/if}
 
 			{#if isSaving}
 				<div
@@ -1706,8 +1679,12 @@
 				>
 					<svg class="h-8 w-8 animate-spin text-slate-900" fill="none" viewBox="0 0 24 24"
 						><circle
-							class="opacity-25" cx="12" cy="12" r="10"
-							stroke="currentColor" stroke-width="4"
+							class="opacity-25"
+							cx="12"
+							cy="12"
+							r="10"
+							stroke="currentColor"
+							stroke-width="4"
 						></circle><path
 							class="opacity-75"
 							fill="currentColor"
@@ -1719,54 +1696,136 @@
 			{/if}
 		</main>
 
-		<!-- ── Right Tool Palette ──────────────────────────────────── -->
-		<aside class="flex w-[68px] shrink-0 flex-col items-center border-l border-slate-200 bg-white py-4">
+		<!-- ── Right Tool Palette ─────────────── -->
+		<aside
+			class="flex w-[56px] shrink-0 flex-col items-center gap-0.5 border-l border-slate-200 bg-white py-3"
+		>
 			<button
-				onclick={() => { activeTool = 'select'; selectionTool = 'seat'; }}
-				class="flex w-12 flex-col items-center gap-1 rounded-xl px-2 py-2.5 text-[9px] font-bold transition-colors {activeTool === 'select' && selectionTool === 'seat' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}"
+				onclick={() => {
+					activeTool = 'select';
+					selectionTool = 'seat';
+				}}
+				class="flex w-10 flex-col items-center gap-0.5 rounded-lg px-1 py-2 text-[9px] font-bold transition-colors {activeTool ===
+					'select' && selectionTool === 'seat'
+					? 'bg-slate-100 text-slate-900'
+					: 'text-slate-400 hover:bg-slate-50 hover:text-slate-700'}"
 			>
-				<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-					><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"
+				<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+					><path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="1.5"
+						d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"
 					/></svg
-				>Seat</button
-			>
+				>
+				Seat
+			</button>
 			<button
-				onclick={() => { activeTool = 'select'; selectionTool = 'row'; }}
-				class="flex w-12 flex-col items-center gap-1 rounded-xl px-2 py-2.5 text-[9px] font-bold transition-colors {activeTool === 'select' && selectionTool === 'row' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}"
+				onclick={() => {
+					activeTool = 'select';
+					selectionTool = 'row';
+				}}
+				class="flex w-10 flex-col items-center gap-0.5 rounded-lg px-1 py-2 text-[9px] font-bold transition-colors {activeTool ===
+					'select' && selectionTool === 'row'
+					? 'bg-slate-100 text-slate-900'
+					: 'text-slate-400 hover:bg-slate-50 hover:text-slate-700'}"
 			>
-				<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-					><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"
+				<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+					><path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="1.5"
+						d="M4 6h16M4 12h16M4 18h16"
 					/></svg
-				>Row</button
-			>
+				>
+				Row
+			</button>
 			<button
-				onclick={() => { activeTool = 'select'; selectionTool = 'section'; }}
-				class="flex w-12 flex-col items-center gap-1 rounded-xl px-2 py-2.5 text-[9px] font-bold transition-colors {activeTool === 'select' && selectionTool === 'section' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}"
+				onclick={() => {
+					activeTool = 'select';
+					selectionTool = 'section';
+				}}
+				class="flex w-10 flex-col items-center gap-0.5 rounded-lg px-1 py-2 text-[9px] font-bold transition-colors {activeTool ===
+					'select' && selectionTool === 'section'
+					? 'bg-slate-100 text-slate-900'
+					: 'text-slate-400 hover:bg-slate-50 hover:text-slate-700'}"
 			>
-				<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-					><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"
+				<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+					><path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="1.5"
+						d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"
 					/></svg
-				>Section</button
+				>
+				Section
+			</button>
+			<div class="my-1.5 h-px w-8 bg-slate-100"></div>
+			<button
+				onclick={() => (activeTool = activeTool === 'brush' ? 'select' : 'brush')}
+				class="flex w-10 flex-col items-center gap-0.5 rounded-lg px-1 py-2 text-[9px] font-bold transition-colors {activeTool ===
+				'brush'
+					? 'bg-blue-50 text-blue-700'
+					: 'text-slate-400 hover:bg-slate-50 hover:text-slate-700'}"
+				title="Brush (B)"
 			>
-			<div class="my-2 h-px w-8 bg-slate-200"></div>
+				<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+					><path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="1.5"
+						d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+					/></svg
+				>
+				Brush
+			</button>
+			<button
+				onclick={() => (activeTool = activeTool === 'eraser' ? 'select' : 'eraser')}
+				class="flex w-10 flex-col items-center gap-0.5 rounded-lg px-1 py-2 text-[9px] font-bold transition-colors {activeTool ===
+				'eraser'
+					? 'bg-rose-50 text-rose-600'
+					: 'text-slate-400 hover:bg-slate-50 hover:text-slate-700'}"
+				title="Eraser (E)"
+			>
+				<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+					><path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="1.5"
+						d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+					/></svg
+				>
+				Eraser
+			</button>
+			<div class="my-1.5 h-px w-8 bg-slate-100"></div>
 			<button
 				onclick={() => (showFilterDialog = !showFilterDialog)}
-				class="flex w-12 flex-col items-center gap-1 rounded-xl px-2 py-2.5 text-[9px] font-bold text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700"
+				class="flex w-10 flex-col items-center gap-0.5 rounded-lg px-1 py-2 text-[9px] font-bold text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-700"
 			>
-				<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-					><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+				<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+					><path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="1.5"
+						d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
 					/></svg
-				>Filters</button
-			>
+				>
+				Filters
+			</button>
 			<button
 				onclick={() => (showAssistantDialog = !showAssistantDialog)}
-				class="flex w-12 flex-col items-center gap-1 rounded-xl px-2 py-2.5 text-[9px] font-bold text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700"
+				class="flex w-10 flex-col items-center gap-0.5 rounded-lg px-1 py-2 text-[9px] font-bold text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-700"
 			>
-				<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-					><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+				<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+					><path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="1.5"
+						d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
 					/></svg
-				>Assistant</button
-			>
+				>
+				Assist
+			</button>
 		</aside>
 	</div>
 </div>
@@ -1794,16 +1853,28 @@
 					>Available Only</span
 				></label
 			>
-			<label class="flex cursor-pointer items-center gap-2"
-				><input type="checkbox" bind:checked={onlyAccessible} class="h-3.5 w-3.5 rounded" /><span
-					>♿ Accessible Only</span
-				></label
+			<label
+				class="flex cursor-pointer items-center gap-2 opacity-40"
+				title="Field not in API model"
 			>
-			<label class="flex cursor-pointer items-center gap-2"
-				><input type="checkbox" bind:checked={onlyObstructed} class="h-3.5 w-3.5 rounded" /><span
-					>⚠️ Obstructed Only</span
-				></label
+				<input
+					type="checkbox"
+					bind:checked={onlyAccessible}
+					class="h-3.5 w-3.5 rounded"
+					disabled
+				/><span>♿ Accessible Only <span class="text-[9px] text-slate-400">(n/a)</span></span>
+			</label>
+			<label
+				class="flex cursor-pointer items-center gap-2 opacity-40"
+				title="Field not in API model"
 			>
+				<input
+					type="checkbox"
+					bind:checked={onlyObstructed}
+					class="h-3.5 w-3.5 rounded"
+					disabled
+				/><span>⚠️ Obstructed Only <span class="text-[9px] text-slate-400">(n/a)</span></span>
+			</label>
 		</div>
 	</div>
 {/if}
