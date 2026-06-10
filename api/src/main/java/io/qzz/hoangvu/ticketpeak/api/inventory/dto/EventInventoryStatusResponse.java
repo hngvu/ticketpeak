@@ -9,7 +9,7 @@ public record EventInventoryStatusResponse(
     List<ReservedSeatStatus> reservedSeats
 ) {
     public record GAInventoryStatus(
-        String areaId,
+        String sectionId,
         UUID offerId,
         int total,
         int sold,

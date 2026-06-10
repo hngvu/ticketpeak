@@ -70,7 +70,7 @@ public class OrderServiceIT {
     Account buyer;
     Event event;
     Offer offer;
-    String areaId = "GA-AREA";
+    String sectionId = "GA-AREA";
 
     @BeforeEach
     void setup() {
@@ -123,7 +123,7 @@ public class OrderServiceIT {
                 .build());
 
         inventoryGaRepository.save(InventoryGa.builder()
-                .eventId(event.getId()).areaId(areaId).offerId(offer.getId())
+                .eventId(event.getId()).sectionId(sectionId).offerId(offer.getId())
                 .total(100).available(98).held(2).sold(0).build());
     }
 
@@ -140,7 +140,7 @@ public class OrderServiceIT {
                 .reservation(reservation)
                 .offerId(offer.getId())
                 .seatingMode(SeatingMode.GENERAL_ADMISSION)
-                .areaId(areaId)
+                .sectionId(sectionId)
                 .qty(2)
                 .unitFaceValue(BigDecimal.valueOf(50))
                 .currency("USD")

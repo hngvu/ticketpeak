@@ -27,16 +27,16 @@ public final class VenueException {
         return new ApiException(HttpStatus.BAD_REQUEST, "ALREADY_ARCHIVED", "Manifest is already archived");
     }
 
-    public static ApiException gaAreaIdExists(String id) {
+    public static ApiException gaSectionIdExists(String id) {
         return new ApiException(HttpStatus.CONFLICT, "GA_AREA_ID_EXISTS", "GA area with id '" + id + "' already exists");
     }
 
-    public static ApiException rsAreaNotFound(String id) {
-        return new ApiException(HttpStatus.NOT_FOUND, "RS_AREA_NOT_FOUND", "RS area not found");
+    public static ApiException sectionNotFound(String id) {
+        return new ApiException(HttpStatus.NOT_FOUND, "SECTION_NOT_FOUND", "Section not found");
     }
 
-    public static ApiException rsAreaIdExists(String id) {
-        return new ApiException(HttpStatus.CONFLICT, "RS_AREA_ID_EXISTS", "RS area with id '" + id + "' already exists");
+    public static ApiException sectionIdExists(String id) {
+        return new ApiException(HttpStatus.CONFLICT, "SECTION_ID_EXISTS", "Section with id '" + id + "' already exists");
     }
 
     public static ApiException seatRowNotFound(String id) {

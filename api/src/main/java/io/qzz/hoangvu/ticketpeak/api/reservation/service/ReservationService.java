@@ -106,9 +106,9 @@ public class ReservationService {
             if (itemReq.seatingMode() == SeatingMode.GENERAL_ADMISSION) {
                 validateGaItem(itemReq, offer);
                 try {
-                    inventoryService.holdGAInventory(event.getId(), itemReq.areaId(), offer.getId(), itemReq.qty());
+                    inventoryService.holdGAInventory(event.getId(), itemReq.sectionId(), offer.getId(), itemReq.qty());
                 } catch (ApiException e) {
-                    throw ReservationException.gaCapacityInsufficient(itemReq.areaId());
+                    throw ReservationException.gaCapacityInsufficient(itemReq.sectionId());
                 }
             } else {
                 validateRsItem(itemReq);
@@ -188,7 +188,7 @@ public class ReservationService {
         for (ReservationItem item : reservation.getItems()) {
             if (item.getSeatingMode() == SeatingMode.GENERAL_ADMISSION) {
                 inventoryService.releaseGAInventory(
-                        reservation.getEventId(), item.getAreaId(), item.getOfferId(), item.getQty());
+                        reservation.getEventId(), item.getSectionId(), item.getOfferId(), item.getQty());
             } else {
                 inventoryService.releaseSeat(reservation.getEventId(), item.getSeatId());
             }
@@ -205,8 +205,8 @@ public class ReservationService {
     }
 
     private void validateGaItem(ReservationItemRequest req, Offer offer) {
-        if (req.areaId() == null || req.areaId().isBlank()) {
-            throw ReservationException.invalidItem("areaId is required for GENERAL_ADMISSION items");
+        if (req.sectionId() == null || req.sectionId().isBlank()) {
+            throw ReservationException.invalidItem("sectionId is required for GENERAL_ADMISSION items");
         }
         if (req.qty() == null || req.qty() < 1) {
             throw ReservationException.invalidQuantity("qty must be at least 1 for GENERAL_ADMISSION items");
@@ -229,7 +229,7 @@ public class ReservationService {
                 .reservation(reservation)
                 .offerId(offer.getId())
                 .seatingMode(req.seatingMode())
-                .areaId(req.areaId())
+                .sectionId(req.sectionId())
                 .seatId(req.seatId())
                 .qty(qty)
                 .unitFaceValue(offer.getFaceValue())

@@ -8,10 +8,6 @@ public record CreateSeatRequest(
         @NotBlank String name,
         Integer positionX,
         Integer positionY,
-        Boolean accessibility,
-
-        Boolean obstructedView,
-        Boolean aisle,
         SeatStatus status,
         String priceLevelId,
         String sectionId

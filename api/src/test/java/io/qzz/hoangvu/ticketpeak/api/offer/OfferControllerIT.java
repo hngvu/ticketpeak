@@ -644,14 +644,14 @@ class OfferControllerIT {
         Manifest manifest = manifestRepository.saveAndFlush(Manifest.builder()
                 .id("M-OFFER-1")
                 .venue(venue)
-                .description("Offer Manifest")
+                
                 .totalCapacity(1000)
                 .status(ManifestStatus.PUBLISHED)
                 .build());
 
-        levelRepository.saveAndFlush(Level.builder().id("LV-1").manifest(manifest).description("Level 1").build());
-        sectionRepository.saveAndFlush(Section.builder().id("SEC-A").manifest(manifest).description("Section A").build());
-        priceLevelRepository.saveAndFlush(PriceLevel.builder().id("PL-1").manifest(manifest).description("Price Level 1").build());
+        levelRepository.saveAndFlush(Level.builder().id("LV-1").manifest(manifest).build());
+        sectionRepository.saveAndFlush(Section.builder().id("SEC-A").manifest(manifest).build());
+        priceLevelRepository.saveAndFlush(PriceLevel.builder().id("PL-1").manifest(manifest).build());
 
         CreateOfferRequest requestValid = new CreateOfferRequest(
                 createTicketType(publishedEvent.getId(), "rs-valid"), "RS Valid", null,

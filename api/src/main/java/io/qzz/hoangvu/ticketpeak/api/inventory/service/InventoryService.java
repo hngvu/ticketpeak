@@ -44,7 +44,7 @@ public class InventoryService {
         List<InventoryGa> gaInventories = inventoryGaRepository.findByEventId(eventId);
         List<EventInventoryStatusResponse.GAInventoryStatus> gaStatuses = gaInventories.stream()
                 .map(ga -> new EventInventoryStatusResponse.GAInventoryStatus(
-                        ga.getAreaId(),
+                        ga.getSectionId(),
                         ga.getOfferId(),
                         ga.getTotal(),
                         ga.getSold(),
@@ -66,47 +66,47 @@ public class InventoryService {
     }
 
     @Transactional
-    public void holdGAInventory(UUID eventId, String areaId, UUID offerId, int qty) {
+    public void holdGAInventory(UUID eventId, String sectionId, UUID offerId, int qty) {
         validateQuantity(qty);
-        int updated = inventoryGaRepository.holdGa(eventId, areaId, offerId, qty);
+        int updated = inventoryGaRepository.holdGa(eventId, sectionId, offerId, qty);
         if (updated == 0) {
-            throw InventoryException.insufficientGaCapacity("Insufficient available capacity in GA area " + areaId);
+            throw InventoryException.insufficientGaCapacity("Insufficient available capacity in GA area " + sectionId);
         }
     }
 
     @Transactional
-    public void releaseGAInventory(UUID eventId, String areaId, UUID offerId, int qty) {
+    public void releaseGAInventory(UUID eventId, String sectionId, UUID offerId, int qty) {
         validateQuantity(qty);
-        int updated = inventoryGaRepository.releaseGa(eventId, areaId, offerId, qty);
+        int updated = inventoryGaRepository.releaseGa(eventId, sectionId, offerId, qty);
         if (updated == 0) {
-            throw InventoryException.invalidRelease("Cannot release held capacity in GA area " + areaId);
+            throw InventoryException.invalidRelease("Cannot release held capacity in GA area " + sectionId);
         }
     }
 
     @Transactional
-    public void directSellGAInventory(UUID eventId, String areaId, UUID offerId, int qty) {
+    public void directSellGAInventory(UUID eventId, String sectionId, UUID offerId, int qty) {
         validateQuantity(qty);
-        int updated = inventoryGaRepository.directSellGa(eventId, areaId, offerId, qty);
+        int updated = inventoryGaRepository.directSellGa(eventId, sectionId, offerId, qty);
         if (updated == 0) {
-            throw InventoryException.insufficientGaCapacity("Insufficient capacity in General Admission area " + areaId);
+            throw InventoryException.insufficientGaCapacity("Insufficient capacity in General Admission area " + sectionId);
         }
     }
 
     @Transactional
-    public void confirmGAInventory(UUID eventId, String areaId, UUID offerId, int qty) {
+    public void confirmGAInventory(UUID eventId, String sectionId, UUID offerId, int qty) {
         validateQuantity(qty);
-        int updated = inventoryGaRepository.confirmGa(eventId, areaId, offerId, qty);
+        int updated = inventoryGaRepository.confirmGa(eventId, sectionId, offerId, qty);
         if (updated == 0) {
-            throw InventoryException.insufficientGaHeld("Insufficient held capacity in General Admission area " + areaId);
+            throw InventoryException.insufficientGaHeld("Insufficient held capacity in General Admission area " + sectionId);
         }
     }
 
     @Transactional
-    public void refundGAInventory(UUID eventId, String areaId, UUID offerId, int qty) {
+    public void refundGAInventory(UUID eventId, String sectionId, UUID offerId, int qty) {
         validateQuantity(qty);
-        int updated = inventoryGaRepository.refundGa(eventId, areaId, offerId, qty);
+        int updated = inventoryGaRepository.refundGa(eventId, sectionId, offerId, qty);
         if (updated == 0) {
-            throw InventoryException.invalidRefund("Cannot refund quantity " + qty + " for General Admission area " + areaId);
+            throw InventoryException.invalidRefund("Cannot refund quantity " + qty + " for General Admission area " + sectionId);
         }
     }
 

@@ -15,6 +15,6 @@ public record OrderItemSnapshot(
         String currency,
         int qty,
         SeatingMode seatingMode,
-        String areaId,
+        String sectionId,
         String seatId
 ) {}

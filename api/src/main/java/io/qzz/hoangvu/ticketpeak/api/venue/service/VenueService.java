@@ -20,23 +20,18 @@ public class VenueService {
     private final LevelRepository levelRepository;
     private final SectionRepository sectionRepository;
     private final PriceLevelRepository priceLevelRepository;
-    private final GAAreaRepository gaAreaRepository;
-    private final RSAreaRepository rsAreaRepository;
     private final SeatRowRepository seatRowRepository;
     private final SeatRepository seatRepository;
 
     public VenueService(VenueRepository venueRepository, ManifestRepository manifestRepository,
                         LevelRepository levelRepository, SectionRepository sectionRepository,
-                        PriceLevelRepository priceLevelRepository, GAAreaRepository gaAreaRepository,
-                        RSAreaRepository rsAreaRepository, SeatRowRepository seatRowRepository,
+                        PriceLevelRepository priceLevelRepository, SeatRowRepository seatRowRepository,
                         SeatRepository seatRepository) {
         this.venueRepository = venueRepository;
         this.manifestRepository = manifestRepository;
         this.levelRepository = levelRepository;
         this.sectionRepository = sectionRepository;
         this.priceLevelRepository = priceLevelRepository;
-        this.gaAreaRepository = gaAreaRepository;
-        this.rsAreaRepository = rsAreaRepository;
         this.seatRowRepository = seatRowRepository;
         this.seatRepository = seatRepository;
     }
@@ -182,67 +177,47 @@ public class VenueService {
         levelRepository.saveAll(levels);
 
         List<Section> sections = sectionRepository.findByManifestId(sourceManifestId).stream()
-                .map(s -> Section.builder().id(s.getId()).manifest(clone).description(s.getDescription()).color(s.getColor()).build())
+                .map(s -> Section.builder()
+                        .id(newId + "-" + s.getId())
+                        .manifest(clone)
+                        .type(s.getType())
+                        .color(s.getColor())
+                        .levelId(s.getLevelId())
+                        .capacity(s.getCapacity())
+                        .uiData(s.getUiData())
+                        .build())
                 .toList();
-        sectionRepository.saveAll(sections);
+        sections = sectionRepository.saveAll(sections);
 
         List<PriceLevel> priceLevels = priceLevelRepository.findByManifestId(sourceManifestId).stream()
                 .map(p -> PriceLevel.builder().id(p.getId()).manifest(clone).description(p.getDescription()).color(p.getColor()).build())
                 .toList();
         priceLevelRepository.saveAll(priceLevels);
 
-        // Clone areas in batch
-        List<GAArea> gaAreas = gaAreaRepository.findByManifestId(sourceManifestId).stream()
-                .map(g -> GAArea.builder()
-                        .id(newId + "-" + g.getId())
-                        .manifestId(clone.getId())
-                        .levelId(g.getLevelId())
-                        .priceLevelId(g.getPriceLevelId())
-                        .capacity(g.getCapacity())
-                        .x(g.getX())
-                        .y(g.getY())
-                        .width(g.getWidth())
-                        .height(g.getHeight())
-                        .build())
-                .toList();
-        gaAreaRepository.saveAll(gaAreas);
-
-        List<RSArea> rsAreas = rsAreaRepository.findByManifestId(sourceManifestId).stream()
-                .map(r -> RSArea.builder()
-                        .id(newId + "-" + r.getId())
-                        .manifestId(clone.getId())
-                        .levelId(r.getLevelId())
-                        .x(r.getX())
-                        .y(r.getY())
-                        .width(r.getWidth())
-                        .height(r.getHeight())
-                        .build())
-                .toList();
-        rsAreas = rsAreaRepository.saveAll(rsAreas);
-
-        // Clone rows and seats in batch
-        java.util.Map<String, RSArea> rsAreaMap = rsAreas.stream()
-                .collect(java.util.stream.Collectors.toMap(RSArea::getId, java.util.function.Function.identity()));
+        java.util.Map<String, Section> sectionMap = sections.stream()
+                .collect(java.util.stream.Collectors.toMap(Section::getId, java.util.function.Function.identity()));
 
         List<SeatRow> seatRows = new java.util.ArrayList<>();
         List<Seat> seats = new java.util.ArrayList<>();
 
-        List<RSArea> sourceRsAreas = rsAreaRepository.findByManifestId(sourceManifestId);
-        for (RSArea r : sourceRsAreas) {
-            String newAreaId = newId + "-" + r.getId();
-            RSArea newArea = rsAreaMap.get(newAreaId);
-            if (newArea == null) {
+        List<Section> sourceSections = sectionRepository.findByManifestId(sourceManifestId);
+        for (Section s : sourceSections) {
+            if (s.getType() != SectionType.RS) continue;
+
+            String newSectionId = newId + "-" + s.getId();
+            Section newSection = sectionMap.get(newSectionId);
+            if (newSection == null) {
                 continue;
             }
 
-            List<SeatRow> rowsInArea = seatRowRepository.findByRsAreaId(r.getId());
-            for (SeatRow row : rowsInArea) {
+            List<SeatRow> rowsInSection = seatRowRepository.findBySectionId(s.getId());
+            for (SeatRow row : rowsInSection) {
                 String newRowId = newId + "-" + row.getId();
                 SeatRow newRow = SeatRow.builder()
                         .id(newRowId)
-                        .rsArea(newArea)
+                        .section(newSection)
                         .name(row.getName())
-                        .positionY(row.getPositionY())
+                        
                         .build();
                 seatRows.add(newRow);
 
@@ -255,11 +230,8 @@ public class VenueService {
                             .positionX(seat.getPositionX())
                             .positionY(seat.getPositionY())
                             .status(SeatStatus.AVAILABLE)
-                            .accessibility(seat.getAccessibility())
-                            .obstructedView(seat.getObstructedView())
-                            .aisle(seat.getAisle())
                             .priceLevelId(seat.getPriceLevelId())
-                            .sectionId(seat.getSectionId())
+                            .sectionId(seat.getSectionId() != null ? newId + "-" + seat.getSectionId() : null)
                             .build();
                     seats.add(newSeat);
                 }
@@ -288,9 +260,28 @@ public class VenueService {
     }
 
     @Transactional
-    public SectionResponse upsertSection(String manifestId, UpsertLookupRequest req) {
+    public SectionResponse upsertSection(String manifestId, UpsertSectionRequest req) {
         Manifest manifest = requireManifest(manifestId);
-        Section section = Section.builder().id(req.id()).manifest(manifest).description(req.description()).color(req.color()).build();
+        Section section = sectionRepository.findById(req.id())
+                .map(existing -> {
+                    existing.setType(req.type());
+                    existing.setName(req.name());
+                    existing.setColor(req.color());
+                    existing.setLevelId(req.levelId());
+                    existing.setCapacity(req.capacity());
+                    existing.setUiData(req.uiData());
+                    return existing;
+                })
+                .orElseGet(() -> Section.builder()
+                        .id(req.id())
+                        .manifest(manifest)
+                        .type(req.type())
+                        .name(req.name())
+                        .color(req.color())
+                        .levelId(req.levelId())
+                        .capacity(req.capacity())
+                        .uiData(req.uiData())
+                        .build());
         return SectionResponse.from(sectionRepository.save(section));
     }
 
@@ -313,113 +304,42 @@ public class VenueService {
         return priceLevelRepository.findByManifestId(manifestId).stream().map(PriceLevelResponse::from).toList();
     }
 
-    // ======================== AREAS ========================
 
-    @Transactional
-    public GAAreaResponse createGAArea(String manifestId, CreateGAAreaRequest req) {
-        requireManifest(manifestId);
-        String priceLevelId = req.priceLevelId() != null && !req.priceLevelId().isBlank() ? req.priceLevelId() : null;
-        
-        GAArea area = gaAreaRepository.findById(req.id())
-                .map(existing -> {
-                    existing.setLevelId(req.levelId());
-                    existing.setPriceLevelId(priceLevelId);
-                    existing.setCapacity(req.capacity());
-                    existing.setX(req.x());
-                    existing.setY(req.y());
-                    existing.setWidth(req.width());
-                    existing.setHeight(req.height());
-                    existing.setPolygon(req.polygon());
-                    return existing;
-                })
-                .orElseGet(() -> GAArea.builder()
-                        .id(req.id())
-                        .manifestId(manifestId)
-                        .levelId(req.levelId())
-                        .priceLevelId(priceLevelId)
-                        .capacity(req.capacity())
-                        .x(req.x())
-                        .y(req.y())
-                        .width(req.width())
-                        .height(req.height())
-                        .polygon(req.polygon())
-                        .build());
-        return GAAreaResponse.from(gaAreaRepository.save(area));
-    }
-
-    @Transactional(readOnly = true)
-    public List<GAAreaResponse> listGAAreas(String manifestId) {
-        requireManifest(manifestId);
-        return gaAreaRepository.findByManifestId(manifestId).stream().map(GAAreaResponse::from).toList();
-    }
-
-    @Transactional
-    public RSAreaResponse createRSArea(String manifestId, CreateRSAreaRequest req) {
-        requireManifest(manifestId);
-
-        RSArea area = rsAreaRepository.findById(req.id())
-                .map(existing -> {
-                    existing.setLevelId(req.levelId());
-                    existing.setX(req.x());
-                    existing.setY(req.y());
-                    existing.setWidth(req.width());
-                    existing.setHeight(req.height());
-                    existing.setPolygon(req.polygon());
-                    return existing;
-                })
-                .orElseGet(() -> RSArea.builder()
-                        .id(req.id())
-                        .manifestId(manifestId)
-                        .levelId(req.levelId())
-                        .x(req.x())
-                        .y(req.y())
-                        .width(req.width())
-                        .height(req.height())
-                        .polygon(req.polygon())
-                        .build());
-        return RSAreaResponse.from(rsAreaRepository.save(area));
-    }
-
-    @Transactional(readOnly = true)
-    public List<RSAreaResponse> listRSAreas(String manifestId) {
-        requireManifest(manifestId);
-        return rsAreaRepository.findByManifestId(manifestId).stream().map(RSAreaResponse::from).toList();
-    }
 
     // ======================== SEAT ROWS & SEATS ========================
 
     @Transactional
-    public SeatRowResponse createSeatRow(String rsAreaId, CreateSeatRowRequest req) {
-        RSArea rsArea = rsAreaRepository.findById(rsAreaId)
-                .orElseThrow(() -> VenueException.rsAreaNotFound(rsAreaId));
+    public SeatRowResponse createSeatRow(String sectionId, CreateSeatRowRequest req) {
+        Section section = sectionRepository.findById(sectionId)
+                .orElseThrow(() -> VenueException.sectionNotFound(sectionId));
         
         SeatRow row = seatRowRepository.findById(req.id())
                 .map(existing -> {
-                    if (!existing.getName().equals(req.name()) && seatRowRepository.existsByRsAreaIdAndName(rsAreaId, req.name())) {
+                    if (!existing.getName().equals(req.name()) && seatRowRepository.existsBySectionIdAndName(sectionId, req.name())) {
                         throw VenueException.seatRowNameDuplicate(req.name());
                     }
-                    existing.setRsArea(rsArea);
+                    existing.setSection(section);
                     existing.setName(req.name());
-                    existing.setPositionY(req.positionY());
+                    
                     return existing;
                 })
                 .orElseGet(() -> {
-                    if (seatRowRepository.existsByRsAreaIdAndName(rsAreaId, req.name())) {
+                    if (seatRowRepository.existsBySectionIdAndName(sectionId, req.name())) {
                         throw VenueException.seatRowNameDuplicate(req.name());
                     }
                     return SeatRow.builder()
                             .id(req.id())
-                            .rsArea(rsArea)
+                            .section(section)
                             .name(req.name())
-                            .positionY(req.positionY())
+                            
                             .build();
                 });
         return SeatRowResponse.from(seatRowRepository.save(row));
     }
 
     @Transactional(readOnly = true)
-    public List<SeatRowResponse> listSeatRows(String rsAreaId) {
-        return seatRowRepository.findByRsAreaId(rsAreaId).stream().map(SeatRowResponse::from).toList();
+    public List<SeatRowResponse> listSeatRows(String sectionId) {
+        return seatRowRepository.findBySectionId(sectionId).stream().map(SeatRowResponse::from).toList();
     }
 
     @Transactional
@@ -427,7 +347,7 @@ public class VenueService {
         SeatRow row = seatRowRepository.findById(rowId)
                 .orElseThrow(() -> VenueException.seatRowNotFound(rowId));
         
-        Integer posY = req.positionY() != null ? req.positionY() : (row.getPositionY() != null ? row.getPositionY() : 0);
+        Integer posY = req.positionY() != null ? req.positionY() : 0;
         
         Seat seat = seatRepository.findById(req.id())
                 .map(existing -> {
@@ -443,15 +363,6 @@ public class VenueService {
                     if (req.status() != null) {
                         existing.setStatus(req.status());
                     }
-                    if (req.accessibility() != null) {
-                        existing.setAccessibility(req.accessibility());
-                    }
-                    if (req.obstructedView() != null) {
-                        existing.setObstructedView(req.obstructedView());
-                    }
-                    if (req.aisle() != null) {
-                        existing.setAisle(req.aisle());
-                    }
                     return existing;
                 })
                 .orElseGet(() -> {
@@ -463,11 +374,7 @@ public class VenueService {
                             .seatRow(row)
                             .name(req.name())
                             .positionX(req.positionX())
-                            .positionY(posY)
                             .status(req.status() != null ? req.status() : SeatStatus.AVAILABLE)
-                            .accessibility(req.accessibility())
-                            .obstructedView(req.obstructedView())
-                            .aisle(req.aisle())
                             .priceLevelId(req.priceLevelId())
                             .sectionId(req.sectionId())
                             .build();

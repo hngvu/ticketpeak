@@ -16,6 +16,6 @@ import java.util.UUID;
 @EqualsAndHashCode
 public class InventoryGaId implements Serializable {
     private UUID eventId;
-    private String areaId;
+    private String sectionId;
     private UUID offerId;
 }

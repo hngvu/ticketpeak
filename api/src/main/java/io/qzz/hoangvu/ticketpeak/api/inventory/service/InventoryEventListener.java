@@ -12,9 +12,10 @@ import io.qzz.hoangvu.ticketpeak.api.inventory.repository.InventorySeatRepositor
 import io.qzz.hoangvu.ticketpeak.api.offer.model.Offer;
 import io.qzz.hoangvu.ticketpeak.api.offer.model.SeatingMode;
 import io.qzz.hoangvu.ticketpeak.api.offer.repository.OfferRepository;
-import io.qzz.hoangvu.ticketpeak.api.venue.model.GAArea;
+import io.qzz.hoangvu.ticketpeak.api.venue.model.Section;
+import io.qzz.hoangvu.ticketpeak.api.venue.model.SectionType;
 import io.qzz.hoangvu.ticketpeak.api.venue.model.Seat;
-import io.qzz.hoangvu.ticketpeak.api.venue.repository.GAAreaRepository;
+import io.qzz.hoangvu.ticketpeak.api.venue.repository.SectionRepository;
 import io.qzz.hoangvu.ticketpeak.api.venue.repository.SeatRepository;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -31,7 +32,7 @@ public class InventoryEventListener {
     private final InventoryGaRepository inventoryGaRepository;
     private final InventorySeatRepository inventorySeatRepository;
     private final EventManifestRepository eventManifestRepository;
-    private final GAAreaRepository gaAreaRepository;
+    private final SectionRepository sectionRepository;
     private final SeatRepository seatRepository;
     private final OfferRepository offerRepository;
 
@@ -39,14 +40,14 @@ public class InventoryEventListener {
             InventoryGaRepository inventoryGaRepository,
             InventorySeatRepository inventorySeatRepository,
             EventManifestRepository eventManifestRepository,
-            GAAreaRepository gaAreaRepository,
+            SectionRepository sectionRepository,
             SeatRepository seatRepository,
             OfferRepository offerRepository
     ) {
         this.inventoryGaRepository = inventoryGaRepository;
         this.inventorySeatRepository = inventorySeatRepository;
         this.eventManifestRepository = eventManifestRepository;
-        this.gaAreaRepository = gaAreaRepository;
+        this.sectionRepository = sectionRepository;
         this.seatRepository = seatRepository;
         this.offerRepository = offerRepository;
     }
@@ -73,24 +74,23 @@ public class InventoryEventListener {
                         .filter(o -> o.getSeatingMode() == SeatingMode.GENERAL_ADMISSION)
                         .toList();
 
-                List<GAArea> gaAreas = gaAreaRepository.findByManifestId(manifestId);
+                List<Section> gaSections = sectionRepository.findByManifestIdAndType(manifestId, SectionType.GA);
                 List<InventoryGa> gaInventories = new ArrayList<>();
 
                 for (Offer offer : gaOffers) {
-                    List<GAArea> matchingAreas = gaAreas.stream()
-                            .filter(area -> (offer.getSectionId() == null || Objects.equals(area.getLevelId(), offer.getSectionId()))
-                                    && (offer.getPriceLevelId() == null || Objects.equals(area.getPriceLevelId(), offer.getPriceLevelId())))
+                    List<Section> matchingAreas = gaSections.stream()
+                            .filter(area -> (offer.getSectionId() == null || Objects.equals(area.getId(), offer.getSectionId())))
                             .toList();
 
                     if (matchingAreas.isEmpty()) {
                         throw InventoryException.invalidOfferMapping("No GA area matches offer " + offer.getTicketTypeId());
                     }
 
-                    for (GAArea area : matchingAreas) {
+                    for (Section area : matchingAreas) {
                         int capacity = offer.getCapacityCap() != null ? offer.getCapacityCap() : area.getCapacity();
                         gaInventories.add(InventoryGa.builder()
                                 .eventId(eventId)
-                                .areaId(area.getId())
+                                .sectionId(area.getId())
                                 .offerId(offer.getId())
                                 .total(capacity)
                                 .available(capacity)
@@ -102,10 +102,10 @@ public class InventoryEventListener {
                 if (!gaInventories.isEmpty()) {
                     java.util.Map<String, Integer> totalByArea = new java.util.HashMap<>();
                     for (InventoryGa row : gaInventories) {
-                        totalByArea.merge(row.getAreaId(), row.getTotal(), Integer::sum);
+                        totalByArea.merge(row.getSectionId(), row.getTotal(), Integer::sum);
                     }
 
-                    for (GAArea area : gaAreas) {
+                    for (Section area : gaSections) {
                         Integer totalAllocated = totalByArea.get(area.getId());
                         if (totalAllocated != null && totalAllocated > area.getCapacity()) {
                             throw InventoryException.capacityExceeded(

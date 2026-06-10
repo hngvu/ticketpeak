@@ -9,7 +9,7 @@ import java.util.UUID;
 public record ReservationItemRequest(
         @NotNull UUID offerId,
         @NotNull SeatingMode seatingMode,
-        String areaId,
+        String sectionId,
         String seatId,
         @Min(1) Integer qty
 ) {}

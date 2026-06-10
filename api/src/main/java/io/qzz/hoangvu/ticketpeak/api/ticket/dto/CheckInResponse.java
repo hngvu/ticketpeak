@@ -10,7 +10,7 @@ public record CheckInResponse(
         boolean alreadyCheckedIn,
         UUID ticketId,
         String seatId,
-        String areaId,
+        String sectionId,
         String seatingMode,
         Instant checkedInAt
 ) {
@@ -20,7 +20,7 @@ public record CheckInResponse(
                 false,
                 t.getId(),
                 t.getSeatId(),
-                t.getAreaId(),
+                t.getSectionId(),
                 t.getSeatingMode().name(),
                 t.getCheckedInAt()
         );
@@ -32,7 +32,7 @@ public record CheckInResponse(
                 true,
                 t.getId(),
                 t.getSeatId(),
-                t.getAreaId(),
+                t.getSectionId(),
                 t.getSeatingMode().name(),
                 t.getCheckedInAt()
         );

@@ -159,7 +159,7 @@ class EventControllerIT {
         manifest = manifestRepository.saveAndFlush(Manifest.builder()
                 .id("M-001")
                 .venue(venue)
-                .description("Standard Layout")
+                
                 .totalCapacity(40000)
                 .status(io.qzz.hoangvu.ticketpeak.api.venue.model.ManifestStatus.PUBLISHED)
                 .build());

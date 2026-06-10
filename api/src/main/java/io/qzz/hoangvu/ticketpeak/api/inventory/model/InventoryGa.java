@@ -31,14 +31,14 @@ public class InventoryGa {
     UUID eventId;
 
     @Id
-    @Column(name = "area_id", nullable = false)
-    String areaId;
+    @Column(name = "section_id", nullable = false)
+    String sectionId;
 
     @Id
     @Column(name = "offer_id", nullable = false)
     UUID offerId;
 
-    // Capacity captured from ga_area at ONSALE snapshot time.
+    // Capacity captured from section at ONSALE snapshot time.
     // Does not change after initialization.
     @Column(name = "total", nullable = false)
     int total;

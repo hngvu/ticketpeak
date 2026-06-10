@@ -176,7 +176,7 @@ public class ResaleServiceIT {
                 .order(orderEntity)
                 .offerId(UUID.randomUUID())
                 .seatingMode(SeatingMode.GENERAL_ADMISSION)
-                .areaId("GA-AREA")
+                .sectionId("GA-AREA")
                 .qty(1)
                 .unitFaceValue(BigDecimal.valueOf(100))
                 .unitTotalPrice(BigDecimal.valueOf(100))

@@ -81,7 +81,7 @@ public class ResaleListingService {
                 .ticketTypeId(ticket.getTicketTypeId())
                 .ticketTypeName(ticket.getTicketTypeName())
                 .seatId(ticket.getSeatId())
-                .areaId(ticket.getAreaId())
+                .sectionId(ticket.getSectionId())
                 .seatingMode(ticket.getSeatingMode())
                 .faceValue(ticket.getFaceValue())
                 .askingPrice(req.askingPrice())

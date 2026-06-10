@@ -55,7 +55,7 @@ public class TicketIssuanceService {
                         .faceValue(item.faceValue())
                         .currency(item.currency())
                         .seatingMode(item.seatingMode())
-                        .areaId(item.areaId())
+                        .sectionId(item.sectionId())
                         .seatId(item.seatId())
                         .totpSecretEnc(encryptedSecret)
                         .status(TicketStatus.ISSUED)

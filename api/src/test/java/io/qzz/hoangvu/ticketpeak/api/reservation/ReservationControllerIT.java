@@ -85,7 +85,7 @@ class ReservationControllerIT {
 
     Offer gaOffer;
     Offer rsOffer;
-    String gaAreaId = "AREA-GA-1";
+    String gaSectionId = "AREA-GA-1";
     String rsSeatId = "SEAT-RS-1";
 
     @BeforeEach
@@ -195,7 +195,7 @@ class ReservationControllerIT {
         // Seed inventory
         inventoryGaRepository.saveAndFlush(InventoryGa.builder()
                 .eventId(onsaleEvent.getId())
-                .areaId(gaAreaId)
+                .sectionId(gaSectionId)
                 .offerId(gaOffer.getId())
                 .total(100)
                 .available(100)
@@ -219,10 +219,10 @@ class ReservationControllerIT {
                 {
                   "eventId": "%s",
                   "items": [
-                    {"offerId": "%s", "seatingMode": "GENERAL_ADMISSION", "areaId": "%s", "qty": 2}
+                    {"offerId": "%s", "seatingMode": "GENERAL_ADMISSION", "sectionId": "%s", "qty": 2}
                   ]
                 }
-                """.formatted(onsaleEvent.getId(), gaOffer.getId(), gaAreaId);
+                """.formatted(onsaleEvent.getId(), gaOffer.getId(), gaSectionId);
 
         String response = mockMvc.perform(post("/api/reservations")
                         .header("Authorization", "Bearer " + tokenA)
@@ -241,7 +241,7 @@ class ReservationControllerIT {
         assertThat(reservationRepository.findById(reservationId)).isPresent();
 
         InventoryGa ga = inventoryGaRepository
-                .findByEventIdAndAreaIdAndOfferId(onsaleEvent.getId(), gaAreaId, gaOffer.getId())
+                .findByEventIdAndSectionIdAndOfferId(onsaleEvent.getId(), gaSectionId, gaOffer.getId())
                 .orElseThrow();
         assertThat(ga.getHeld()).isEqualTo(2);
         assertThat(ga.getAvailable()).isEqualTo(98);
@@ -311,10 +311,10 @@ class ReservationControllerIT {
                 {
                   "eventId": "%s",
                   "items": [
-                    {"offerId": "%s", "seatingMode": "GENERAL_ADMISSION", "areaId": "%s", "qty": 200}
+                    {"offerId": "%s", "seatingMode": "GENERAL_ADMISSION", "sectionId": "%s", "qty": 200}
                   ]
                 }
-                """.formatted(onsaleEvent.getId(), gaOffer.getId(), gaAreaId);
+                """.formatted(onsaleEvent.getId(), gaOffer.getId(), gaSectionId);
 
         mockMvc.perform(post("/api/reservations")
                         .header("Authorization", "Bearer " + tokenA)
@@ -337,10 +337,10 @@ class ReservationControllerIT {
                 {
                   "eventId": "%s",
                   "items": [
-                    {"offerId": "%s", "seatingMode": "GENERAL_ADMISSION", "areaId": "%s", "qty": 1}
+                    {"offerId": "%s", "seatingMode": "GENERAL_ADMISSION", "sectionId": "%s", "qty": 1}
                   ]
                 }
-                """.formatted(onsaleEvent.getId(), gaOffer.getId(), gaAreaId);
+                """.formatted(onsaleEvent.getId(), gaOffer.getId(), gaSectionId);
 
         mockMvc.perform(post("/api/reservations")
                         .header("Authorization", "Bearer " + tokenA)
@@ -364,10 +364,10 @@ class ReservationControllerIT {
                 {
                   "eventId": "%s",
                   "items": [
-                    {"offerId": "%s", "seatingMode": "GENERAL_ADMISSION", "areaId": "%s", "qty": 1}
+                    {"offerId": "%s", "seatingMode": "GENERAL_ADMISSION", "sectionId": "%s", "qty": 1}
                   ]
                 }
-                """.formatted(draftEvent.getId(), gaOffer.getId(), gaAreaId);
+                """.formatted(draftEvent.getId(), gaOffer.getId(), gaSectionId);
 
         mockMvc.perform(post("/api/reservations")
                         .header("Authorization", "Bearer " + tokenA)
@@ -385,10 +385,10 @@ class ReservationControllerIT {
                 {
                   "eventId": "%s",
                   "items": [
-                    {"offerId": "%s", "seatingMode": "GENERAL_ADMISSION", "areaId": "%s", "qty": 2}
+                    {"offerId": "%s", "seatingMode": "GENERAL_ADMISSION", "sectionId": "%s", "qty": 2}
                   ]
                 }
-                """.formatted(onsaleEvent.getId(), gaOffer.getId(), gaAreaId);
+                """.formatted(onsaleEvent.getId(), gaOffer.getId(), gaSectionId);
 
         String createResponse = mockMvc.perform(post("/api/reservations")
                         .header("Authorization", "Bearer " + tokenA)
@@ -405,7 +405,7 @@ class ReservationControllerIT {
                 .andExpect(jsonPath("$.data.status").value("CANCELLED"));
 
         InventoryGa ga = inventoryGaRepository
-                .findByEventIdAndAreaIdAndOfferId(onsaleEvent.getId(), gaAreaId, gaOffer.getId())
+                .findByEventIdAndSectionIdAndOfferId(onsaleEvent.getId(), gaSectionId, gaOffer.getId())
                 .orElseThrow();
         assertThat(ga.getAvailable()).isEqualTo(100);
         assertThat(ga.getHeld()).isEqualTo(0);
@@ -417,10 +417,10 @@ class ReservationControllerIT {
                 {
                   "eventId": "%s",
                   "items": [
-                    {"offerId": "%s", "seatingMode": "GENERAL_ADMISSION", "areaId": "%s", "qty": 1}
+                    {"offerId": "%s", "seatingMode": "GENERAL_ADMISSION", "sectionId": "%s", "qty": 1}
                   ]
                 }
-                """.formatted(onsaleEvent.getId(), gaOffer.getId(), gaAreaId);
+                """.formatted(onsaleEvent.getId(), gaOffer.getId(), gaSectionId);
 
         String createResponse = mockMvc.perform(post("/api/reservations")
                         .header("Authorization", "Bearer " + tokenA)
@@ -453,10 +453,10 @@ class ReservationControllerIT {
                 {
                   "eventId": "%s",
                   "items": [
-                    {"offerId": "%s", "seatingMode": "GENERAL_ADMISSION", "areaId": "%s", "qty": 1}
+                    {"offerId": "%s", "seatingMode": "GENERAL_ADMISSION", "sectionId": "%s", "qty": 1}
                   ]
                 }
-                """.formatted(onsaleEvent.getId(), gaOffer.getId(), gaAreaId);
+                """.formatted(onsaleEvent.getId(), gaOffer.getId(), gaSectionId);
 
         String createResponse = mockMvc.perform(post("/api/reservations")
                         .header("Authorization", "Bearer " + tokenA)
@@ -487,10 +487,10 @@ class ReservationControllerIT {
                 {
                   "eventId": "%s",
                   "items": [
-                    {"offerId": "%s", "seatingMode": "GENERAL_ADMISSION", "areaId": "%s", "qty": 3}
+                    {"offerId": "%s", "seatingMode": "GENERAL_ADMISSION", "sectionId": "%s", "qty": 3}
                   ]
                 }
-                """.formatted(onsaleEvent.getId(), gaOffer.getId(), gaAreaId);
+                """.formatted(onsaleEvent.getId(), gaOffer.getId(), gaSectionId);
 
         String createResponse = mockMvc.perform(post("/api/reservations")
                         .header("Authorization", "Bearer " + tokenA)
@@ -515,7 +515,7 @@ class ReservationControllerIT {
         assertThat(expired.getStatus()).isEqualTo(ReservationStatus.EXPIRED);
 
         InventoryGa ga = inventoryGaRepository
-                .findByEventIdAndAreaIdAndOfferId(onsaleEvent.getId(), gaAreaId, gaOffer.getId())
+                .findByEventIdAndSectionIdAndOfferId(onsaleEvent.getId(), gaSectionId, gaOffer.getId())
                 .orElseThrow();
         assertThat(ga.getHeld()).isEqualTo(0);
         assertThat(ga.getAvailable()).isEqualTo(100);
@@ -529,10 +529,10 @@ class ReservationControllerIT {
                 {
                   "eventId": "%s",
                   "items": [
-                    {"offerId": "%s", "seatingMode": "GENERAL_ADMISSION", "areaId": "%s", "qty": 1}
+                    {"offerId": "%s", "seatingMode": "GENERAL_ADMISSION", "sectionId": "%s", "qty": 1}
                   ]
                 }
-                """.formatted(onsaleEvent.getId(), gaOffer.getId(), gaAreaId);
+                """.formatted(onsaleEvent.getId(), gaOffer.getId(), gaSectionId);
 
         mockMvc.perform(post("/api/reservations")
                         .header("Authorization", "Bearer " + tokenA)

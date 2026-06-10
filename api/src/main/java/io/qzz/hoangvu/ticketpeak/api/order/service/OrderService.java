@@ -186,7 +186,7 @@ public class OrderService {
             if (item.getSeatingMode() == SeatingMode.GENERAL_ADMISSION) {
                 inventoryService.confirmGAInventory(
                         reservation.getEventId(),
-                        item.getAreaId(),
+                        item.getSectionId(),
                         item.getOfferId(),
                         item.getQty()
                 );
@@ -220,7 +220,7 @@ public class OrderService {
                     .order(order)
                     .offerId(resItem.getOfferId())
                     .seatingMode(resItem.getSeatingMode())
-                    .areaId(resItem.getAreaId())
+                    .sectionId(resItem.getSectionId())
                     .seatId(resItem.getSeatId())
                     .qty(resItem.getQty())
                     .unitFaceValue(resItem.getUnitFaceValue())
@@ -307,7 +307,7 @@ public class OrderService {
                     item.getCurrency(),
                     item.getQty(),
                     item.getSeatingMode(),
-                    item.getAreaId(),
+                    item.getSectionId(),
                     item.getSeatId()
             ));
         }

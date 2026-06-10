@@ -93,7 +93,7 @@ class PaymentControllerIT {
     Venue venue;
     Event onsaleEvent;
     Offer gaOffer;
-    String gaAreaId = "AREA-GA-IT";
+    String gaSectionId = "AREA-GA-IT";
 
     @BeforeEach
     void setup() throws Exception {
@@ -168,7 +168,7 @@ class PaymentControllerIT {
 
         inventoryGaRepository.saveAndFlush(InventoryGa.builder()
                 .eventId(onsaleEvent.getId())
-                .areaId(gaAreaId)
+                .sectionId(gaSectionId)
                 .offerId(gaOffer.getId())
                 .total(100)
                 .available(100)
@@ -345,7 +345,7 @@ class PaymentControllerIT {
         Reservation finalizedRes = reservationRepository.findById(reservation.getId()).orElseThrow();
         assertThat(finalizedRes.getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
 
-        InventoryGa ga = inventoryGaRepository.findByEventIdAndAreaIdAndOfferId(onsaleEvent.getId(), gaAreaId, gaOffer.getId()).orElseThrow();
+        InventoryGa ga = inventoryGaRepository.findByEventIdAndSectionIdAndOfferId(onsaleEvent.getId(), gaSectionId, gaOffer.getId()).orElseThrow();
         assertThat(ga.getSold()).isEqualTo(1);
     }
 
@@ -445,7 +445,7 @@ class PaymentControllerIT {
         Reservation finalizedRes = reservationRepository.findById(reservation.getId()).orElseThrow();
         assertThat(finalizedRes.getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
 
-        InventoryGa ga = inventoryGaRepository.findByEventIdAndAreaIdAndOfferId(onsaleEvent.getId(), gaAreaId, gaOffer.getId()).orElseThrow();
+        InventoryGa ga = inventoryGaRepository.findByEventIdAndSectionIdAndOfferId(onsaleEvent.getId(), gaSectionId, gaOffer.getId()).orElseThrow();
         assertThat(ga.getSold()).isEqualTo(1);
     }
 
@@ -494,7 +494,7 @@ class PaymentControllerIT {
                 .reservation(r)
                 .offerId(gaOffer.getId())
                 .seatingMode(SeatingMode.GENERAL_ADMISSION)
-                .areaId(gaAreaId)
+                .sectionId(gaSectionId)
                 .qty(qty)
                 .unitFaceValue(gaOffer.getFaceValue())
                 .currency("VND")
@@ -503,7 +503,7 @@ class PaymentControllerIT {
 
         r.setItems(List.of(item));
 
-        InventoryGa inventory = inventoryGaRepository.findByEventIdAndAreaIdAndOfferId(onsaleEvent.getId(), gaAreaId, gaOffer.getId()).orElseThrow();
+        InventoryGa inventory = inventoryGaRepository.findByEventIdAndSectionIdAndOfferId(onsaleEvent.getId(), gaSectionId, gaOffer.getId()).orElseThrow();
         inventory.setHeld(inventory.getHeld() + qty);
         inventory.setAvailable(inventory.getAvailable() - qty);
         inventoryGaRepository.saveAndFlush(inventory);

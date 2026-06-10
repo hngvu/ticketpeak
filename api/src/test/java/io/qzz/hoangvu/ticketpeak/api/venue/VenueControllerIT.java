@@ -1,5 +1,7 @@
 package io.qzz.hoangvu.ticketpeak.api.venue;
 
+import io.qzz.hoangvu.ticketpeak.api.venue.model.SectionType;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.qzz.hoangvu.ticketpeak.api.account.model.Account;
 import io.qzz.hoangvu.ticketpeak.api.account.model.AccountStatus;
@@ -225,23 +227,23 @@ class VenueControllerIT {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CreateManifestRequest("M005", "L", 100, null))))
                 .andExpect(status().isCreated());
-                mockMvc.perform(post("/api/ops/venues/manifests/M005/rs-areas").header("Authorization", "Bearer " + adminToken)
+                mockMvc.perform(put("/api/ops/venues/manifests/M005/sections").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateRSAreaRequest("RA001", "L1", null, null, null, null, null))))
-                .andExpect(status().isCreated());
-        mockMvc.perform(post("/api/ops/venues/rs-areas/RA001/rows").header("Authorization", "Bearer " + adminToken)
+                        .content(objectMapper.writeValueAsString(UpsertSectionRequest.builder().id("RA001").type(SectionType.RS).levelId("L1").build())))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/ops/venues/sections/RA001/rows").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateSeatRowRequest("ROW001", "A", null))))
+                        .content(objectMapper.writeValueAsString(new CreateSeatRowRequest("ROW001", "A"))))
                 .andExpect(status().isCreated());
 
                 mockMvc.perform(post("/api/ops/venues/rows/ROW001/seats").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateSeatRequest("S001", "1", null, null, null, null, null, null, null, null))))
+                        .content(objectMapper.writeValueAsString(new CreateSeatRequest("S001", "1", null, null, null, null, null))))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(post("/api/ops/venues/rows/ROW001/seats").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateSeatRequest("S002", "1", null, null, null, null, null, null, null, null))))
+                        .content(objectMapper.writeValueAsString(new CreateSeatRequest("S002", "1", null, null, null, null, null))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("SEAT_NAME_DUPLICATE"));
     }
@@ -260,19 +262,19 @@ class VenueControllerIT {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CreateManifestRequest("M005-Row", "L", 100, null))))
                 .andExpect(status().isCreated());
-        mockMvc.perform(post("/api/ops/venues/manifests/M005-Row/rs-areas").header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(put("/api/ops/venues/manifests/M005-Row/sections").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateRSAreaRequest("RA001-Row", "L1", null, null, null, null, null))))
-                .andExpect(status().isCreated());
+                        .content(objectMapper.writeValueAsString(UpsertSectionRequest.builder().id("RA001-Row").type(SectionType.RS).levelId("L1").build())))
+                .andExpect(status().isOk());
         
-        mockMvc.perform(post("/api/ops/venues/rs-areas/RA001-Row/rows").header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(post("/api/ops/venues/sections/RA001-Row/rows").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateSeatRowRequest("ROW001-Row", "Row-A", null))))
+                        .content(objectMapper.writeValueAsString(new CreateSeatRowRequest("ROW001-Row", "Row-A"))))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(post("/api/ops/venues/rs-areas/RA001-Row/rows").header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(post("/api/ops/venues/sections/RA001-Row/rows").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateSeatRowRequest("ROW002-Row", "Row-A", null))))
+                        .content(objectMapper.writeValueAsString(new CreateSeatRowRequest("ROW002-Row", "Row-A"))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("SEAT_ROW_NAME_DUPLICATE"));
     }
@@ -292,59 +294,59 @@ class VenueControllerIT {
                         .content(objectMapper.writeValueAsString(new CreateManifestRequest("M-LAYOUT", "Layout", 100, null))))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(post("/api/ops/venues/manifests/M-LAYOUT/ga-areas").header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(put("/api/ops/venues/manifests/M-LAYOUT/sections").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateGAAreaRequest("GA-1", "L1", "P1", 120, 10, 20, 300, 140, null))))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.x").value(10))
-                .andExpect(jsonPath("$.data.width").value(300));
+                                UpsertSectionRequest.builder().id("GA-1").type(SectionType.GA).levelId("L1").capacity(120).uiData(java.util.Map.of("x", 10, "y", 20, "width", 300, "height", 140)).build())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.uiData.x").value(10))
+                .andExpect(jsonPath("$.data.uiData.width").value(300));
 
-        mockMvc.perform(post("/api/ops/venues/manifests/M-LAYOUT/ga-areas").header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(put("/api/ops/venues/manifests/M-LAYOUT/sections").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateGAAreaRequest("GA-1", "L1", "P1", 150, 30, 40, 360, 180, null))))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.x").value(30))
-                .andExpect(jsonPath("$.data.height").value(180));
+                                UpsertSectionRequest.builder().id("GA-1").type(SectionType.GA).levelId("L1").capacity(150).uiData(java.util.Map.of("x", 30, "y", 40, "width", 360, "height", 180)).build())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.uiData.x").value(30))
+                .andExpect(jsonPath("$.data.uiData.height").value(180));
 
-        mockMvc.perform(post("/api/ops/venues/manifests/M-LAYOUT/rs-areas").header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(put("/api/ops/venues/manifests/M-LAYOUT/sections").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateRSAreaRequest("RS-1", "L1", 50, 60, 280, 160, null))))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.x").value(50))
-                .andExpect(jsonPath("$.data.height").value(160));
+                                UpsertSectionRequest.builder().id("RS-1").type(SectionType.RS).levelId("L1").uiData(java.util.Map.of("x", 50, "y", 60, "width", 280, "height", 160)).build())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.uiData.x").value(50))
+                .andExpect(jsonPath("$.data.uiData.height").value(160));
 
-        mockMvc.perform(post("/api/ops/venues/manifests/M-LAYOUT/rs-areas").header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(put("/api/ops/venues/manifests/M-LAYOUT/sections").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateRSAreaRequest("RS-1", "L1", 80, 90, 340, 200, null))))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.x").value(80))
-                .andExpect(jsonPath("$.data.width").value(340));
+                                UpsertSectionRequest.builder().id("RS-1").type(SectionType.RS).levelId("L1").uiData(java.util.Map.of("x", 80, "y", 90, "width", 340, "height", 200)).build())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.uiData.x").value(80))
+                .andExpect(jsonPath("$.data.uiData.width").value(340));
 
-        mockMvc.perform(post("/api/ops/venues/rs-areas/RS-1/rows").header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(post("/api/ops/venues/sections/RS-1/rows").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateSeatRowRequest("ROW-1", "A", 10))))
+                        .content(objectMapper.writeValueAsString(new CreateSeatRowRequest("ROW-1", "A"))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.positionY").value(10));
 
-        mockMvc.perform(post("/api/ops/venues/rs-areas/RS-1/rows").header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(post("/api/ops/venues/sections/RS-1/rows").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateSeatRowRequest("ROW-1", "A", 20))))
+                        .content(objectMapper.writeValueAsString(new CreateSeatRowRequest("ROW-1", "A"))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.positionY").value(20));
 
         mockMvc.perform(post("/api/ops/venues/rows/ROW-1/seats").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateSeatRequest("SEAT-1", "1", 0, null, true, false, false, null, null, null))))
+                        .content(objectMapper.writeValueAsString(new CreateSeatRequest("SEAT-1", "1", 0, null, null, null, null))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.positionX").value(0));
 
         mockMvc.perform(post("/api/ops/venues/rows/ROW-1/seats").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateSeatRequest("SEAT-1", "1", 12, null, false, true, true, io.qzz.hoangvu.ticketpeak.api.venue.model.SeatStatus.UNAVAILABLE, null, null))))
+                        .content(objectMapper.writeValueAsString(new CreateSeatRequest("SEAT-1", "1", 12, null, io.qzz.hoangvu.ticketpeak.api.venue.model.SeatStatus.UNAVAILABLE, null, null))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.positionX").value(12))
                 .andExpect(jsonPath("$.data.aisle").value(true))
@@ -467,21 +469,21 @@ class VenueControllerIT {
                 .andExpect(status().isOk());
 
         // Create GAArea with null/blank priceLevelId
-        mockMvc.perform(post("/api/ops/venues/manifests/M-NULLABLE/ga-areas").header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(put("/api/ops/venues/manifests/M-NULLABLE/sections").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateGAAreaRequest("GA-1", "L1", "", 150, 30, 40, 360, 180, null))))
-                .andExpect(status().isCreated())
+                                UpsertSectionRequest.builder().id("GA-1").type(SectionType.GA).levelId("L1").capacity(150).uiData(java.util.Map.of("x", 30, "y", 40, "width", 360, "height", 180)).build())))
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.priceLevelId").value(org.hamcrest.Matchers.nullValue()));
 
         // Create RSArea with geometry only
-        mockMvc.perform(post("/api/ops/venues/manifests/M-NULLABLE/rs-areas").header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(put("/api/ops/venues/manifests/M-NULLABLE/sections").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new CreateRSAreaRequest("RS-1", "L1", 50, 60, 280, 160, null))))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.x").value(50))
-                .andExpect(jsonPath("$.data.width").value(280));
+                                UpsertSectionRequest.builder().id("RS-1").type(SectionType.RS).levelId("L1").uiData(java.util.Map.of("x", 50, "y", 60, "width", 280, "height", 160)).build())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.uiData.x").value(50))
+                .andExpect(jsonPath("$.data.uiData.width").value(280));
     }
 
     private String login(String email, String password) throws Exception {

@@ -34,17 +34,9 @@ public class Seat {
     @Column(nullable = false)
     SeatStatus status;
 
-    Boolean accessibility;
-
-    @Column(name = "obstructed_view")
-    Boolean obstructedView;
-
-    Boolean aisle;
-
     @Column(name = "price_level_id")
     String priceLevelId;
 
     @Column(name = "section_id")
     String sectionId;
 }
-

@@ -85,17 +85,15 @@ class InventoryControllerIT {
     @Autowired
     LevelRepository levelRepository;
 
-    @Autowired
-    SectionRepository sectionRepository;
+    
 
     @Autowired
     PriceLevelRepository priceLevelRepository;
 
     @Autowired
-    GAAreaRepository gaAreaRepository;
+    SectionRepository sectionRepository;
 
-    @Autowired
-    RSAreaRepository rsAreaRepository;
+    
 
     @Autowired
     SeatRowRepository seatRowRepository;
@@ -139,8 +137,8 @@ class InventoryControllerIT {
         eventRepository.deleteAll();
         seatRepository.deleteAll();
         seatRowRepository.deleteAll();
-        rsAreaRepository.deleteAll();
-        gaAreaRepository.deleteAll();
+        sectionRepository.deleteAll();
+        sectionRepository.deleteAll();
         priceLevelRepository.deleteAll();
         sectionRepository.deleteAll();
         levelRepository.deleteAll();
@@ -179,14 +177,14 @@ class InventoryControllerIT {
         manifest = manifestRepository.saveAndFlush(Manifest.builder()
                 .id("M-INVENTORY-1")
                 .venue(venue)
-                .description("Inventory Manifest")
+                
                 .totalCapacity(100)
                 .status(ManifestStatus.PUBLISHED)
                 .build());
 
-        levelRepository.saveAndFlush(Level.builder().id("LV-1").manifest(manifest).description("Level 1").build());
-        sectionRepository.saveAndFlush(Section.builder().id("SEC-A").manifest(manifest).description("Section A").build());
-        priceLevelRepository.saveAndFlush(PriceLevel.builder().id("PL-1").manifest(manifest).description("Price Level 1").build());
+        levelRepository.saveAndFlush(Level.builder().id("LV-1").manifest(manifest).build());
+        sectionRepository.saveAndFlush(Section.builder().id("SEC-A").manifest(manifest).build());
+        priceLevelRepository.saveAndFlush(PriceLevel.builder().id("PL-1").manifest(manifest).build());
     }
 
     private Event saveEvent(String slug, String title, EventStatus status) {
@@ -219,26 +217,26 @@ class InventoryControllerIT {
     @Test
     void testInventoryInitializationAndAvailabilityFlow() throws Exception {
         // 1. Add GA Area to layout
-        gaAreaRepository.saveAndFlush(GAArea.builder()
+        sectionRepository.saveAndFlush(Section.builder().type(SectionType.GA)
                 .id("GA-A")
-                .manifestId(manifest.getId())
+                .id(manifest.getId())
                 .levelId("LV-1")
-                .priceLevelId("PL-1")
+                
                 .capacity(50)
                 .build());
 
         // 2. Setup Reserved Seating layout
-        RSArea rsArea = rsAreaRepository.saveAndFlush(RSArea.builder()
+        Section rsArea = sectionRepository.saveAndFlush(Section.builder().type(SectionType.RS)
                 .id("RS-A")
-                .manifestId(manifest.getId())
+                .id(manifest.getId())
                 .levelId("LV-1")
                 .build());
 
         SeatRow seatRow = seatRowRepository.saveAndFlush(SeatRow.builder()
                 .id("ROW-1")
-                .rsArea(rsArea)
+                .section(rsArea)
                 .name("A")
-                .positionY(1)
+                
                 .build());
 
         seatRepository.saveAndFlush(Seat.builder()
@@ -246,9 +244,9 @@ class InventoryControllerIT {
                 .seatRow(seatRow)
                 .name("A-01")
                 .positionX(1)
-                .positionY(1)
+                
                 .sectionId("SEC-A")
-                .priceLevelId("PL-1")
+                
                 .status(SeatStatus.AVAILABLE)
                 .build());
 
@@ -268,7 +266,7 @@ class InventoryControllerIT {
                 .sellableQuantities(List.of(1, 2, 4))
                 .seatingMode(SeatingMode.GENERAL_ADMISSION)
                 .sectionId(null)
-                .priceLevelId("PL-1")
+                
                 .charges(List.of())
                 .build());
 
@@ -284,7 +282,7 @@ class InventoryControllerIT {
                 .sellableQuantities(List.of(1))
                 .seatingMode(SeatingMode.RESERVED_SEATING)
                 .sectionId("SEC-A")
-                .priceLevelId("PL-1")
+                
                 .charges(List.of())
                 .build());
         
@@ -309,7 +307,7 @@ class InventoryControllerIT {
         // 7. Verify composite read models are initialized cleanly!
         // Verify GA
         assertThat(inventoryGaRepository.existsByEventId(event.getId())).isTrue();
-        InventoryGa gaInventory = inventoryGaRepository.findByEventIdAndAreaIdAndOfferId(event.getId(), gaAreaId, gaOffer.getId()).orElseThrow();
+        InventoryGa gaInventory = inventoryGaRepository.findByEventIdAndSectionIdAndOfferId(event.getId(), gaAreaId, gaOffer.getId()).orElseThrow();
         assertThat(gaInventory.getTotal()).isEqualTo(50);
         assertThat(gaInventory.getSold()).isEqualTo(0);
         assertThat(gaInventory.getAvailable()).isEqualTo(50);
@@ -373,7 +371,7 @@ class InventoryControllerIT {
 
         inventoryGaRepository.saveAndFlush(InventoryGa.builder()
                 .eventId(event.getId())
-                .areaId("GA-A")
+                .sectionId("GA-A")
                 .offerId(UUID.randomUUID())
                 .total(10)
                 .available(10)
@@ -394,25 +392,25 @@ class InventoryControllerIT {
 
     @Test
     void onsale_transition_rolls_back_when_reserved_seat_has_no_matching_offer() throws Exception {
-        gaAreaRepository.saveAndFlush(GAArea.builder()
+        sectionRepository.saveAndFlush(Section.builder().type(SectionType.GA)
                 .id("GA-B")
-                .manifestId(manifest.getId())
+                .id(manifest.getId())
                 .levelId("LV-1")
-                .priceLevelId("PL-1")
+                
                 .capacity(10)
                 .build());
 
-        RSArea rsArea = rsAreaRepository.saveAndFlush(RSArea.builder()
+        Section rsArea = sectionRepository.saveAndFlush(Section.builder().type(SectionType.RS)
                 .id("RS-B")
-                .manifestId(manifest.getId())
+                .id(manifest.getId())
                 .levelId("LV-1")
                 .build());
 
         SeatRow seatRow = seatRowRepository.saveAndFlush(SeatRow.builder()
                 .id("ROW-B")
-                .rsArea(rsArea)
+                .section(rsArea)
                 .name("B")
-                .positionY(1)
+                
                 .build());
 
         seatRepository.saveAndFlush(Seat.builder()
@@ -420,9 +418,9 @@ class InventoryControllerIT {
                 .seatRow(seatRow)
                 .name("B-01")
                 .positionX(1)
-                .positionY(1)
+                
                 .sectionId("SEC-A")
-                .priceLevelId("PL-1")
+                
                 .status(SeatStatus.AVAILABLE)
                 .build());
 

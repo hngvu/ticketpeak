@@ -47,7 +47,7 @@ public final class ReservationException {
         return new ApiException(HttpStatus.CONFLICT, "RESERVATION_SEAT_UNAVAILABLE", "Seat " + seatId + " is not available");
     }
 
-    public static ApiException gaCapacityInsufficient(String areaId) {
-        return new ApiException(HttpStatus.CONFLICT, "RESERVATION_GA_CAPACITY_INSUFFICIENT", "Insufficient capacity in area " + areaId);
+    public static ApiException gaCapacityInsufficient(String sectionId) {
+        return new ApiException(HttpStatus.CONFLICT, "RESERVATION_GA_CAPACITY_INSUFFICIENT", "Insufficient capacity in area " + sectionId);
     }
 }

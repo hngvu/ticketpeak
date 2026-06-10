@@ -101,7 +101,7 @@ public class OpsVenueController {
 
     @PutMapping("/manifests/{manifestId}/sections")
     public ResponseEntity<ApiResponse<SectionResponse>> upsertSection(
-            @PathVariable String manifestId, @Valid @RequestBody UpsertLookupRequest req) {
+            @PathVariable String manifestId, @Valid @RequestBody UpsertSectionRequest req) {
         return ResponseEntity.ok(ApiResponse.success(venueService.upsertSection(manifestId, req), "Section saved"));
     }
 
@@ -121,41 +121,19 @@ public class OpsVenueController {
         return ResponseEntity.ok(ApiResponse.success(venueService.listPriceLevels(manifestId), "OK"));
     }
 
-    // ======================== AREAS ========================
-
-    @PostMapping("/manifests/{manifestId}/ga-areas")
-    public ResponseEntity<ApiResponse<GAAreaResponse>> createGAArea(
-            @PathVariable String manifestId, @Valid @RequestBody CreateGAAreaRequest req) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(venueService.createGAArea(manifestId, req), "GA area created"));
-    }
-
-    @GetMapping("/manifests/{manifestId}/ga-areas")
-    public ResponseEntity<ApiResponse<List<GAAreaResponse>>> listGAAreas(@PathVariable String manifestId) {
-        return ResponseEntity.ok(ApiResponse.success(venueService.listGAAreas(manifestId), "OK"));
-    }
-
-    @PostMapping("/manifests/{manifestId}/rs-areas")
-    public ResponseEntity<ApiResponse<RSAreaResponse>> createRSArea(
-            @PathVariable String manifestId, @Valid @RequestBody CreateRSAreaRequest req) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(venueService.createRSArea(manifestId, req), "RS area created"));
-    }
-
-    @GetMapping("/manifests/{manifestId}/rs-areas")
-    public ResponseEntity<ApiResponse<List<RSAreaResponse>>> listRSAreas(@PathVariable String manifestId) {
-        return ResponseEntity.ok(ApiResponse.success(venueService.listRSAreas(manifestId), "OK"));
-    }
+    // Removed GA/RS areas endpoints
 
     // ======================== SEAT ROWS & SEATS ========================
 
-    @PostMapping("/rs-areas/{rsAreaId}/rows")
+    @PostMapping("/sections/{sectionId}/rows")
     public ResponseEntity<ApiResponse<SeatRowResponse>> createSeatRow(
-            @PathVariable String rsAreaId, @Valid @RequestBody CreateSeatRowRequest req) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(venueService.createSeatRow(rsAreaId, req), "Seat row created"));
+            @PathVariable String sectionId, @Valid @RequestBody CreateSeatRowRequest req) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(venueService.createSeatRow(sectionId, req), "Seat row created"));
     }
 
-    @GetMapping("/rs-areas/{rsAreaId}/rows")
-    public ResponseEntity<ApiResponse<List<SeatRowResponse>>> listSeatRows(@PathVariable String rsAreaId) {
-        return ResponseEntity.ok(ApiResponse.success(venueService.listSeatRows(rsAreaId), "OK"));
+    @GetMapping("/sections/{sectionId}/rows")
+    public ResponseEntity<ApiResponse<List<SeatRowResponse>>> listSeatRows(@PathVariable String sectionId) {
+        return ResponseEntity.ok(ApiResponse.success(venueService.listSeatRows(sectionId), "OK"));
     }
 
     @PostMapping("/rows/{rowId}/seats")
