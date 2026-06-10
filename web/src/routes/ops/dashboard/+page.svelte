@@ -36,7 +36,6 @@
 			| 'events'
 			| 'venues'
 			| 'users'
-			| 'roles'
 			| 'orders'
 			| 'payouts'
 			| 'fees'
@@ -1127,93 +1126,7 @@
 		</div>
 	{/if}
 
-	<!-- ======================== TAB 8: ROLES & PERMISSIONS ======================== -->
-	{#if activeTab === 'roles'}
-		<div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-			<div class="rounded-lg border border-[#E4E4E7] bg-white p-6 lg:col-span-2">
-				<h3 class="mb-4 border-b border-[#F4F4F5] pb-3 text-sm font-semibold text-[#111111]">
-					Default Authorization Policies
-				</h3>
-				<div class="space-y-4">
-					<div class="rounded-md border border-[#E4E4E7] bg-[#FAFAFA] p-4">
-						<div class="mb-2 flex items-center justify-between">
-							<span class="text-xs font-bold text-[#111111] uppercase">ROLE_ADMIN</span>
-							<span class="rounded bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-600"
-								>All Scopes Allowed</span
-							>
-						</div>
-						<p class="text-xs text-[#71717A]">
-							Complete super administrator access. Can override tickets transfer locks, issue
-							platform-level refunds, configure commission rates, ban users, and approve payout
-							channels.
-						</p>
-					</div>
-
-					<div class="rounded-md border border-[#E4E4E7] bg-[#FAFAFA] p-4">
-						<div class="mb-2 flex items-center justify-between">
-							<span class="text-xs font-bold text-[#111111] uppercase">ROLE_ORGANIZER</span>
-							<span class="rounded bg-[#F4F4F5] px-2 py-0.5 text-[9px] font-bold text-[#71717A]"
-								>8 scopes</span
-							>
-						</div>
-						<p class="text-xs text-[#71717A]">
-							Assigned to verified business organizers. Authorizes creation, publishing, inventory
-							setup, holds allocation, seating manifests configurations, and payment settlement
-							checks.
-						</p>
-					</div>
-
-					<div class="rounded-md border border-[#E4E4E7] bg-[#FAFAFA] p-4">
-						<div class="mb-2 flex items-center justify-between">
-							<span class="text-xs font-bold text-[#111111] uppercase">ROLE_BUYER</span>
-							<span class="rounded bg-[#F4F4F5] px-2 py-0.5 text-[9px] font-bold text-[#71717A]"
-								>3 scopes</span
-							>
-						</div>
-						<p class="text-xs text-[#71717A]">
-							Assigned to registered end ticket purchasers. Authorizes buying tickets, generating
-							TOTP-secured check-in QR codes, submitting secondary resale listings, and transferring
-							tickets.
-						</p>
-					</div>
-				</div>
-			</div>
-
-			<div class="space-y-4 rounded-lg border border-[#E4E4E7] bg-white p-6">
-				<h3 class="border-b border-[#F4F4F5] pb-3 text-sm font-semibold text-[#111111]">
-					Platform System Scopes
-				</h3>
-				<div class="space-y-3 font-mono text-[11px] text-[#71717A]">
-					<div class="flex items-center justify-between border-b border-[#F4F4F5] pb-2">
-						<span>event:publish</span>
-						<input type="checkbox" checked disabled class="accent-slate-900" />
-					</div>
-					<div class="flex items-center justify-between border-b border-[#F4F4F5] pb-2">
-						<span>order:refund</span>
-						<input type="checkbox" checked disabled class="accent-slate-900" />
-					</div>
-					<div class="flex items-center justify-between border-b border-[#F4F4F5] pb-2">
-						<span>user:ban</span>
-						<input type="checkbox" checked disabled class="accent-slate-900" />
-					</div>
-					<div class="flex items-center justify-between border-b border-[#F4F4F5] pb-2">
-						<span>payout:approve</span>
-						<input type="checkbox" checked disabled class="accent-slate-900" />
-					</div>
-					<div class="flex items-center justify-between border-b border-[#F4F4F5] pb-2">
-						<span>resale:censor</span>
-						<input type="checkbox" checked disabled class="accent-slate-900" />
-					</div>
-					<div class="flex items-center justify-between">
-						<span>cms:manage</span>
-						<input type="checkbox" checked disabled class="accent-slate-900" />
-					</div>
-				</div>
-			</div>
-		</div>
-	{/if}
-
-	<!-- ======================== TAB 9: ORDERS & TRANSACTIONS ======================== -->
+	<!-- ======================== TAB 8: ORDERS & TRANSACTIONS ======================== -->
 	{#if activeTab === 'orders'}
 		<div class="animate-fade-in overflow-hidden rounded-lg border border-[#E4E4E7] bg-white">
 			<div

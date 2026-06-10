@@ -514,3 +514,17 @@ The typography system uses two primary typefaces:
 - **Don't apply heavy single-layer shadows:** Avoid standard browser default shadows; stick to layered multi-stop parameters.
 - **Don't uppercase headings:** Keep text sentence-cased with negative tracking to sustain an architectural, modern design aesthetic.
 - **Don't mix button shapes:** Keep action pills round (`{rounded.pill}`) and interface control components square (`{rounded.sm}`).
+
+---
+
+## Admin Panel (Ops) Conventions
+
+### Table Layout
+
+- **No header row:** Tables in the admin panel omit `<thead>` rows entirely. Column context is conveyed through inline labels, data format, and visual hierarchy rather than a dedicated header bar.
+- **Status as inline badge:** Status is never displayed in a dedicated "Status" column. Instead, a status badge is placed inline next to the entity name (e.g., venue name, user name). The badge only renders when the status differs from the default active state — e.g., only show an "INACTIVE" badge; active entities have no badge. Badge styling uses the same semantic color tokens defined in `Colors > Semantic` above.
+
+### Page Header & Navigation
+
+- **Page title as header:** The page title (h1/h2) is the primary header, not the breadcrumb. Breadcrumbs sit inside the main content area as a secondary navigation aid, not as the page heading.
+- **Back button only when necessary:** A "Back" button should only be added if there is no equivalent browser back behavior or breadcrumb that covers the same navigation. If a breadcrumb already links back to the parent page, no separate back button is needed.

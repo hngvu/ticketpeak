@@ -243,26 +243,6 @@
 	{/if}
 
 	<div class="animate-fade-in overflow-hidden rounded-lg border border-[#E4E4E7] bg-white">
-		<div class="flex items-center justify-between border-b border-[#F4F4F5] px-6 py-4">
-			<h3 class="font-sans text-sm font-semibold text-[#111111] select-none">Platform Venues</h3>
-			<button
-				type="button"
-				onclick={() => {
-					name = '';
-					addressSearch = '';
-					selectedLocation = null;
-					managerQuery = '';
-					selectedManager = null;
-					showAddressSuggestions = false;
-					showManagerSuggestions = false;
-					showAddVenueModal = true;
-				}}
-				class="cursor-pointer rounded-md border border-[#111111] bg-[#111111] px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-black active:scale-95"
-			>
-				Create
-			</button>
-		</div>
-
 		<div
 			class="flex flex-col gap-4 border-b border-[#F4F4F5] px-6 py-4 sm:flex-row sm:items-center sm:justify-between"
 		>
@@ -305,17 +285,6 @@
 
 		<div class="overflow-x-auto">
 			<table class="w-full border-collapse text-left text-xs font-semibold text-[#71717A]">
-				<thead>
-					<tr
-						class="border-b border-[#E4E4E7] bg-[#FAFAFA] text-[10px] text-[#71717A] uppercase select-none"
-					>
-						<th class="px-6 py-3.5">Venue Details</th>
-						<th class="px-6 py-3.5">Address</th>
-						<th class="px-6 py-3.5">City & Country</th>
-						<th class="px-6 py-3.5">Status</th>
-						<th class="px-6 py-3.5 text-right">Actions</th>
-					</tr>
-				</thead>
 				<tbody class="divide-y divide-[#F4F4F5] bg-white text-[#111111]">
 					{#each filteredVenues as ven (ven.id)}
 						<tr class="hover:bg-[#FAFAFA]">
@@ -335,57 +304,22 @@
 										</div>
 									{/if}
 									<div class="flex min-w-0 flex-col">
-										<span class="text-sm font-bold text-[#111111]">{ven.name}</span>
-										{#if ven.website}
-											<a
-												href={ven.website}
-												target="_blank"
-												rel="noopener noreferrer"
-												class="mt-0.5 text-[10px] text-blue-600 hover:underline">{ven.website}</a
-											>
-										{/if}
+										<div class="flex items-center gap-2">
+											<a href="/ops/venues/{ven.id}" class="text-sm font-bold text-[#111111] hover:text-blue-600 hover:underline">{ven.name}</a>
+											{#if ven.status !== 'ACTIVE'}
+												<span class="rounded-md bg-rose-50 px-2 py-0.5 text-[9px] font-bold uppercase text-rose-600 select-none">{ven.status}</span>
+											{/if}
+										</div>
 									</div>
 								</div>
 							</td>
-							<td class="px-6 py-4 font-medium text-[#71717A]">{ven.address || 'N/A'}</td>
-							<td class="px-6 py-4 font-medium text-[#111111]">
-								{ven.city || ''}{ven.city && ven.country ? ', ' : ''}{ven.country || ''}
-							</td>
-							<td class="px-6 py-4">
-								<span
-									class="inline-block rounded-md px-2.5 py-0.5 text-[9px] font-bold uppercase select-none {ven.status ===
-									'ACTIVE'
-										? 'bg-emerald-50 text-emerald-600'
-										: 'bg-rose-50 text-rose-600'}"
-								>
-									{ven.status}
-								</span>
-							</td>
-							<td class="px-6 py-4 text-right">
-								<a
-									href="/ops/venues/{ven.id}/manifests"
-									class="mr-2 inline-block cursor-pointer rounded-md border border-[#E4E4E7] bg-white px-3 py-1.5 text-xs font-bold text-[#111111] transition-all hover:bg-[#FAFAFA] active:scale-95"
-								>
-									Manifests
-								</a>
-								<form method="POST" action="?/toggleStatus" use:enhance class="inline-block">
-									<input type="hidden" name="id" value={ven.id} />
-									<input type="hidden" name="status" value={ven.status} />
-									<button
-										type="submit"
-										class="cursor-pointer rounded-md border px-3 py-1.5 text-xs font-bold transition-all active:scale-95 {ven.status ===
-										'ACTIVE'
-											? 'border-rose-100 bg-rose-50/50 text-rose-600 hover:bg-rose-600 hover:text-white'
-											: 'border-emerald-100 bg-emerald-50/50 text-emerald-600 hover:bg-emerald-600 hover:text-white'}"
-									>
-										{ven.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
-									</button>
-								</form>
+							<td class="px-6 py-4 font-medium text-[#71717A]">
+								{ven.address || ''}{ven.address && (ven.city || ven.country) ? ', ' : ''}{ven.city || ''}{ven.city && ven.country ? ', ' : ''}{ven.country || ''}
 							</td>
 						</tr>
 					{:else}
 						<tr>
-							<td colspan="5" class="p-12 text-center text-[#71717A] font-medium"
+							<td colspan="2" class="p-12 text-center text-[#71717A] font-medium"
 								>No venues registered in this platform.</td
 							>
 						</tr>

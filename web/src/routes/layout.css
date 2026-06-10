@@ -20,7 +20,7 @@
 	--color-warning: oklch(75% 0.12 80);
 
 	--font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-	--font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+	--font-mono: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 body {

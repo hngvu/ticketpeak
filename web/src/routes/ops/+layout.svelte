@@ -91,8 +91,8 @@
 				},
 				{
 					label: 'Roles & Permissions',
-					href: '/ops/dashboard?tab=roles',
-					active: page.url.searchParams.get('tab') === 'roles'
+					href: '/ops/roles',
+					active: page.url.pathname === '/ops/roles'
 				}
 			]
 		},

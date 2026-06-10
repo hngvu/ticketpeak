@@ -104,44 +104,6 @@
 		</div>
 	</div>
 
-	<!-- Venue Summary Card -->
-	<div
-		class="overflow-hidden rounded-lg border border-[#E4E4E7] bg-white p-6 shadow-xs select-none"
-	>
-		<div class="flex items-start gap-4">
-			{#if venue?.thumbnailUrl}
-				<img
-					src={venue.thumbnailUrl}
-					alt={venue.name}
-					class="h-12 w-12 rounded-lg border border-[#E4E4E7] object-cover"
-				/>
-			{:else}
-				<div
-					class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm font-bold text-slate-700 uppercase"
-				>
-					{venue?.name?.[0] || 'V'}
-				</div>
-			{/if}
-			<div class="flex-1 space-y-1">
-				<h3 class="text-sm font-bold text-[#111111]">{venue?.name}</h3>
-				<div class="grid grid-cols-1 gap-2 text-xs text-[#71717A] sm:grid-cols-3">
-					<div>
-						<span class="font-semibold text-slate-400">Address:</span>
-						{venue?.address || 'N/A'}, {venue?.city || ''}
-					</div>
-					<div>
-						<span class="font-semibold text-slate-400">Contact:</span>
-						{venue?.email || 'No email'} · {venue?.phone || 'No phone'}
-					</div>
-					<div>
-						<span class="font-semibold text-slate-400">Coordinates:</span>
-						{venue?.latitude?.toFixed(5) || 'N/A'}, {venue?.longitude?.toFixed(5) || 'N/A'}
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
-
 	<!-- Manifests Table -->
 	<div class="animate-fade-in overflow-hidden rounded-lg border border-[#E4E4E7] bg-white">
 		<div class="border-b border-[#F4F4F5] px-6 py-4">
@@ -150,54 +112,47 @@
 
 		<div class="overflow-x-auto">
 			<table class="w-full border-collapse text-left text-xs font-semibold text-[#71717A]">
-				<thead>
-					<tr
-						class="border-b border-[#E4E4E7] bg-[#FAFAFA] text-[10px] text-[#71717A] uppercase select-none"
-					>
-						<th class="px-6 py-3.5">Code</th>
-						<th class="px-6 py-3.5">Description</th>
-						<th class="px-6 py-3.5">Total Capacity</th>
-						<th class="px-6 py-3.5">Status</th>
-						<th class="px-6 py-3.5">Created At</th>
-						<th class="px-6 py-3.5 text-right">Actions</th>
-					</tr>
-				</thead>
 				<tbody class="divide-y divide-[#F4F4F5] bg-white text-[#111111]">
 					{#each manifests as manifest (manifest.id)}
 						{@const isExpanded = expandedManifestId === manifest.id}
 						<tr class="border-b border-slate-100 transition-colors hover:bg-[#FAFAFA]">
-							<td class="px-6 py-4 font-mono font-bold text-slate-900">
-								<button
-									type="button"
-									onclick={() => toggleDetails(manifest.id)}
-									class="flex cursor-pointer items-center gap-1.5 text-left outline-none hover:text-blue-600"
-								>
-									<span
-										class="inline-block transition-transform duration-200 {isExpanded
-											? 'rotate-90'
-											: ''}"
+							<td class="px-6 py-4">
+								<div class="flex items-center gap-1.5">
+									<button
+										type="button"
+										onclick={() => toggleDetails(manifest.id)}
+										class="flex cursor-pointer items-center outline-none"
 									>
-										▸
-									</span>
-									{manifest.id}
-								</button>
+										<span
+											class="inline-block text-[#71717A] transition-transform duration-200 {isExpanded
+												? 'rotate-90'
+												: ''}"
+										>
+											▸
+										</span>
+									</button>
+									<a
+										href="/ops/venues/{venueId}/manifests/{manifest.id}"
+										class="flex items-center gap-2 font-mono font-bold text-slate-900 hover:text-blue-600 hover:underline"
+									>
+										{manifest.id}
+										{#if manifest.status !== 'PUBLISHED'}
+											<span
+												class="inline-block rounded-md px-2 py-0.5 text-[9px] font-bold uppercase select-none {manifest.status ===
+												'DRAFT'
+													? 'bg-amber-50 text-amber-600'
+													: 'bg-slate-100 text-slate-500'}"
+											>
+												{manifest.status}
+											</span>
+										{/if}
+									</a>
+								</div>
 							</td>
 							<td class="px-6 py-4 font-medium text-[#71717A]">{manifest.description}</td>
 							<td class="px-6 py-4 font-mono font-bold text-[#111111]"
 								>{manifest.totalCapacity?.toLocaleString() || 0}</td
 							>
-							<td class="px-6 py-4">
-								<span
-									class="inline-block rounded-md px-2.5 py-0.5 text-[9px] font-bold uppercase select-none {manifest.status ===
-									'PUBLISHED'
-										? 'bg-emerald-50 text-emerald-600'
-										: manifest.status === 'DRAFT'
-											? 'bg-amber-50 text-amber-600'
-											: 'bg-slate-100 text-slate-500'}"
-								>
-									{manifest.status}
-								</span>
-							</td>
 							<td class="px-6 py-4 font-medium text-[#71717A]"
 								>{new Date(manifest.createdAt).toLocaleDateString()}</td
 							>
@@ -242,7 +197,7 @@
 						<!-- Expanded seating info (levels, sections, price levels) -->
 						{#if isExpanded}
 							<tr class="bg-slate-50/40">
-								<td colspan="6" class="px-8 py-4">
+								<td colspan="5" class="px-8 py-4">
 									{#if loadingDetails[manifest.id]}
 										<div class="flex items-center gap-2 py-2 text-xs font-semibold text-[#71717A]">
 											<svg
@@ -360,7 +315,7 @@
 						{/if}
 					{:else}
 						<tr>
-							<td colspan="6" class="p-12 text-center text-[#71717A] font-medium"
+							<td colspan="5" class="p-12 text-center text-[#71717A] font-medium"
 								>No seating manifests configured for this venue.</td
 							>
 						</tr>
