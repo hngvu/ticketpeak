@@ -91,28 +91,28 @@ class PermissionControllerIT {
         adminAccount = accountRepository.saveAndFlush(Account.builder()
                 .email("admin@ticketpeak.com")
                 .password(encoded)
-                .role(Role.ADMIN)
+                .roles(java.util.Set.of(Role.ADMIN))
                 .status(AccountStatus.ACTIVE)
                 .build());
 
         ownerAccount = accountRepository.saveAndFlush(Account.builder()
                 .email("owner@ticketpeak.com")
                 .password(encoded)
-                .role(Role.ORGANIZER)
+                .roles(java.util.Set.of(Role.ORGANIZER))
                 .status(AccountStatus.ACTIVE)
                 .build());
 
         memberAccount = accountRepository.saveAndFlush(Account.builder()
                 .email("member@ticketpeak.com")
                 .password(encoded)
-                .role(Role.ORGANIZER)
+                .roles(java.util.Set.of(Role.ORGANIZER))
                 .status(AccountStatus.ACTIVE)
                 .build());
 
         otherAccount = accountRepository.saveAndFlush(Account.builder()
                 .email("stranger@ticketpeak.com")
                 .password(encoded)
-                .role(Role.BUYER)
+                .roles(java.util.Set.of(Role.BUYER))
                 .status(AccountStatus.ACTIVE)
                 .build());
 

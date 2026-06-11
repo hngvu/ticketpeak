@@ -111,7 +111,7 @@ class PaymentControllerIT {
         buyer = accountRepository.saveAndFlush(Account.builder()
                 .email("buyer@test.com")
                 .password(passwordEncoder.encode(rawPassword))
-                .role(Role.BUYER)
+                .roles(java.util.Set.of(Role.BUYER))
                 .status(AccountStatus.ACTIVE)
                 .build());
 
@@ -406,7 +406,7 @@ class PaymentControllerIT {
         Account otherBuyer = accountRepository.saveAndFlush(Account.builder()
                 .email("otherbuyer@test.com")
                 .password(passwordEncoder.encode("Password123!"))
-                .role(Role.BUYER)
+                .roles(java.util.Set.of(Role.BUYER))
                 .status(AccountStatus.ACTIVE)
                 .build());
         String otherBuyerToken = login(otherBuyer.getEmail(), "Password123!");

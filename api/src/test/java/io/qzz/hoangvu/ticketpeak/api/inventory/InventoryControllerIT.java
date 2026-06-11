@@ -152,7 +152,7 @@ class InventoryControllerIT {
         organizerAccount = accountRepository.saveAndFlush(Account.builder()
                 .email("organizer@ticketpeak.com")
                 .password(passwordEncoder.encode(rawPassword))
-                .role(Role.ORGANIZER)
+                .roles(java.util.Set.of(Role.ORGANIZER))
                 .status(AccountStatus.ACTIVE)
                 .build());
 

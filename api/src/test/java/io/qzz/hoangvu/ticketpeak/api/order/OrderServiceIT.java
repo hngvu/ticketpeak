@@ -89,7 +89,7 @@ public class OrderServiceIT {
                 .email("buyer@example.com")
                 .password("hash")
                 .firstName("Buyer").lastName("One")
-                .role(Role.BUYER)
+                .roles(java.util.Set.of(Role.BUYER))
                 .status(AccountStatus.ACTIVE)
                 .build());
 

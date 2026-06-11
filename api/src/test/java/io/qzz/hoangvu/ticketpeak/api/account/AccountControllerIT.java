@@ -71,7 +71,7 @@ class AccountControllerIT {
                         ))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.email").value("newuser@example.com"))
-                .andExpect(jsonPath("$.data.role").value("BUYER"))
+                .andExpect(jsonPath("$.data.roles").value("BUYER"))
                 .andExpect(jsonPath("$.data.status").value("ACTIVE"))
                 .andReturn()
                 .getResponse()
@@ -130,7 +130,7 @@ class AccountControllerIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.firstName").value("Updated"))
                 .andExpect(jsonPath("$.data.cityId").value(1))
-                .andExpect(jsonPath("$.data.role").value("BUYER"));
+                .andExpect(jsonPath("$.data.roles").value("BUYER"));
 
         mockMvc.perform(get("/api/accounts/me")
                         .header("Authorization", "Bearer " + accessToken))
@@ -142,7 +142,7 @@ class AccountControllerIT {
         Account account = accountRepository.findByEmailIgnoreCase("profile@example.com").orElseThrow();
         assertThat(account.getEmail()).isEqualTo("profile@example.com");
         assertThat(passwordEncoder.matches("Secret123!", account.getPassword())).isTrue();
-        assertThat(account.getRole()).isEqualTo(Role.BUYER);
+        assertThat(account.getRoles()).contains(Role.BUYER);
         assertThat(account.getStatus()).isEqualTo(AccountStatus.ACTIVE);
         assertThat(account.getFirstName()).isEqualTo("Updated");
         assertThat(account.getAvatarUrl()).isEqualTo("https://cdn.example.com/new-avatar.png");
@@ -170,7 +170,7 @@ class AccountControllerIT {
         Account updated = accountRepository.findByEmailIgnoreCase("profile@example.com").orElseThrow();
         assertThat(updated.getEmail()).isEqualTo("profile@example.com");
         assertThat(updated.getPassword()).isEqualTo(account.getPassword());
-        assertThat(updated.getRole()).isEqualTo(Role.BUYER);
+        assertThat(updated.getRoles()).contains(Role.BUYER);
         assertThat(updated.getStatus()).isEqualTo(AccountStatus.ACTIVE);
     }
 
@@ -217,7 +217,7 @@ class AccountControllerIT {
                 .password(passwordEncoder.encode(password))
                 .firstName("Ticket")
                 .lastName("Peak")
-                .role(Role.BUYER)
+                .roles(java.util.Set.of(Role.BUYER))
                 .status(AccountStatus.ACTIVE)
                 .build();
         return accountRepository.saveAndFlush(account);

@@ -23,7 +23,7 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
                    LOWER(a.email) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')) OR
                    LOWER(CONCAT(COALESCE(a.firstName, ''), ' ', COALESCE(a.lastName, '')))
                        LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))
-              AND (:role IS NULL OR a.role = :role)
+              AND (:role IS NULL OR :role MEMBER OF a.roles)
             ORDER BY a.email
             """)
     List<Account> listAccounts(@Param("q") String q,

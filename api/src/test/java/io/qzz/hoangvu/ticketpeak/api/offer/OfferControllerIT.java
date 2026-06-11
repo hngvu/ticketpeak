@@ -125,21 +125,21 @@ class OfferControllerIT {
         organizerAccount = accountRepository.saveAndFlush(Account.builder()
                 .email("organizer@ticketpeak.com")
                 .password(passwordEncoder.encode(rawPassword))
-                .role(Role.ORGANIZER)
+                .roles(java.util.Set.of(Role.ORGANIZER))
                 .status(AccountStatus.ACTIVE)
                 .build());
 
         buyerAccount = accountRepository.saveAndFlush(Account.builder()
                 .email("buyer@ticketpeak.com")
                 .password(passwordEncoder.encode(rawPassword))
-                .role(Role.BUYER)
+                .roles(java.util.Set.of(Role.BUYER))
                 .status(AccountStatus.ACTIVE)
                 .build());
 
         Account adminAccount = accountRepository.saveAndFlush(Account.builder()
                 .email("admin@ticketpeak.com")
                 .password(passwordEncoder.encode(rawPassword))
-                .role(Role.ADMIN)
+                .roles(java.util.Set.of(Role.ADMIN))
                 .status(AccountStatus.ACTIVE)
                 .build());
 

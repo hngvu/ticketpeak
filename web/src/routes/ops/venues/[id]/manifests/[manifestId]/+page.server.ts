@@ -42,48 +42,34 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 	// ── Mock venue path: serve data without hitting the API ───────────────────
 	const mockData = MOCK_VENUE_MANIFEST_EDITOR_DATA[venueId];
 	if (mockData && mockData.manifest.id === manifestId) {
-		// Build rsSections: one entry per RS section, with rows+seats nested inside.
-		// Each section carries: id, name, color, levelId, polygon (from uiData), rows[].
-		// Each row carries: id, sectionId, name, seats[].
-		// Each seat carries the full SeatResponse shape.
 		const rsSections = mockData.sections
-			.filter((s: any) => s.type === 'RS')
+			.filter((sec: any) => mockData.rsAreas.some((a: any) => a.sectionId === sec.id))
 			.map((sec: any) => {
-				const secRows = mockData.rows
-					.filter((r: any) => r.sectionId === sec.id)
-					.map((row: any) => ({
-						...row,
-						seats: mockData.seats.filter((seat: any) => seat.rowId === row.id)
-					}));
+				const areasForSec = mockData.rsAreas.filter((a: any) => a.sectionId === sec.id);
+				const secRows = areasForSec.flatMap((a: any) => a.rows || []);
 				return {
 					id: sec.id,
 					name: sec.name ?? null,
 					color: sec.color ?? null,
 					levelId: sec.levelId ?? null,
-					// polygon lives in uiData.polygon for fan sections,
-					// or can be computed from uiData rect for box sections
 					polygon: (sec.uiData?.polygon as [number, number][] | undefined) ?? [],
 					rows: secRows
 				};
 			});
 
-		// Build gaSections: one entry per GA section.
-		const gaSections = mockData.sections
-			.filter((s: any) => s.type === 'GA')
-			.map((sec: any) => ({
-				id: sec.id,
-				name: sec.name ?? null,
-				levelId: sec.levelId ?? null,
-				priceLevelId: null,
-				capacity: sec.capacity ?? 0,
-				color: sec.color ?? null,
-				// support both polygon and rect uiData
-				polygon: (sec.uiData?.polygon as [number, number][] | undefined) ?? [],
-				x: (sec.uiData?.x as number | undefined) ?? 0,
-				y: (sec.uiData?.y as number | undefined) ?? 0,
-				width: (sec.uiData?.width as number | undefined) ?? 200,
-				height: (sec.uiData?.height as number | undefined) ?? 100
-			}));
+		const gaSections = mockData.gaAreas.map((ga: any) => ({
+			id: ga.id,
+			name: ga.name ?? null,
+			levelId: ga.levelId ?? null,
+			priceLevelId: ga.priceLevelId ?? null,
+			capacity: ga.capacity ?? 0,
+			color: ga.color ?? null,
+			polygon: (ga.uiData?.polygon as [number, number][] | undefined) ?? [],
+			x: ga.x ?? 0,
+			y: ga.y ?? 0,
+			width: ga.width ?? 200,
+			height: ga.height ?? 100
+		}));
 
 		return {
 			isNew: false,

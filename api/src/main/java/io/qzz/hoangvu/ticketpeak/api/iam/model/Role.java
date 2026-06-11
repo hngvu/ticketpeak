@@ -4,6 +4,5 @@ public enum Role {
     BUYER,
     ORGANIZER,
     ADMIN,
-    VENUE_MANAGER,
-    PROMOTER
+    VENUE_MANAGER
 }

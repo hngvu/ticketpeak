@@ -11,8 +11,11 @@ import org.springframework.stereotype.Service;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class JwtService {
@@ -35,13 +38,15 @@ public class JwtService {
         this.refreshTokenExpirySeconds = refreshTokenExpirySeconds;
     }
 
-    public JwtTokenPair issueTokenPair(UUID accountId, Role role) {
+    public JwtTokenPair issueTokenPair(UUID accountId, Set<Role> roles) {
         Instant now = Instant.now();
         String refreshTokenId = UUID.randomUUID().toString();
 
+        String rolesClaim = roles.stream().map(Role::name).collect(Collectors.joining(","));
+
         String accessToken = Jwts.builder()
                 .subject(accountId.toString())
-                .claim(ROLE_CLAIM, role.name())
+                .claim(ROLE_CLAIM, rolesClaim)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plusSeconds(accessTokenExpirySeconds)))
                 .signWith(signingKey)
@@ -61,14 +66,18 @@ public class JwtService {
 
     public ParsedAccessToken parseAccessToken(String token) {
         Claims claims = parseClaims(token);
-        String roleValue = claims.get(ROLE_CLAIM, String.class);
-        if (roleValue == null) {
+        String rolesValue = claims.get(ROLE_CLAIM, String.class);
+        if (rolesValue == null || rolesValue.isBlank()) {
             throw new JwtException("Missing role claim");
         }
 
+        Set<Role> roles = Arrays.stream(rolesValue.split(","))
+                .map(Role::valueOf)
+                .collect(Collectors.toSet());
+
         return new ParsedAccessToken(
                 UUID.fromString(claims.getSubject()),
-                Role.valueOf(roleValue)
+                roles
         );
     }
 
@@ -106,7 +115,7 @@ public class JwtService {
                 .getPayload();
     }
 
-    public record ParsedAccessToken(UUID accountId, Role role) {
+    public record ParsedAccessToken(UUID accountId, Set<Role> roles) {
     }
 
     public record ParsedRefreshToken(UUID accountId, String refreshTokenId) {

@@ -49,7 +49,7 @@ public class OpsClassificationController {
 
     private void verifyAdmin(Authentication authentication) {
         AuthenticatedAccount principal = (AuthenticatedAccount) authentication.getPrincipal();
-        if (principal.role() != Role.ADMIN) {
+        if (!principal.roles().contains(Role.ADMIN)) {
             throw new AccessDeniedException("Only administrators can perform this action");
         }
     }

@@ -62,7 +62,7 @@ public class PartnerEventGroupController {
     ) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof AuthenticatedAccount acc) {
-            if (acc.role() != Role.ADMIN) {
+            if (!acc.roles().contains(Role.ADMIN)) {
                 if (organizationId == null) {
                     throw new AccessDeniedException("Organization ID must be specified for non-admin search");
                 }
@@ -128,7 +128,7 @@ public class PartnerEventGroupController {
     private void validateOrgAccess(UUID organizationId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof AuthenticatedAccount acc) {
-            if (acc.role() != Role.ADMIN && !orgSecurity.isOwnerOrMember(organizationId)) {
+            if (!acc.roles().contains(Role.ADMIN) && !orgSecurity.isOwnerOrMember(organizationId)) {
                 throw new AccessDeniedException("You do not have access to this organization");
             }
         }

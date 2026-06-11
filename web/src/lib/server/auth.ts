@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export interface User {
 	id: string;
-	role: 'BUYER' | 'ORGANIZER' | 'ADMIN';
+	roles: string[];
 }
 
 export function parseJwt(token: string): any {
@@ -9,12 +9,22 @@ export function parseJwt(token: string): any {
 		const parts = token.split('.');
 		if (parts.length !== 3) return null;
 		const payload = parts[1];
-		// Standard base64 decoding on Server (Node.js Buffer)
 		const decoded = Buffer.from(payload, 'base64').toString('utf-8');
 		return JSON.parse(decoded);
 	} catch {
 		return null;
 	}
+}
+
+export function parseUserFromToken(token: string): User | null {
+	const parsed = parseJwt(token);
+	if (!parsed) return null;
+	if (parsed.exp && Date.now() >= parsed.exp * 1000) return null;
+	if (!parsed.sub || !parsed.role) return null;
+	return {
+		id: parsed.sub,
+		roles: parsed.role.split(',').map((r: string) => r.trim())
+	};
 }
 
 export function getCurrentUser(
@@ -23,18 +33,5 @@ export function getCurrentUser(
 ): User | null {
 	const token = cookies.get(tokenKey);
 	if (!token) return null;
-	const parsed = parseJwt(token);
-	if (!parsed) return null;
-
-	// Check if token has expired
-	if (parsed.exp && Date.now() >= parsed.exp * 1000) {
-		return null;
-	}
-
-	if (!parsed.sub || !parsed.role) return null;
-
-	return {
-		id: parsed.sub,
-		role: parsed.role as 'BUYER' | 'ORGANIZER' | 'ADMIN'
-	};
+	return parseUserFromToken(token);
 }

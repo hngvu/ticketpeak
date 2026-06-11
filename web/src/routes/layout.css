@@ -21,6 +21,16 @@
 
 	--font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 	--font-mono: 'Inter', system-ui, -apple-system, sans-serif;
+
+	/* Sidebar typography scale */
+	--text-sidebar-label: 0.8125rem;
+	--text-sidebar-label--line-height: 1.125rem;
+	--text-sidebar-caption: 0.75rem;
+	--text-sidebar-caption--line-height: 1rem;
+	--text-sidebar-tiny: 0.6875rem;
+	--text-sidebar-tiny--line-height: 0.875rem;
+	--text-sidebar-brand: 0.875rem;
+	--text-sidebar-brand--line-height: 1.125rem;
 }
 
 body {

@@ -5,7 +5,7 @@ import { apiFetch } from '$lib/server/api';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	// If already logged in as organizer, redirect to B2B dashboard
-	if (locals.user && locals.user.role === 'ORGANIZER') {
+	if (locals.user && locals.user.roles.includes('ORGANIZER')) {
 		throw redirect(303, '/b2b/dashboard');
 	}
 	return {};

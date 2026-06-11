@@ -54,7 +54,7 @@ public class OrganizationService {
         Account owner = accountRepository.findByEmailIgnoreCase(request.ownerEmail())
                 .orElseThrow(AccountException::notFound);
 
-        if (owner.getRole() != Role.ORGANIZER && owner.getRole() != Role.ADMIN) {
+        if (!owner.getRoles().contains(Role.ORGANIZER) && !owner.getRoles().contains(Role.ADMIN)) {
             throw OrganizationException.invalidOwnerRole();
         }
 

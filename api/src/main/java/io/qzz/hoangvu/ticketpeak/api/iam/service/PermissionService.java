@@ -47,7 +47,7 @@ public class PermissionService {
 
     @Transactional
     public PermissionResponse createPermission(CreatePermissionRequest request, AuthenticatedAccount principal) {
-        if (principal.role() != Role.ADMIN) {
+        if (!principal.roles().contains(Role.ADMIN)) {
             throw new AccessDeniedException("Only platform admins can create permissions");
         }
         if (permissionRepository.existsById(request.code())) {
@@ -130,7 +130,7 @@ public class PermissionService {
                 .orElseThrow(OrganizationException::notFound);
 
         boolean isSelf = principal.accountId().equals(accountId);
-        boolean isAdmin = principal.role() == Role.ADMIN;
+        boolean isAdmin = principal.roles().contains(Role.ADMIN);
         boolean isOwner = org.getOwnerAccountId().equals(principal.accountId());
         boolean isMember = organizationMemberRepository.existsByOrganizationIdAndAccountIdAndStatus(orgId, principal.accountId(), OrganizationMemberStatus.ACTIVE);
 
@@ -145,7 +145,7 @@ public class PermissionService {
     }
 
     private void verifyOrgAdminOrManager(UUID orgId, AuthenticatedAccount principal) {
-        if (principal.role() == Role.ADMIN) {
+        if (principal.roles().contains(Role.ADMIN)) {
             return;
         }
         Organization org = organizationRepository.findById(orgId)

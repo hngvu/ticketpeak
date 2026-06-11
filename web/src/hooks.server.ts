@@ -1,5 +1,5 @@
 import { redirect, type Handle } from '@sveltejs/kit';
-import { getCurrentUser, parseJwt } from '$lib/server/auth';
+import { getCurrentUser, parseJwt, parseUserFromToken } from '$lib/server/auth';
 import { env } from '$env/dynamic/private';
 
 const API_BASE = env.API_BASE || 'http://localhost:8080';
@@ -64,13 +64,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 							maxAge: refreshTokenExpiresIn || 604800
 						});
 
-						const parsedNew = parseJwt(newAccess);
-						if (parsedNew && parsedNew.sub && parsedNew.role) {
-							user = {
-								id: parsedNew.sub,
-								role: parsedNew.role
-							};
-						}
+						user = parseUserFromToken(newAccess);
 					} else {
 						// refresh payload is invalid, clear cookies
 						event.cookies.delete(accessKey, { path: '/' });
@@ -97,9 +91,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// 1. /auth: if logged in, redirect to correct portal based on role
 	if (pathname === '/auth') {
 		if (user) {
-			if (user.role === 'ADMIN') {
+			if (user.roles.includes('ADMIN')) {
 				throw redirect(303, '/ops/dashboard');
-			} else if (user.role === 'ORGANIZER') {
+			} else if (user.roles.includes('ORGANIZER')) {
 				throw redirect(303, '/b2b/dashboard');
 			} else {
 				const redirectTo = event.url.searchParams.get('redirect') || '/discover';
@@ -110,14 +104,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	// 2. /b2b/**: require role ORGANIZER except landing and login
 	if (pathname.startsWith('/b2b') && pathname !== '/b2b' && pathname !== '/b2b/login') {
-		if (!user || user.role !== 'ORGANIZER') {
+		if (!user || !user.roles.includes('ORGANIZER')) {
 			throw redirect(303, '/b2b/login');
 		}
 	}
 
 	// 3. /ops/**: require role ADMIN except login
 	if (pathname.startsWith('/ops') && pathname !== '/ops/login') {
-		if (!user || user.role !== 'ADMIN') {
+		if (!user || !user.roles.includes('ADMIN')) {
 			throw redirect(303, '/ops/login');
 		}
 	}

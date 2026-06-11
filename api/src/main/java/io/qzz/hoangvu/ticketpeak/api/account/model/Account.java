@@ -14,7 +14,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -44,9 +46,12 @@ public class Account {
     Integer cityId;
     String countryCode;
 
+    @Builder.Default
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "account_role", joinColumns = @JoinColumn(name = "account_id"))
+    @Column(name = "role", nullable = false)
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    Role role;
+    Set<Role> roles = new HashSet<>();
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     Map<String, Object> metadata;

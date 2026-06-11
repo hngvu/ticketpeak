@@ -2,11 +2,11 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { apiFetch } from '$lib/server/api';
-import { parseJwt } from '$lib/server/auth';
+import { parseUserFromToken } from '$lib/server/auth';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	// If already authenticated as ADMIN, redirect to ops dashboard
-	if (locals.user && locals.user.role === 'ADMIN') {
+	if (locals.user && locals.user.roles.includes('ADMIN')) {
 		throw redirect(303, '/ops/dashboard');
 	}
 	return {};
@@ -38,8 +38,8 @@ export const actions: Actions = {
 			const { accessToken, refreshToken, accessTokenExpiresIn, refreshTokenExpiresIn } = res;
 
 			// 2. Decode access token claims immediately to inspect role
-			const parsed = parseJwt(accessToken);
-			if (!parsed || parsed.role !== 'ADMIN') {
+			const parsedUser = parseUserFromToken(accessToken);
+			if (!parsedUser || !parsedUser.roles.includes('ADMIN')) {
 				// Immediate Session Safeguard: Invalidate the token pair immediately on the backend
 				try {
 					await apiFetch(fetch, '/api/auth/logout', {

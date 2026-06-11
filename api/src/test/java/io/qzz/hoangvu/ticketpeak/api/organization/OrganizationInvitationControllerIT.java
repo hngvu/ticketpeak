@@ -97,10 +97,10 @@ class OrganizationInvitationControllerIT {
         String rawPassword = "Password123!";
         String encoded = passwordEncoder.encode(rawPassword);
 
-        adminAccount = accountRepository.saveAndFlush(Account.builder().email("admin@tp.com").password(encoded).role(Role.ADMIN).status(AccountStatus.ACTIVE).build());
-        ownerAccount = accountRepository.saveAndFlush(Account.builder().email("owner@tp.com").password(encoded).role(Role.ORGANIZER).status(AccountStatus.ACTIVE).build());
-        inviteeAccount = accountRepository.saveAndFlush(Account.builder().email("invitee@tp.com").password(encoded).role(Role.ORGANIZER).status(AccountStatus.ACTIVE).build());
-        authorizedMemberAccount = accountRepository.saveAndFlush(Account.builder().email("auth@tp.com").password(encoded).role(Role.ORGANIZER).status(AccountStatus.ACTIVE).build());
+        adminAccount = accountRepository.saveAndFlush(Account.builder().email("admin@tp.com").password(encoded).roles(java.util.Set.of(Role.ADMIN)).status(AccountStatus.ACTIVE).build());
+        ownerAccount = accountRepository.saveAndFlush(Account.builder().email("owner@tp.com").password(encoded).roles(java.util.Set.of(Role.ORGANIZER)).status(AccountStatus.ACTIVE).build());
+        inviteeAccount = accountRepository.saveAndFlush(Account.builder().email("invitee@tp.com").password(encoded).roles(java.util.Set.of(Role.ORGANIZER)).status(AccountStatus.ACTIVE).build());
+        authorizedMemberAccount = accountRepository.saveAndFlush(Account.builder().email("auth@tp.com").password(encoded).roles(java.util.Set.of(Role.ORGANIZER)).status(AccountStatus.ACTIVE).build());
 
         adminToken = login("admin@tp.com", rawPassword);
         ownerToken = login("owner@tp.com", rawPassword);
@@ -140,7 +140,7 @@ class OrganizationInvitationControllerIT {
 
     @Test
     void cannot_invite_buyer() throws Exception {
-        Account buyer = accountRepository.saveAndFlush(Account.builder().email("buyer@tp.com").password(passwordEncoder.encode("Password123!")).role(Role.BUYER).status(AccountStatus.ACTIVE).build());
+        Account buyer = accountRepository.saveAndFlush(Account.builder().email("buyer@tp.com").password(passwordEncoder.encode("Password123!")).roles(java.util.Set.of(Role.BUYER)).status(AccountStatus.ACTIVE).build());
         CreateInvitationRequest req = new CreateInvitationRequest(buyer.getId());
 
         mockMvc.perform(post("/api/partner/organizations/" + org.getId() + "/invitations")

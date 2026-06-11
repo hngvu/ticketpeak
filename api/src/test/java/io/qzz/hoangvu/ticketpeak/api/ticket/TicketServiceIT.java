@@ -87,21 +87,21 @@ public class TicketServiceIT {
         sender = accountRepository.save(Account.builder()
                 .email("sender@example.com")
                 .password("hash")
-                .role(Role.BUYER)
+                .roles(java.util.Set.of(Role.BUYER))
                 .status(AccountStatus.ACTIVE)
                 .build());
 
         recipient = accountRepository.save(Account.builder()
                 .email("recipient@example.com")
                 .password("hash")
-                .role(Role.BUYER)
+                .roles(java.util.Set.of(Role.BUYER))
                 .status(AccountStatus.ACTIVE)
                 .build());
 
         outsider = accountRepository.save(Account.builder()
                 .email("outsider@example.com")
                 .password("hash")
-                .role(Role.BUYER)
+                .roles(java.util.Set.of(Role.BUYER))
                 .status(AccountStatus.ACTIVE)
                 .build());
 

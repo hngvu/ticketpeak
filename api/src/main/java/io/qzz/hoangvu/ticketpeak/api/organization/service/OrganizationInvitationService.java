@@ -60,7 +60,7 @@ public class OrganizationInvitationService {
         Account invitee = accountRepository.findById(request.inviteeAccountId())
                 .orElseThrow(AccountException::notFound);
 
-        if (invitee.getRole() != Role.ORGANIZER && invitee.getRole() != Role.ADMIN) {
+        if (!invitee.getRoles().contains(Role.ORGANIZER) && !invitee.getRoles().contains(Role.ADMIN)) {
             throw OrganizationException.invalidInviteeRole();
         }
 

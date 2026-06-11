@@ -50,7 +50,7 @@ public class AuthService {
             throw invalidCredentials("Invalid email or password");
         }
 
-        JwtTokenPair tokenPair = jwtService.issueTokenPair(account.getId(), account.getRole());
+        JwtTokenPair tokenPair = jwtService.issueTokenPair(account.getId(), account.getRoles());
         refreshTokenStore.store(account.getId(), tokenPair.refreshTokenId());
         return TokenPairResponse.from(tokenPair, jwtService.accessTokenExpirySeconds(), jwtService.refreshTokenExpirySeconds());
     }
@@ -68,7 +68,7 @@ public class AuthService {
             throw AuthException.refreshTokenRevoked();
         }
 
-        JwtTokenPair tokenPair = jwtService.issueTokenPair(account.getId(), account.getRole());
+        JwtTokenPair tokenPair = jwtService.issueTokenPair(account.getId(), account.getRoles());
         refreshTokenStore.store(account.getId(), tokenPair.refreshTokenId());
         return TokenPairResponse.from(tokenPair, jwtService.accessTokenExpirySeconds(), jwtService.refreshTokenExpirySeconds());
     }

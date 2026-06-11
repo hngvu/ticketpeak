@@ -68,7 +68,7 @@ public class PartnerEventController {
     ) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof AuthenticatedAccount acc) {
-            if (acc.role() != Role.ADMIN) {
+            if (!acc.roles().contains(Role.ADMIN)) {
                 if (organizationId == null) {
                     throw new AccessDeniedException("Organization ID must be specified for non-admin search");
                 }

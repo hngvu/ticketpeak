@@ -492,13 +492,13 @@
 
 					{#if data.user}
 						<div class="flex items-center gap-3">
-							{#if data.user.role === 'ADMIN'}
+							{#if data.user.roles.includes('ADMIN')}
 								<a
 									href="/ops/dashboard"
 									class="hidden text-xs font-bold tracking-wider text-white/80 uppercase transition-colors hover:text-white sm:inline"
 									>Admin Panel</a
 								>
-							{:else if data.user.role === 'ORGANIZER'}
+							{:else if data.user.roles.includes('ORGANIZER')}
 								<a
 									href="/b2b/dashboard"
 									class="hidden text-xs font-bold tracking-wider text-white/80 uppercase transition-colors hover:text-white sm:inline"

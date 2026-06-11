@@ -16,6 +16,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -30,12 +31,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
                 JwtService.ParsedAccessToken parsedToken = jwtService.parseAccessToken(token);
-                Role role = parsedToken.role();
-                AuthenticatedAccount principal = new AuthenticatedAccount(parsedToken.accountId(), role);
+                Set<Role> roles = parsedToken.roles();
+                AuthenticatedAccount principal = new AuthenticatedAccount(parsedToken.accountId(), roles);
+                List<SimpleGrantedAuthority> authorities = roles.stream()
+                        .map(r -> new SimpleGrantedAuthority("ROLE_" + r.name()))
+                        .toList();
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         principal,
                         token,
-                        List.of(new SimpleGrantedAuthority("ROLE_" + role.name()))
+                        authorities
                 );
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             } catch (JwtException | IllegalArgumentException ignored) {

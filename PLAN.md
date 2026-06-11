@@ -1,6 +1,6 @@
 # PLAN.md — Ticketpeak
 
-Development roadmap organized by phase and detailed per-module checklists.
+---
 
 ## Legend
 
@@ -13,258 +13,315 @@ Development roadmap organized by phase and detailed per-module checklists.
 
 ---
 
-## Phases
+## The Product in One Sentence
 
-Phases are ordered by dependency — later phases build on the output of earlier ones. Do not start a new phase until the current one's core items are complete.
-
-| Phase | Name | Modules | Goal |
-|-------|------|---------|------|
-| **1** | Foundation | `auth`, `iam`, `account` | Users can register, log in, and be authorized |
-| **2** | Core Entities | `organization`, `venue`, `event`, `offer` | Organizers can create events with venues and ticket tiers |
-| **3** | Transactions | `order`, `payment`, `ticket` | Buyers can purchase tickets, receive QR tickets, and be checked in |
-| **4** | Secondary Market | `resale` | Ticket resale with anti-scalping enforcement |
-| **5** | Growth | `search`, `discovery`, `notification`, `promotion` | Users find events, receive alerts, and use promotions |
-| **6** | Intelligence | `report`, `admin` | Organizers analyze performance; admins manage the platform |
+A ticketing platform where venue managers publish seat maps, organizers price and sell events on top of them, buyers purchase tickets as rotating QR codes, and gate staff scan them at the door.
 
 ---
 
-## Phase 1 — Foundation
+## Who Does What
 
-> Goal: a working auth system before anything else.
-> Every subsequent module depends on JWT + RBAC established here.
+| Role | Portal | Owns |
+|------|--------|------|
+| `VENUE_MANAGER` | `/b2b` | Venue, Manifest, Levels, Sections, Rows, Seats |
+| `ORGANIZER` | `/b2b` | Event, Offers (price per seat category) |
+| `BUYER` | consumer site | Orders, Tickets |
+| `ADMIN` | `/ops` | Platform governance |
 
-### `auth`
-- [x] User registration (email + password)
-- [x] Login — return access token + refresh token
-- [x] Refresh access token
-- [x] Logout (revoke refresh token)
-
-### `iam`
-- [x] Define system roles: `ADMIN`, `ORGANIZER`, `BUYER`
-- [x] Define permission set per role
-- [ ] `@RequirePermission` annotation / interceptor for Spring controllers
-- [x] Route guard in SvelteKit by role
-
-### `account`
-- [x] View own profile
-- [x] Update personal info (name, avatar, phone number)
-- [] Upload avatar to MinIO
-- [x] Manage addresses (add, edit, delete, set default)
-- [x] User preferences (language, timezone, notification settings)
+Organizer never touches seat layout. Venue Manager never touches pricing.
 
 ---
 
-## Phase 2 — Core Entities
-
-> Goal: organizers can create a fully configured event with venue, seating, and ticket tiers.
-> No payments or orders yet — focus on content only.
-
-### `organization`
-- [x] Create an organization (name, logo, description, website)
-- [ ] Upload org logo to MinIO
-- [x] Invite members to org via email, in-app
-- [ ] Remove / leave organization
-- [ ] Approval workflow: org events require admin approval before publishing
-- [ ] List organizations the current user belongs to
-- [ ] Public org profile page
-
-### `venue`
-- [ ] Create venue (name, address, capacity, description, photos)
-- [ ] Upload venue photos to MinIO
-- [ ] Update / delete venue
-- [ ] Create manifest (zones, sections, rows, seats)
-- [ ] Seat map builder: drag-and-drop seating chart editor
-- [ ] Assigned seating: label individual seats (A1, A2…)
-- [ ] General Admission zone: capacity only, no specific seats
-- [ ] Save and reuse manifests across multiple events
-
-### `event`
-- [ ] Create event (title, description, banner, category, tags)
-- [ ] Upload event banner / photos to MinIO
-- [ ] Attach venue and select manifest
-- [ ] Set date, time, and timezone
-- [ ] Multi-session support (recurring / multiple event dates)
-- [ ] Publish event (`DRAFT` → `PUBLISHED`)
-- [ ] Cancel event (`CANCELLED`) and notify ticket holders
-- [ ] Postpone event (`POSTPONED`) and update date
-- [ ] Clone event (reuse structure for a new event)
-- [ ] Full status lifecycle: `DRAFT` → `PUBLISHED` → `ON_SALE` → `ENDED` → `CANCELLED`
-- [ ] Public event page
-
-### `offer`
-- [ ] Create ticket tier (VIP, Early Bird, Standard…)
-- [ ] Set price, quantity, and description per tier
-- [ ] Map tier to zone / section in venue manifest
-- [ ] Presale window: early access for a specific group (email whitelist)
-- [ ] Sale window: open and close dates for each tier
-- [ ] Max tickets per order limit
-- [ ] Create promo codes (percentage or fixed amount discount)
-- [ ] Limit promo code usage (globally and per user)
-- [ ] Hide / show tier without deleting it
-- [ ] Auto sold-out when inventory reaches zero
-
----
-
-## Phase 3 — Transactions
-
-> Goal: buyers purchase tickets, receive valid TOTP QR tickets, and organizers check in attendees at the gate.
-> This is the core value of the platform — test this phase most rigorously.
-
-### `order`
-- [ ] Add tickets to cart
-- [ ] Temporary seat reservation on cart entry (Redis TTL)
-- [ ] Display countdown timer for reservation hold
-- [ ] Release reservation on TTL expiry, return slots to pool
-- [ ] Apply promo code to order
-- [ ] Order summary screen before checkout
-- [ ] Checkout: hand off to payment
-- [ ] Confirm order after successful payment
-- [ ] Order lifecycle: `PENDING` → `CONFIRMED` → `CANCELLED` / `REFUNDED`
-- [ ] Buyer order history
-- [ ] Cancel order (within allowed cancellation window)
-- [ ] Handle concurrent purchase race condition (pessimistic lock or DB constraint)
-
-### `payment`
-- [ ] Integrate payment gateway (VNPay / Stripe)
-- [ ] Create payment intent on checkout
-- [ ] Webhook receiver for gateway callbacks
-- [ ] On payment success: confirm order and issue tickets
-- [ ] On payment failure: release reservation
-- [ ] Refund buyer when event is cancelled
-- [ ] Refund on buyer request (within policy window)
-- [ ] Post-event payout to organizer (scheduled job)
-- [ ] Deduct platform commission before payout
-- [ ] Organizer transaction history
-- [ ] Real-time revenue dashboard for organizer
-
-### `ticket`
-- [ ] Issue ticket after order is confirmed
-- [ ] Each ticket has a unique TOTP secret stored encrypted in DB
-- [ ] Generate QR code on-demand from TOTP (never cached, never stored as image)
-- [ ] QR code rotates every 30 seconds
-- [ ] Buyer ticket screen (QR + event info)
-- [ ] Check-in: scan QR and validate TOTP at time of scan
-- [ ] Check-in: reject already-used tickets (idempotent)
-- [ ] Check-in interface for gate staff (web / mobile)
-- [ ] Transfer ticket to another user (one tap)
-- [ ] Cancel transfer before recipient accepts
-- [ ] Ticket lifecycle: `ISSUED` → `TRANSFERRED` / `CHECKED_IN` / `VOID`
-- [ ] Void ticket on order refund
-
----
-
-## Phase 4 — Secondary Market
-
-> Goal: buyers can resell tickets with platform-enforced anti-scalping rules.
-
-### `resale`
-- [ ] Buyer creates a resale listing for an owned ticket
-- [ ] Set resale price (capped at max % above face value — anti-scalping)
-- [ ] Organizer configures resale price cap per event
-- [ ] Limit number of listings per user per event
-- [ ] Public resale listings for an event
-- [ ] Buy a resale ticket (create resale order)
-- [ ] Platform deducts commission on successful resale
-- [ ] Automatically transfer ticket to new buyer after payment
-- [ ] Seller cancels listing before a buyer claims it
-- [ ] Listing lifecycle: `ACTIVE` → `SOLD` / `CANCELLED`
-
----
-
-## Phase 5 — Growth
-
-> Goal: users discover relevant events, receive timely notifications, and benefit from promotions.
-
-### `search`
-- [x] Full-text search across event titles, organizers, and venues
-- [x] Filter by category, city, date range, price, availability
-- [ ] Faceted search (show result counts per filter value)
-- [ ] Ranking by relevance and popularity
-- [ ] Search suggestions / autocomplete
-- [ ] Vietnamese language support (tokenizer, diacritic folding)
-
-### `discovery`
-- [x] Homepage: trending events by city
-- [x] "Near you" section (geolocation)
-- [x] "Coming up" section by preferred category
-- [x] Similar events (by category, venue, organizer)
-- [ ] Personalized feed based on purchase and browsing history
-- [ ] Follow organizer / artist / venue
-- [ ] Notify followers when a followed organizer publishes a new event
-
-### `notification`
-- [ ] Email: order confirmation
-- [ ] Email: e-ticket delivery after payment
-- [ ] Email: event reminder before event date
-- [ ] Email: event cancelled / postponed
-- [ ] Email: payout completed (organizer)
-- [ ] Web push / mobile push notifications
-- [ ] In-app notifications with read / unread state
-- [ ] Notification preferences (enable / disable per type)
-- [ ] Notify when a resale ticket becomes available for a followed event
-- [ ] Notify when a ticket transfer is received
-
-### `promotion`
-- [ ] Create coupon codes (percentage or fixed amount discount)
-- [ ] Usage limits (global and per-user)
-- [ ] Coupon expiry date
-- [ ] Campaign: group multiple events / offers under one promotion
-- [ ] Early Bird auto-expires based on offer sale window
-- [ ] Flash sale: discounted price within a limited time window
-- [ ] Personal vouchers (issued directly to specific users)
-- [ ] Campaign performance report
-
----
-
-## Phase 6 — Intelligence
-
-> Goal: organizers make data-driven decisions; admins govern and audit the platform.
-
-### `report`
-- [ ] Revenue dashboard: total, by day, by ticket tier
-- [ ] Attendance report: check-in rate, no-show rate
-- [ ] Sales channel breakdown: primary vs resale
-- [ ] Conversion funnel: view → cart → checkout → paid
-- [ ] Export reports to CSV / Excel
-- [ ] Cross-event performance comparison
-- [ ] Real-time ticket sales chart on event day
-
-### `admin`
-- [ ] Platform overview dashboard: users, events, revenue, tickets
-- [ ] Approve / reject events before publishing
-- [ ] Approve / reject user KYC submissions
-- [ ] Lock / unlock user accounts
-- [ ] Take down / hide events that violate policy
-- [ ] Manage organizers and organizations
-- [ ] Audit log: record every admin action
-- [ ] System configuration (anti-scalping cap, platform fee rate, etc.)
-- [ ] View and resolve buyer / organizer disputes
-
----
-
-## Dependency Map
+## MVP — The Loop That Must Close
 
 ```
-auth ──────────────────────────────────────────► all modules
-iam ───────────────────────────────────────────► all modules
-account ───────────────────────────────────────► organization, payment
-organization ──────────────────────────────────► event
-venue ─────────────────────────────────────────► event
-event ─────────────────────────────────────────► offer, report
-offer ─────────────────────────────────────────► order, promotion
-order ─────────────────────────────────────────► payment, ticket
-payment ───────────────────────────────────────► ticket, report
-ticket ────────────────────────────────────────► resale
-resale ────────────────────────────────────────► payment
-event + account ───────────────────────────────► search, discovery
-order + ticket + payment ──────────────────────► notification
+Venue Manager creates a venue and publishes a seat map
+  → Organizer creates an event on that seat map, sets prices per seat category, publishes
+  → Buyer finds the event, picks a seat, pays
+  → Buyer receives a rotating QR code
+  → Gate staff scans the QR at the door
+  → Buyer walks in ✓
+```
+
+---
+
+## Phase 1 — Identity
+
+**Goal:** anyone can create an account and log in. Roles are assigned from here.
+
+### What the user experiences
+- Visitor signs up → email verified → account active with base role `BUYER`
+- Applies to become Organizer or is assigned Venue Manager by Admin
+- Logs in → routed to the correct portal for their role
+- Returning to a protected page without a session redirects to login
+
+### Status
+- [x] Register (email + password), base role = BUYER
+- [x] Login / logout
+- [x] Token refresh
+- [x] Roles: BUYER (default), ORGANIZER, VENUE_MANAGER, ADMIN
+- [x] Route protection by role
+
+---
+
+## Phase 2 — Venue Portal: Venue & Seat Map
+
+**Actor: Venue Manager** (`/b2b`)
+**Goal:** describe a physical space and provide a reusable seat map. Organizers consume it — they never edit it.
+
+### What the Venue Manager experiences
+
+**Setting up a venue:**
+- *Demo Shortcut:* For this project, we completely skip the UI for building seat maps. Venue and Manifest data (Levels, Seat Categories, Sections, Rows, Seats) will be seeded directly into the database to easily demo the booking flow. 
+- The B2B portal only allows creating/editing basic venue info (name, address, city, description).
+
+### Status
+- [-] B2B: create / edit venue info
+- [~] Create / build manifest UI (Skipped for demo, manifest data is seeded directly to DB)
+
+---
+
+## Phase 3 — Organizer Portal: Event & Offers
+
+**Actor: Organizer** (`/b2b`)
+**Goal:** pick a published manifest, set a price against each seat category, publish the event. No seat layout work — pricing only.
+
+### What the Organizer experiences
+
+**Creating an event:**
+- B2B → Events → New Event
+- Fills in title, description, date/time, banner
+- Browses venues → selects one → picks a published manifest
+- Saves → Event status: **DRAFT**
+
+**Configuring pricing (Offers):**
+- Sees the seat categories defined in the manifest (read-only): name, color, seat count
+- Creates one Offer per category they want to sell:
+  - Name, price, quantity cap, sale window (opens at / closes at), max per order
+  - Maps to a Seat Category — that's the only link to the seat map
+- Optionally restricts an offer to a presale access list
+- Offers stay inactive until their sale window opens
+
+**Publishing:**
+- Submits for admin review → **PENDING_APPROVAL**
+- Admin approves → **PUBLISHED**
+- Sale window opens → **ON_SALE**
+- All offers close → **ENDED**
+
+**Cancelling or postponing:**
+- Cancel → all tickets voided, orders refunded, buyers notified
+- Postpone → new date set, buyers notified and given refund option
+
+### Event status flow
+```
+DRAFT ──► PENDING_APPROVAL ──► PUBLISHED ──► ON_SALE ──► ENDED
+                │                                │
+           REJECTED                         CANCELLED
+                                                 │
+                                            POSTPONED ──► ON_SALE (rescheduled)
+```
+
+### Status
+- [ ] B2B: create / edit event (title, date, banner)
+- [ ] Select venue → select published manifest
+- [ ] View seat categories from manifest (read-only: name, color, seat count)
+- [ ] Create offers: name, price, quantity, sale window, seat category
+- [ ] Presale access list per offer
+- [ ] Max tickets per order
+- [ ] Submit for approval (DRAFT → PENDING_APPROVAL)
+- [ ] Admin approve / reject
+- [ ] Auto ON_SALE when sale window opens
+- [ ] Auto ENDED when all offers close
+- [ ] Cancel event → void tickets + refund + notify
+- [ ] Postpone event → notify + allow refund request
+- [ ] Public event page (consumer site)
+
+---
+
+## Phase 4 — Consumer Site: Purchase
+
+**Actor: Buyer**
+**Goal:** find an event, pick seats, pay, receive a ticket.
+
+### What the Buyer experiences
+
+**Finding the event:**
+- Browses homepage or searches → opens event page
+- Sees event details, seat map colored by offer tier, prices
+
+**Selecting seats:**
+- Clicks a seat on the map (RS) or selects quantity (GA)
+- Seats held for **10 minutes** — countdown visible
+- Timer expires → seats released, buyer must start over
+
+**Checkout:**
+- Reviews order: seat(s), offer tier, price, promo code if applied
+- Pays (VNPay / Stripe)
+- Payment succeeds → Order confirmed → Tickets issued → "Your Tickets"
+- Payment fails → reservation released → back to event page
+
+### Order status flow
+```
+PENDING ──► CONFIRMED
+    │
+    └──► CANCELLED  (payment failed or buyer cancelled)
+              │
+              └──► REFUNDED  (event cancelled or refund approved)
+```
+
+### Status
+- [ ] Seat map on event page: colored by offer tier, clickable (RS) / quantity picker (GA)
+- [ ] 10-minute reservation hold with countdown
+- [ ] Release reservation on timeout
+- [ ] Apply promo code
+- [ ] Order summary before payment
+- [ ] Payment (VNPay / Stripe)
+- [ ] Confirm order + issue tickets on success
+- [ ] Release reservation on failure
+- [ ] Buyer order history
+- [ ] Cancel order within allowed window
+- [ ] Auto-refund when event is cancelled
+
+---
+
+## Phase 5 — Tickets & Check-In
+
+**Actor: Buyer (holds ticket), Organizer (runs check-in)**
+**Goal:** buyer holds a secure unforgeable ticket; gate staff verifies it in under 2 seconds.
+
+### What the Buyer experiences
+- Opens ticket → sees event info + QR code
+- QR **rotates every 30 seconds** — screenshot sharing is ineffective
+
+### What Gate Staff experiences (B2B → Check-in)
+- Scans buyer's QR:
+  - ✓ Valid + first scan → **CHECKED_IN** → let through
+  - ✗ Already scanned → "already used"
+  - ✗ Bad QR → "invalid"
+
+### Ticket transfer
+- Buyer taps Transfer → enters recipient email → **TRANSFER_PENDING**
+- Recipient accepts → new ticket issued, original voided
+- Sender cancels before accept → reverts to **ISSUED**
+
+### Ticket status flow
+```
+ISSUED ──► CHECKED_IN
+   │
+   ├──► TRANSFER_PENDING ──► ISSUED (new owner)
+   │              │
+   │              └──► ISSUED (original, if cancelled)
+   │
+   └──► VOID
+```
+
+### Status
+- [ ] Issue ticket on order confirmation
+- [ ] QR generated on-demand from TOTP, rotates every 30s
+- [ ] Buyer ticket screen (QR + event details)
+- [ ] Check-in screen in B2B portal (gate staff)
+- [ ] Validate QR at scan time, reject duplicates
+- [ ] Transfer ticket → accept / cancel flow
+- [ ] Void ticket on refund or event cancellation
+
+---
+
+## Phase 6 — Resale
+
+**Actor: Buyer (seller), Buyer (new buyer)**
+**Goal:** buyers resell at a fair price; organizer controls the cap.
+
+### What the user experiences
+- Seller: opens a ticket → List for Resale → sets price (capped by organizer's policy)
+- New buyer: sees resale listings on event page → buys → same checkout flow → ticket transferred
+- Seller can cancel listing before a buyer pays
+
+### Resale listing status flow
+```
+ACTIVE ──► SOLD
+   │
+   └──► CANCELLED
+```
+
+### Status
+- [ ] Create resale listing (organizer-set price cap enforced)
+- [ ] Resale listings visible on event page
+- [ ] Buy resale ticket → payment → ticket transfer
+- [ ] Platform commission on sale, remainder to seller
+- [ ] Seller cancels listing
+
+---
+
+## Phase 7 — Discovery & Notifications
+
+**Actor: Buyer, Organizer**
+**Goal:** buyers find events they care about; everyone gets the right message at the right time.
+
+### What the Buyer experiences
+- Homepage: trending events in their city
+- Search: keyword, category, city, date, price
+- Follow an organizer → notified on new event
+- Notifications: order confirmed, reminder 24h before, event cancelled/postponed, transfer received
+
+### What the Organizer experiences
+- Notifications: event approved/rejected, payout completed
+
+### Status
+- [x] Homepage: trending events by city
+- [x] Search with filters
+- [ ] Follow organizer
+- [ ] Email: order confirmation + ticket link
+- [ ] Email: event reminder (24h before)
+- [ ] Email: event cancelled / postponed
+- [ ] In-app notifications (read / unread)
+- [ ] Notification preferences per user
+
+---
+
+## Phase 8 — Payouts & Reporting
+
+**Actor: Organizer, Admin**
+**Goal:** organizers get paid; everyone can see what happened.
+
+### What the Organizer experiences
+- T+3 after event ends → platform calculates gross − refunds − commission → transfers to organizer
+- Dashboard: revenue by day, by seat category, check-in rate
+- Export to CSV
+
+### What the Admin experiences
+- Platform overview: revenue, active events, users
+- Approve / reject events and org applications
+- Lock accounts, take down events, resolve disputes
+
+### Status
+- [ ] T+3 payout job
+- [ ] Organizer: revenue dashboard (by day, by seat category)
+- [ ] Organizer: check-in / attendance report
+- [ ] Organizer: CSV export
+- [ ] Admin: platform overview dashboard
+- [ ] Admin: approve / reject events and orgs
+- [ ] Admin: lock accounts, take down events
+
+---
+
+## Dependency Order
+
+```
+Phase 1  Identity
+   ├─► Phase 2  Venue Portal       (Venue Manager builds seat maps)
+   │     └─► Phase 3  Organizer Portal  (Organizer prices events on top)
+   │               └─► Phase 4  Consumer Site  (Buyer purchases)
+   │                     └─► Phase 5  Tickets & Check-In  ← MVP complete
+   │                           ├─► Phase 6  Resale
+   │                           ├─► Phase 7  Discovery & Notifications
+   │                           └─► Phase 8  Payouts & Reporting
 ```
 
 ---
 
 ## Notes
 
-- A module is considered **done** when: API endpoints are tested, UI is connected, and no downstream modules are blocked.
-- **Phase 1–3 = MVP** — enough to demo the full flow: create event → buy ticket → check in.
-- **Phase 4–6 = V1** — production-ready for real users.
-- Update this file whenever a task is started (`[-]`) or completed (`[x]`).
+- **Phases 1–5 = MVP.** Done when all four actors can complete their part of the loop without a workaround.
+- **Phases 6–8 = V1.** Production-ready.
+- A phase is complete when a real user can walk through its flow above without hitting a dead end.
+- Update task status as work progresses: `[ ]` → `[-]` → `[x]`.

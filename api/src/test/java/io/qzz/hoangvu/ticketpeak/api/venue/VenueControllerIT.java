@@ -67,7 +67,7 @@ class VenueControllerIT {
                 .password(passwordEncoder.encode(rawPassword))
                 .firstName("Admin")
                 .lastName("User")
-                .role(Role.ADMIN)
+                .roles(java.util.Set.of(Role.ADMIN))
                 .status(AccountStatus.ACTIVE)
                 .build());
 
@@ -391,7 +391,7 @@ class VenueControllerIT {
                 .password(passwordEncoder.encode("password123"))
                 .firstName("Organizer")
                 .lastName("User")
-                .role(Role.ORGANIZER)
+                .roles(java.util.Set.of(Role.ORGANIZER))
                 .status(AccountStatus.ACTIVE)
                 .build());
 

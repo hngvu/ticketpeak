@@ -7,6 +7,7 @@ import io.qzz.hoangvu.ticketpeak.api.iam.model.Role;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Set;
 import java.util.UUID;
 
 public record AccountResponse(
@@ -19,7 +20,7 @@ public record AccountResponse(
         Gender gender,
         Integer cityId,
         String countryCode,
-        Role role,
+        Set<Role> roles,
         AccountStatus status,
         Instant createdAt,
         Instant updatedAt
@@ -36,7 +37,7 @@ public record AccountResponse(
                 account.getGender(),
                 account.getCityId(),
                 account.getCountryCode(),
-                account.getRole(),
+                account.getRoles(),
                 account.getStatus(),
                 account.getCreatedAt(),
                 account.getUpdatedAt()

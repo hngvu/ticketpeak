@@ -131,7 +131,7 @@ class AuthControllerIT {
                         .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.email").value("protected@example.com"))
-                .andExpect(jsonPath("$.data.role").value("BUYER"));
+                .andExpect(jsonPath("$.data.roles").value("BUYER"));
     }
 
     private JsonNode performLogin(String email, String password) throws Exception {
@@ -155,7 +155,7 @@ class AuthControllerIT {
                 .password(passwordEncoder.encode(rawPassword))
                 .firstName("Ticket")
                 .lastName("Peak")
-                .role(Role.BUYER)
+                .roles(java.util.Set.of(Role.BUYER))
                 .status(AccountStatus.ACTIVE)
                 .build();
         return accountRepository.saveAndFlush(account);

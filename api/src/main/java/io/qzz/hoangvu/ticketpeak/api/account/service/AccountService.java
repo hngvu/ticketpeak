@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -46,7 +47,7 @@ public class AccountService {
                 .gender(parseGender(request.gender()))
                 .cityId(request.cityId())
                 .countryCode(trimToNull(request.countryCode()))
-                .role(Role.BUYER)
+                .roles(Set.of(Role.BUYER))
                 .status(AccountStatus.ACTIVE)
                 .build();
 

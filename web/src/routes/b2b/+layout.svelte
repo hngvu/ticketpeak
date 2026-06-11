@@ -213,7 +213,7 @@
 			</div>
 
 			<nav class="flex items-center gap-4">
-				{#if data.user && data.user.role === 'ORGANIZER'}
+				{#if data.user && data.user.roles.includes('ORGANIZER')}
 					<a href="/b2b/dashboard" class="text-sm font-medium transition hover:text-primary">
 						Dashboard
 					</a>

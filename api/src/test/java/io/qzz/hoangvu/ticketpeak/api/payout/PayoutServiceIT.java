@@ -54,7 +54,7 @@ public class PayoutServiceIT {
         seller = accountRepository.save(Account.builder()
                 .email(UUID.randomUUID() + "@example.com")
                 .password("hash")
-                .role(Role.BUYER)
+                .roles(java.util.Set.of(Role.BUYER))
                 .status(AccountStatus.ACTIVE)
                 .build());
     }

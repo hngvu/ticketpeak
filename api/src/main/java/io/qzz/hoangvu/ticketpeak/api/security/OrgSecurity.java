@@ -121,7 +121,7 @@ public class OrgSecurity {
             return false;
         }
 
-        if (acc.role() == io.qzz.hoangvu.ticketpeak.api.iam.model.Role.ADMIN) {
+        if (acc.roles().contains(io.qzz.hoangvu.ticketpeak.api.iam.model.Role.ADMIN)) {
             return true;
         }
 

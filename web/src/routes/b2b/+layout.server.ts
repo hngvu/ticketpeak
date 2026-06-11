@@ -9,14 +9,14 @@ export const load: LayoutServerLoad = async ({ locals, url, fetch, cookies }) =>
 
 	// If organizer is already logged in and goes to the /b2b base path, redirect them to the dashboard
 	if (pathname === '/b2b') {
-		if (user && user.role === 'ORGANIZER') {
+		if (user && user.roles.includes('ORGANIZER')) {
 			throw redirect(303, `/b2b/dashboard${url.search}`);
 		}
 	}
 
 	// Enforce organizer role guard on all nested pages, excluding the login page
 	if (pathname !== '/b2b/login') {
-		if (!user || user.role !== 'ORGANIZER') {
+		if (!user || !user.roles.includes('ORGANIZER')) {
 			throw redirect(303, '/b2b/login');
 		}
 

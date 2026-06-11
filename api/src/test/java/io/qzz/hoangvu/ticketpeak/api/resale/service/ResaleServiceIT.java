@@ -99,14 +99,14 @@ public class ResaleServiceIT {
         seller = accountRepository.save(Account.builder()
                 .email("seller@example.com")
                 .password("hash")
-                .role(Role.BUYER)
+                .roles(java.util.Set.of(Role.BUYER))
                 .status(AccountStatus.ACTIVE)
                 .build());
 
         buyer = accountRepository.save(Account.builder()
                 .email("buyer@example.com")
                 .password("hash")
-                .role(Role.BUYER)
+                .roles(java.util.Set.of(Role.BUYER))
                 .status(AccountStatus.ACTIVE)
                 .build());
 

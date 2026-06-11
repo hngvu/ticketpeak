@@ -104,14 +104,14 @@ class ReservationControllerIT {
         buyerA = accountRepository.saveAndFlush(Account.builder()
                 .email("buyerA@test.com")
                 .password(passwordEncoder.encode(rawPassword))
-                .role(Role.BUYER)
+                .roles(java.util.Set.of(Role.BUYER))
                 .status(AccountStatus.ACTIVE)
                 .build());
 
         buyerB = accountRepository.saveAndFlush(Account.builder()
                 .email("buyerB@test.com")
                 .password(passwordEncoder.encode(rawPassword))
-                .role(Role.BUYER)
+                .roles(java.util.Set.of(Role.BUYER))
                 .status(AccountStatus.ACTIVE)
                 .build());
 
