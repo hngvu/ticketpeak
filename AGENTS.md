@@ -404,3 +404,20 @@ Before implementing any feature or significant change:
 3. Implement: set status to `in-progress`, then write code following this file.
 4. Verify: run the relevant tests and confirm acceptance criteria are met.
 5. Complete: set status to `done`, fill in outcome, then present the final changes to the developer for explicit approval before committing using the commit format above.
+
+
+---
+
+## Harness Documents
+
+Read these documents before starting significant work. They encode durable decisions and context that should not be re-derived from scratch each session.
+
+| Document | Read when |
+|----------|-----------|
+| `docs/HARNESS.md` | Start of any session — human-agent collaboration model |
+| `docs/ARCHITECTURE.md` | Before any structural change — module boundaries, data model, canvas rules |
+| `docs/FEATURE_INTAKE.md` | Before every feature — classify as tiny / normal / high-risk |
+| `docs/TEST_MATRIX.md` | Before marking any plan `done` — what proof is required |
+| `docs/decisions/` | Before any significant change — read all ADRs, do not re-litigate closed decisions |
+| `docs/templates/PLAN_TEMPLATE.md` | When creating a new plan file |
+| `docs/templates/ADR_TEMPLATE.md` | When recording a new architectural decision |
