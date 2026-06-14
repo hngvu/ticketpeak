@@ -499,6 +499,14 @@ The typography system uses two primary typefaces:
 
 - **`nav-bar`**: Sticked header (64px). White base (`{colors.canvas}`) with a bottom `{colors.hairline}` divider. Organizes main logo, buyer search routes, and partner dashboard access seamlessly.
 
+## Modals
+
+### Modal Action Buttons
+
+- **Split alignment:** Modal actions with two buttons (e.g., Cancel + Confirm) must align one button to the left and the other to the right using `justify-content: space-between`. This improves reachability and visual balance over grouping both on the same side.
+- The left button is typically the dismissive/secondary action (e.g., Cancel), styled as ghost. The right button is the primary/confirm action, styled as primary.
+- Single-action modals (e.g., a lone "Close" or "Done") remain right-aligned as standard.
+
 ## Do's and Don'ts
 
 ### Do:

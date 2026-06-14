@@ -48,29 +48,22 @@ export const actions: Actions = {
 		const data = await request.formData();
 		const venueId = data.get('venueId') as string;
 		const title = data.get('title') as string;
-		const description = data.get('description') as string;
+		const slug = data.get('slug') as string;
 		const startAtStr = data.get('startAt') as string;
-		const endAtStr = data.get('endAt') as string;
 		const timezone = (data.get('timezone') as string) || 'Asia/Ho_Chi_Minh';
 		const classificationId = data.get('classificationId') as string;
 
-		if (!venueId || !title || !startAtStr) {
+		if (!venueId || !title || !slug || !startAtStr) {
 			return fail(400, { error: 'Required fields are missing' });
 		}
 
 		const startAt = new Date(startAtStr).toISOString();
-		const endAt = endAtStr ? new Date(endAtStr).toISOString() : null;
-
-		if (endAt && new Date(endAt) <= new Date(startAt)) {
-			return fail(400, { error: 'End time must be strictly after start time' });
-		}
 
 		const payload = {
 			venueId,
 			title,
-			description,
+			slug,
 			startAt,
-			endAt,
 			timezone,
 			restrictSingleSeat: false,
 			safeTixEnabled: false,

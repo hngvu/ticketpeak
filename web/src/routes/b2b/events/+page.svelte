@@ -79,88 +79,7 @@
 	let filterDateRange = $state('all'); // all, today, this-week, this-month, custom
 	let customFilterDate = $state('');
 
-	// High Fidelity Mock Events based exactly on the user's screenshot
-	const highFidelityMockEvents = [
-		{
-			id: 'mock-1',
-			title: 'Amanda Run test 2',
-			startAt: '2025-04-01T08:00:00Z',
-			endAt: '2025-02-04T18:00:00Z',
-			status: 'DRAFT',
-			venueId: 'mock-venue-1',
-			attractionIds: ['mock-attraction-1']
-		},
-		{
-			id: 'mock-2',
-			title: 'Runtest300 for publish - Amanda',
-			startAt: '2025-06-03T08:00:00Z',
-			endAt: '2025-04-21T18:00:00Z',
-			status: 'DRAFT',
-			venueId: 'mock-venue-1',
-			attractionIds: ['mock-attraction-2']
-		},
-		{
-			id: 'mock-3',
-			title: 'Amanda test run 3',
-			startAt: '2025-06-04T08:00:00Z',
-			endAt: '2025-03-31T18:00:00Z',
-			status: 'DRAFT',
-			venueId: 'mock-venue-1',
-			attractionIds: ['mock-attraction-1']
-		},
-		{
-			id: 'mock-4',
-			title: 'Run test 300 events',
-			startAt: '2025-06-12T08:00:00Z',
-			endAt: '2025-01-26T18:00:00Z',
-			status: 'DRAFT',
-			venueId: 'mock-venue-1',
-			attractionIds: ['mock-attraction-2']
-		},
-		{
-			id: 'mock-5',
-			title: 'Run testing entire flow 1',
-			startAt: '2025-06-17T08:00:00Z',
-			endAt: '2025-10-31T18:00:00Z',
-			status: 'DRAFT',
-			venueId: 'mock-venue-1',
-			attractionIds: ['mock-attraction-2']
-		},
-		{
-			id: 'mock-6',
-			title: 'SC Test Event',
-			startAt: '2025-07-16T08:00:00Z',
-			endAt: '2025-08-31T18:00:00Z',
-			status: 'DRAFT',
-			venueId: 'mock-venue-1',
-			attractionIds: ['mock-attraction-1']
-		},
-		{
-			id: 'mock-7',
-			title: 'Eventrun 11. June',
-			startAt: '2025-08-01T08:00:00Z',
-			endAt: '2025-12-31T18:00:00Z',
-			status: 'DRAFT',
-			venueId: 'mock-venue-1',
-			attractionIds: ['mock-attraction-1']
-		},
-		{
-			id: 'mock-8',
-			title: 'CORE TICKETING ONLY - PLEASE USE FOR AUTOMATION ONLY!',
-			startAt: '2025-08-28T07:00:00Z',
-			status: 'SALES_ACTIVE',
-			venueId: 'mock-venue-2',
-			attractionIds: ['mock-attraction-3']
-		}
-	];
-
-	// Merge backend events with high-fidelity mock events
-	const allEvents = $derived([
-		...highFidelityMockEvents,
-		...(data.events?.filter(
-			(e: any) => !highFidelityMockEvents.some((mock) => mock.title === e.title)
-		) || [])
-	]);
+	const allEvents = $derived(data.events || []);
 
 	const filteredEvents = $derived(
 		allEvents.filter((event: any) => {
@@ -170,19 +89,19 @@
 				const titleMatch = cleanVietnamese(event.title || '')
 					.toLowerCase()
 					.includes(query);
-				const venueObj =
-					data.venues?.find((v: any) => v.id === event.venueId) ||
-					(event.venueId === 'mock-venue-1'
-						? { name: 'AmericanAirlines Arena', city: 'Miami' }
-						: event.venueId === 'mock-venue-2'
-							? { name: 'Venue', city: 'New York' }
-							: null);
+				const venueObj = data.venues?.find((v: any) => v.id === event.venueId);
 				const venueMatch = venueObj
 					? cleanVietnamese(venueObj.name || '')
 							.toLowerCase()
 							.includes(query)
 					: false;
-				if (!titleMatch && !venueMatch) {
+				const idMatch = event.id.toLowerCase().includes(query);
+				const attractionMatch = event.attractionIds ? event.attractionIds.some((attId: string) => {
+					const attraction = data.attractions?.find((a: any) => a.id === attId);
+					return attraction ? cleanVietnamese(attraction.name || '').toLowerCase().includes(query) : false;
+				}) : false;
+
+				if (!titleMatch && !venueMatch && !idMatch && !attractionMatch) {
 					return false;
 				}
 			}
@@ -234,16 +153,10 @@
 
 			// 4. Event Type (Classification) Filter
 			if (filterClassId !== 'all') {
-				const isMockConcert = event.id.startsWith('mock-');
-				if (isMockConcert && filterClassId !== 'concert') {
+				const hasClass =
+					event.classifications && event.classifications.some((c: any) => c.id === filterClassId);
+				if (!hasClass) {
 					return false;
-				}
-				if (!isMockConcert) {
-					const hasClass =
-						event.classifications && event.classifications.some((c: any) => c.id === filterClassId);
-					if (!hasClass) {
-						return false;
-					}
 				}
 			}
 
@@ -686,15 +599,16 @@
 							<!-- Events List Rows divided by thin lines -->
 							<div class="divide-y divide-slate-100 border-t border-slate-100">
 								{#each filteredEvents as event (event.id)}
-									{@const venue =
-										data.venues.find((v: any) => v.id === event.venueId) ||
-										(event.venueId === 'mock-venue-1'
-											? { name: 'AmericanAirlines Arena', city: 'Miami', stateCode: 'FL' }
-											: event.venueId === 'mock-venue-2'
-												? { name: 'Venue', city: 'New York', stateCode: 'NY' }
-												: null)}
+									{@const venue = data.venues.find((v: any) => v.id === event.venueId)}
+									<!-- svelte-ignore a11y_click_events_have_key_events -->
+									<!-- svelte-ignore a11y_no_static_element_interactions -->
 									<div
-										class="flex items-center justify-between px-2 py-4 transition-colors hover:bg-slate-50/40"
+										onclick={(e) => {
+											if (!(e.target as HTMLElement).closest('button, a, input')) {
+												window.location.href = `/b2b/events/${event.id}`;
+											}
+										}}
+										class="flex cursor-pointer items-center justify-between px-2 py-4 transition-colors hover:bg-slate-50/40"
 									>
 										<div class="flex min-w-0 flex-1 items-center gap-4">
 											<!-- Select Checkbox -->
@@ -707,50 +621,6 @@
 											<div
 												class="hidden h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 shadow-xs sm:flex"
 											>
-												{#if event.id === 'mock-2' || event.id === 'mock-4' || event.id === 'mock-5'}
-													<!-- Handsome gentleman avatar matching screenshot -->
-													<svg
-														class="h-full w-full bg-slate-100"
-														viewBox="0 0 100 100"
-														fill="none"
-														xmlns="http://www.w3.org/2000/svg"
-													>
-														<circle cx="50" cy="50" r="50" fill="#E2E8F0" />
-														<path d="M50 85 L20 100 L80 100 Z" fill="#1E293B" />
-														<path d="M50 82 L46 100 L54 100 Z" fill="#FFFFFF" />
-														<circle cx="50" cy="46" r="18" fill="#FDBA74" />
-														<path
-															d="M32 46 Q32 30 50 30 Q68 30 68 46 C68 56 50 64 32 46 Z"
-															fill="#0F172A"
-															opacity="0.15"
-														/>
-														<path
-															d="M34 40 C34 26 66 26 66 40"
-															stroke="#0F172A"
-															stroke-width="8"
-															stroke-linecap="round"
-														/>
-														<circle cx="43" cy="42" r="2" fill="#0F172A" />
-														<circle cx="57" cy="42" r="2" fill="#0F172A" />
-														<path
-															d="M38 52 C44 55 56 55 62 52"
-															stroke="#0F172A"
-															stroke-width="4"
-															stroke-linecap="round"
-														/>
-														<path d="M44 86 L56 86 L50 89 Z" fill="#DC2626" />
-														<path d="M44 92 L56 92 L50 89 Z" fill="#DC2626" />
-													</svg>
-												{:else if event.id === 'mock-8'}
-													<!-- Warm vibrant gradient matching pink performer avatar -->
-													<div
-														class="flex h-full w-full items-center justify-center bg-gradient-to-tr from-pink-500 via-rose-500 to-orange-400"
-													>
-														<span class="text-[9px] font-extrabold tracking-widest text-white"
-															>TP</span
-														>
-													</div>
-												{:else}
 													<!-- Camera icon placeholder inside solid grey circle -->
 													<div
 														class="text-slate-455 flex h-full w-full items-center justify-center bg-slate-100"
@@ -774,7 +644,6 @@
 															/>
 														</svg>
 													</div>
-												{/if}
 											</div>
 
 											<!-- Date display (month abbreviation, day range, and year underneath) -->
@@ -796,12 +665,7 @@
 													{event.title}
 												</a>
 												<div class="text-slate-450 mt-0.5 truncate text-xs font-medium">
-													{#if event.title.includes('CORE TICKETING')}
-														Thu 7:00 AM • Venue, New York, NY
-													{:else}
-														{venue?.name || 'AmericanAirlines Arena'} • {venue?.city || 'Miami'}, {venue?.stateCode ||
-															'FL'}
-													{/if}
+													{venue?.name} • {venue?.city}, {venue?.stateCode}
 												</div>
 											</div>
 										</div>
