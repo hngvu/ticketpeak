@@ -48,7 +48,7 @@
 	},
 	"dependencies": {
 		"@tanstack/svelte-query": "^6.1.34",
-		"bits-ui": "^2.18.1",
+		"bits-ui": "^0.21.16",
 		"cmdk-sv": "^0.0.19",
 		"konva": "^10.3.0",
 		"svelte-konva": "^1.0.1"

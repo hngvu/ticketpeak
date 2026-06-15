@@ -2,6 +2,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { apiFetch, type PageResponse } from '$lib/server/api';
+import { MOCK_CLASSIFICATIONS } from '$lib/server/mockData';
 
 export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 	const { id } = params;
@@ -23,7 +24,9 @@ export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 			apiFetch<PageResponse<any>>(fetch, '/api/venues?size=100').catch(
 				() => ({ content: [] }) as any
 			),
-			apiFetch<any[]>(fetch, '/api/classifications').catch(() => []),
+			apiFetch<any[]>(fetch, '/api/classifications')
+				.then((res) => (res && res.length > 0 ? res : [...MOCK_CLASSIFICATIONS]))
+				.catch(() => [...MOCK_CLASSIFICATIONS]),
 			apiFetch<any[]>(fetch, '/api/attractions').catch(() => [])
 		]);
 
