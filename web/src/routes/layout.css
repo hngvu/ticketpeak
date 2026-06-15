@@ -44,42 +44,13 @@ body {
 	font-optical-sizing: auto;
 }
 
-/* Premium ultra-thin scrollbars with no arrows at the two ends */
-::-webkit-scrollbar,
-*::-webkit-scrollbar {
-	width: 4px !important;
-	height: 4px !important;
-	display: block !important;
-}
-
-::-webkit-scrollbar-track,
-*::-webkit-scrollbar-track {
-	background: transparent !important;
-}
-
-::-webkit-scrollbar-thumb,
-*::-webkit-scrollbar-thumb {
-	background: var(--color-hairline-strong) !important;
-	border-radius: 9999px !important;
-}
-
-::-webkit-scrollbar-thumb:hover,
-*::-webkit-scrollbar-thumb:hover {
-	background: var(--color-mute) !important;
-}
-
-/* Explicitly hide scrollbar buttons (arrows at top/bottom/left/right) on all scrollable elements */
-::-webkit-scrollbar-button,
-*::-webkit-scrollbar-button {
-	display: none !important;
-	width: 0 !important;
-	height: 0 !important;
-}
-
-/* Firefox compatibility */
+/* Hide scrollbars globally – scroll still works */
 * {
-	scrollbar-width: thin !important;
-	scrollbar-color: var(--color-hairline-strong) transparent !important;
+	-ms-overflow-style: none !important;  /* IE / Edge */
+	scrollbar-width: none !important;      /* Firefox */
+}
+*::-webkit-scrollbar {
+	display: none !important;              /* Chrome / Safari / WebKit */
 }
 
 /* Helper class to hide scrollbars completely while preserving scroll functionality */

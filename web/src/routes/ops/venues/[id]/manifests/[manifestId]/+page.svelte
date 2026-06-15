@@ -1448,22 +1448,6 @@
 
 		<!-- ── Canvas ──────────────────────────────────────────────── -->
 		<main class="relative flex flex-1 flex-col overflow-hidden bg-[#FAFAFA]">
-			<button
-				class="absolute top-3 left-1/2 z-30 -translate-x-1/2 rounded-lg border border-slate-200 bg-white px-5 py-2 text-xs font-bold text-slate-800 shadow-sm transition hover:bg-slate-50 hover:shadow-md"
-			>
-				<svg
-					class="mr-1.5 -ml-0.5 inline-block h-3.5 w-3.5 text-emerald-600"
-					fill="none"
-					stroke="currentColor"
-					viewBox="0 0 24 24"
-					><path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2.5"
-						d="M5 13l4 4L19 7"
-					/></svg
-				>Sell Order
-			</button>
 
 			<div
 				id="stage-container"
@@ -1476,7 +1460,7 @@
 
 			<!-- Zoom controls -->
 			<div
-				class="absolute right-4 bottom-20 z-30 flex flex-col items-center gap-0.5 rounded-xl border border-slate-200/80 bg-white/90 p-0.5 shadow-lg backdrop-blur-md"
+				class="absolute right-4 bottom-4 z-30 flex flex-col items-center gap-0.5 rounded-xl border border-slate-200/80 bg-white/90 p-0.5 shadow-lg backdrop-blur-md"
 			>
 				<button
 					type="button"
@@ -1528,7 +1512,7 @@
 
 			<!-- Mini-map -->
 			<div
-				class="absolute right-16 bottom-20 z-30 flex h-32 w-44 flex-col overflow-hidden rounded-xl border border-slate-200/80 bg-white/90 p-2 shadow-lg backdrop-blur-md"
+				class="absolute right-16 bottom-4 z-30 flex h-32 w-44 flex-col overflow-hidden rounded-xl border border-slate-200/80 bg-white/90 p-2 shadow-lg backdrop-blur-md"
 			>
 				<div
 					class="flex items-center justify-between pb-1 text-[8px] font-bold tracking-wider text-slate-400 uppercase"
@@ -1759,43 +1743,6 @@
 					/></svg
 				>
 				Section
-			</button>
-			<div class="my-1.5 h-px w-8 bg-slate-100"></div>
-			<button
-				onclick={() => (activeTool = activeTool === 'brush' ? 'select' : 'brush')}
-				class="flex w-10 flex-col items-center gap-0.5 rounded-lg px-1 py-2 text-[9px] font-bold transition-colors {activeTool ===
-				'brush'
-					? 'bg-blue-50 text-blue-700'
-					: 'text-slate-400 hover:bg-slate-50 hover:text-slate-700'}"
-				title="Brush (B)"
-			>
-				<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-					><path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="1.5"
-						d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-					/></svg
-				>
-				Brush
-			</button>
-			<button
-				onclick={() => (activeTool = activeTool === 'eraser' ? 'select' : 'eraser')}
-				class="flex w-10 flex-col items-center gap-0.5 rounded-lg px-1 py-2 text-[9px] font-bold transition-colors {activeTool ===
-				'eraser'
-					? 'bg-rose-50 text-rose-600'
-					: 'text-slate-400 hover:bg-slate-50 hover:text-slate-700'}"
-				title="Eraser (E)"
-			>
-				<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-					><path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="1.5"
-						d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-					/></svg
-				>
-				Eraser
 			</button>
 			<div class="my-1.5 h-px w-8 bg-slate-100"></div>
 			<button

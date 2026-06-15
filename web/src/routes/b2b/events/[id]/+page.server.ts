@@ -11,8 +11,8 @@ export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 	}
 
 	try {
-		// Fetch event details, offers, inventory, venues, categories concurrently
-		const [event, offers, inventory, venuesRes, classifications] = await Promise.all([
+		// Fetch event details, offers, inventory, venues, categories, attractions concurrently
+		const [event, offers, inventory, venuesRes, classifications, attractions] = await Promise.all([
 			apiFetch<any>(fetch, `/api/partner/events/${id}`, {
 				headers: {
 					Authorization: `Bearer ${accessToken}`
@@ -23,7 +23,8 @@ export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 			apiFetch<PageResponse<any>>(fetch, '/api/venues?size=100').catch(
 				() => ({ content: [] }) as any
 			),
-			apiFetch<any[]>(fetch, '/api/classifications').catch(() => [])
+			apiFetch<any[]>(fetch, '/api/classifications').catch(() => []),
+			apiFetch<any[]>(fetch, '/api/attractions').catch(() => [])
 		]);
 
 		return {
@@ -31,7 +32,8 @@ export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 			offers,
 			inventory,
 			venues: venuesRes?.content || [],
-			classifications
+			classifications,
+			attractions
 		};
 	} catch (err: any) {
 		console.error('[EVENT DETAILS LOAD ERROR]:', err);
@@ -52,8 +54,9 @@ export const actions: Actions = {
 		const startAtStr = data.get('startAt') as string;
 		const timezone = (data.get('timezone') as string) || 'Asia/Ho_Chi_Minh';
 		const classificationId = data.get('classificationId') as string;
+		const attractionIds = data.getAll('attractionIds') as string[];
 
-		if (!venueId || !title || !slug || !startAtStr) {
+		if (!venueId || !title || !startAtStr) {
 			return fail(400, { error: 'Required fields are missing' });
 		}
 
@@ -62,7 +65,7 @@ export const actions: Actions = {
 		const payload = {
 			venueId,
 			title,
-			slug,
+			slug: slug || '',
 			startAt,
 			timezone,
 			restrictSingleSeat: false,
@@ -71,7 +74,7 @@ export const actions: Actions = {
 			maxTransferCount: 5,
 			serviceFeePercent: 0,
 			classificationIds: classificationId ? [classificationId] : [],
-			attractionIds: []
+			attractionIds
 		};
 
 		try {

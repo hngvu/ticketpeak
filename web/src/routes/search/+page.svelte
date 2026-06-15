@@ -16,11 +16,10 @@
 	let locationVal = $state(data.location);
 
 	// Date Range options
-	let datePreset = $state('any'); // any, today, weekend, month, custom
+	let datePreset = $state((data.startDate || data.endDate) ? 'custom' : 'any');
 	let customStartDate = $state(data.startDate);
 	let customEndDate = $state(data.endDate);
 
-	// Check if dates represent a preset on load
 	$effect(() => {
 		searchVal = data.query;
 		locationVal = data.location;

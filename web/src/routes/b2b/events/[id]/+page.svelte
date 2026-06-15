@@ -2,15 +2,7 @@
 	/* eslint-disable svelte/no-navigation-without-resolve */
 	/* eslint-disable @typescript-eslint/no-explicit-any */
 	import { enhance } from '$app/forms';
-	import {
-		IconAdjustmentsHorizontal,
-		IconTicket,
-		IconMap,
-		IconLock,
-		IconPlus,
-		IconChevronLeft,
-		IconQrcode
-	} from '@tabler/icons-svelte';
+	import { IconPlus, IconChevronLeft, IconQrcode } from '@tabler/icons-svelte';
 
 	let { data, form } = $props();
 
@@ -22,6 +14,7 @@
 	const event = $derived(form?.event || data.event);
 	const offers = $derived(data.offers || []);
 	const venueName = $derived(data.venues?.find((v: any) => v.id === event.venueId)?.name || '');
+	const attractions = $derived(data.attractions || []);
 
 	let localOffers = $state<any[]>([]);
 	$effect(() => {
@@ -29,6 +22,8 @@
 			localOffers = [...offers];
 		}
 	});
+
+	let selectedAttractionIds = $state<string[]>(event.attractionIds || []);
 
 	let isAddOfferModalOpen = $state(false);
 	let newOfferName = $state('');
@@ -198,7 +193,6 @@
 				class="tab-btn"
 				class:active={activeTab === 'general'}
 			>
-				<IconAdjustmentsHorizontal size={16} />
 				<span>General</span>
 			</button>
 			<button
@@ -207,7 +201,6 @@
 				class="tab-btn"
 				class:active={activeTab === 'seats'}
 			>
-				<IconMap size={16} />
 				<span>Seat Map & Inventory</span>
 			</button>
 			<button
@@ -216,7 +209,6 @@
 				class="tab-btn"
 				class:active={activeTab === 'offers'}
 			>
-				<IconTicket size={16} />
 				<span>Offers & Presales</span>
 			</button>
 			<button
@@ -225,7 +217,6 @@
 				class="tab-btn"
 				class:active={activeTab === 'holds'}
 			>
-				<IconLock size={16} />
 				<span>Holds & Kills</span>
 			</button>
 		</nav>
@@ -259,17 +250,6 @@
 						/>
 					</div>
 					<div class="field">
-						<label for="edit-slug" class="label">Slug <span class="required">*</span></label>
-						<input
-							type="text"
-							id="edit-slug"
-							name="slug"
-							required
-							value={event.slug}
-							class="input"
-						/>
-					</div>
-					<div class="field">
 						<label for="edit-category" class="label">Classification</label>
 						<select id="edit-category" name="classificationId" class="input">
 							<option value="">-- Select a Category --</option>
@@ -284,28 +264,79 @@
 						</select>
 					</div>
 					<div class="field">
-						<label for="edit-start" class="label"
-							>Date<span class="required">*</span></label
-						>
-						<input
-							type="datetime-local"
-							id="edit-start"
-							name="startAt"
-							required
-							value={toDateTimeLocalString(event.startAt)}
+						<label for="edit-attraction" class="label">Attraction</label>
+						<select
+							id="edit-attraction"
 							class="input"
-						/>
+							onchange={(e) => {
+								const val = (e.target as HTMLSelectElement).value;
+								if (val && !selectedAttractionIds.includes(val)) {
+									selectedAttractionIds = [...selectedAttractionIds, val];
+								}
+							}}
+						>
+							<option value="">-- Select an Attraction --</option>
+							{#each attractions as att (att.id)}
+								<option value={att.id}>{att.name}</option>
+							{/each}
+						</select>
+						{#if selectedAttractionIds.length > 0}
+							<div class="attraction-chips">
+								{#each selectedAttractionIds as id (id)}
+									{@const att = attractions.find((a: any) => a.id === id)}
+									<span class="attraction-chip">
+										{att?.name || id}
+										<button
+											type="button"
+											onclick={() => {
+												selectedAttractionIds = selectedAttractionIds.filter((x) => x !== id);
+											}}
+											class="chip-remove"
+										>✕</button>
+									</span>
+								{/each}
+							</div>
+						{/if}
+						{#each selectedAttractionIds as id (id)}
+							<input type="hidden" name="attractionIds" value={id} />
+						{/each}
 					</div>
 					<div class="field">
-						<label for="edit-tz" class="label">Timezone</label>
-						<input
-							type="text"
-							id="edit-tz"
-							name="timezone"
-							value={event.timezone || 'Asia/Ho_Chi_Minh'}
-							readonly
-							class="input input-readonly"
-						/>
+						<label for="edit-venue" class="label">Venue</label>
+						<select id="edit-venue" name="venueId" class="input">
+							<option value="">-- Select a Venue --</option>
+							{#each data.venues as venue (venue.id)}
+								<option value={venue.id} selected={venue.id === event.venueId}>
+									{venue.name} ({venue.city}, {venue.countryCode})
+								</option>
+							{/each}
+						</select>
+					</div>
+					<div class="field-row">
+						<div class="field">
+							<label for="edit-start" class="label"
+								>Date<span class="required">*</span></label
+							>
+							<input
+								type="datetime-local"
+								id="edit-start"
+								name="startAt"
+								required
+								value={toDateTimeLocalString(event.startAt)}
+								class="input"
+							/>
+						</div>
+						<div class="field">
+							<label for="edit-tz" class="label">Timezone</label>
+							<input
+								type="text"
+								id="edit-tz"
+								name="timezone"
+								value={event.timezone || 'Asia/Ho_Chi_Minh'}
+								readonly
+								class="input input-readonly"
+							/>
+						</div>
 					</div>
 					<div class="form-actions">
 						<button type="submit" disabled={loading} class="btn-primary">
@@ -933,8 +964,8 @@
 		color: var(--fg);
 	}
 	.tab-btn.active {
-		color: var(--accent);
-		box-shadow: 0 2px 0 0 var(--accent);
+		color: #2563eb;
+		box-shadow: 0 2px 0 0 #2563eb;
 	}
 
 	.content {
@@ -972,6 +1003,32 @@
 		display: grid;
 		grid-template-columns: 1fr 1fr;
 		gap: 16px;
+	}
+	.attraction-chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+	}
+	.attraction-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		padding: 2px 8px;
+		font-size: var(--text-xs);
+		font-weight: 500;
+		color: var(--fg);
+		background: var(--surface);
+		border-radius: var(--radius-sm);
+		box-shadow: 0 0 0 1px var(--border);
+	}
+	.chip-remove {
+		cursor: pointer;
+		background: none;
+		border: none;
+		font-size: 10px;
+		color: var(--muted);
+		padding: 0;
+		line-height: 1;
 	}
 	@media (max-width: 640px) {
 		.field-row {
