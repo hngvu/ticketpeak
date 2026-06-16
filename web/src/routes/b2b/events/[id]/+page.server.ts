@@ -30,13 +30,21 @@ export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 			apiFetch<any[]>(fetch, '/api/attractions').catch(() => [])
 		]);
 
+		let manifests: any[] = [];
+		if (event?.venueId) {
+			manifests = await apiFetch<any[]>(fetch, `/api/partner/venues/${event.venueId}/manifests`, {
+				headers: { Authorization: `Bearer ${accessToken}` }
+			}).catch(() => []);
+		}
+
 		return {
 			event,
 			offers,
 			inventory,
 			venues: venuesRes?.content || [],
 			classifications,
-			attractions
+			attractions,
+			manifests
 		};
 	} catch (err: any) {
 		console.error('[EVENT DETAILS LOAD ERROR]:', err);

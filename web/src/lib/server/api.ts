@@ -7,6 +7,8 @@ import {
 	MOCK_VENUE_BY_ID,
 	MOCK_CLASSIFICATIONS,
 	MOCK_EVENTS,
+	MOCK_VENUE_MANIFESTS,
+	MOCK_MANIFEST_DETAIL,
 	mockInventoryForEvent
 } from './mockData';
 
@@ -35,7 +37,14 @@ export interface PageResponse<T> {
 
 const MOCK_PAGE = <T>(items: T[]): PageResponse<T> => ({
 	content: items,
-	pageable: { pageNumber: 0, pageSize: 100, sort: { empty: true, sorted: false, unsorted: true }, offset: 0, unpaged: false, paged: true },
+	pageable: {
+		pageNumber: 0,
+		pageSize: 100,
+		sort: { empty: true, sorted: false, unsorted: true },
+		offset: 0,
+		unpaged: false,
+		paged: true
+	},
 	totalElements: items.length,
 	totalPages: 1,
 	last: true,
@@ -103,6 +112,41 @@ async function tryMockFallback<T>(path: string, _options?: RequestInit): Promise
 	// GET /api/partner/events (list — includes all statuses)
 	if (basePath === '/api/partner/events' || basePath.startsWith('/api/partner/events?')) {
 		return MOCK_PAGE(MOCK_EVENTS) as T;
+	}
+
+	// GET /api/partner/venues/{id}/manifests
+	const partnerManifestMatch = basePath.match(/^\/api\/partner\/venues\/([^/]+)\/manifests$/);
+	if (partnerManifestMatch) {
+		const venueId = partnerManifestMatch[1];
+		const manifests = MOCK_VENUE_MANIFESTS[venueId];
+		if (!manifests) return [] as T;
+		return manifests.map((m) => ({
+			id: m.id,
+			name: m.description,
+			description: m.description,
+			totalCapacity: m.totalCapacity,
+			status: m.status,
+			isDraft: m.status === 'DRAFT',
+			objects: m.objects
+		})) as T;
+	}
+
+	// GET /api/partner/venues/{id}/manifests/{manifestId}
+	const partnerManifestDetailMatch = basePath.match(
+		/^\/api\/partner\/venues\/([^/]+)\/manifests\/([^/]+)$/
+	);
+	if (partnerManifestDetailMatch) {
+		const manifestId = partnerManifestDetailMatch[2];
+		const detail = MOCK_MANIFEST_DETAIL[manifestId];
+		if (!detail) return undefined;
+		return {
+			manifest: detail.manifest,
+			levels: detail.levels,
+			sections: detail.sections,
+			priceLevels: detail.priceLevels,
+			rsAreas: detail.rsAreas,
+			gaAreas: detail.gaAreas
+		} as T;
 	}
 
 	return undefined;

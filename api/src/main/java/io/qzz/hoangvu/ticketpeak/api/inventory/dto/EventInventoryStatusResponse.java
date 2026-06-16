@@ -19,6 +19,6 @@ public record EventInventoryStatusResponse(
 
     public record ReservedSeatStatus(
         String seatId,
-        String status // "AVAILABLE", "HELD", "SOLD"
+        String status // "AVAILABLE", "HELD", "SOLD", "KILLED"
     ) {}
 }

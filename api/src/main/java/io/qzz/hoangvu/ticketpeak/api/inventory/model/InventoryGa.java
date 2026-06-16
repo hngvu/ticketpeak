@@ -51,4 +51,7 @@ public class InventoryGa {
 
     @Column(name = "sold", nullable = false)
     int sold;
+
+    @Column(name = "killed", nullable = false)
+    int killed;
 }

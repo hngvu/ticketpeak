@@ -244,12 +244,53 @@ public class VenueService {
         return ManifestResponse.from(clone);
     }
 
+    private static final List<String> PRESET_COLORS = List.of(
+            "#3b82f6", // Blue
+            "#10b981", // Emerald
+            "#a855f7", // Purple
+            "#ec4899", // Pink
+            "#14b8a6", // Teal
+            "#6366f1", // Indigo
+            "#84cc16", // Lime
+            "#06b6d4"  // Cyan
+    );
+
+    private String getNextAvailableColor(List<String> usedColors) {
+        List<String> lowercaseUsed = usedColors.stream()
+                .filter(java.util.Objects::nonNull)
+                .map(String::toLowerCase)
+                .toList();
+        for (String preset : PRESET_COLORS) {
+            if (!lowercaseUsed.contains(preset.toLowerCase())) {
+                return preset;
+            }
+        }
+        return PRESET_COLORS.get(0); // Fallback
+    }
+
     // ======================== LOOKUP TABLES ========================
 
     @Transactional
     public LevelResponse upsertLevel(String manifestId, UpsertLookupRequest req) {
         Manifest manifest = requireManifest(manifestId);
-        Level level = Level.builder().id(req.id()).manifest(manifest).description(req.description()).color(req.color()).build();
+        LevelId id = new LevelId(req.id(), manifestId);
+        Level level = levelRepository.findById(id)
+                .map(existing -> {
+                    existing.setDescription(req.description());
+                    if (req.color() != null && !req.color().isBlank()) {
+                        existing.setColor(req.color());
+                    }
+                    return existing;
+                })
+                .orElseGet(() -> {
+                    String color = req.color();
+                    if (color == null || color.isBlank()) {
+                        List<String> used = levelRepository.findByManifestId(manifestId)
+                                .stream().map(Level::getColor).toList();
+                        color = getNextAvailableColor(used);
+                    }
+                    return Level.builder().id(req.id()).manifest(manifest).description(req.description()).color(color).build();
+                });
         return LevelResponse.from(levelRepository.save(level));
     }
 
@@ -294,7 +335,24 @@ public class VenueService {
     @Transactional
     public PriceLevelResponse upsertPriceLevel(String manifestId, UpsertLookupRequest req) {
         Manifest manifest = requireManifest(manifestId);
-        PriceLevel pl = PriceLevel.builder().id(req.id()).manifest(manifest).description(req.description()).color(req.color()).build();
+        PriceLevelId id = new PriceLevelId(req.id(), manifestId);
+        PriceLevel pl = priceLevelRepository.findById(id)
+                .map(existing -> {
+                    existing.setDescription(req.description());
+                    if (req.color() != null && !req.color().isBlank()) {
+                        existing.setColor(req.color());
+                    }
+                    return existing;
+                })
+                .orElseGet(() -> {
+                    String color = req.color();
+                    if (color == null || color.isBlank()) {
+                        List<String> used = priceLevelRepository.findByManifestId(manifestId)
+                                .stream().map(PriceLevel::getColor).toList();
+                        color = getNextAvailableColor(used);
+                    }
+                    return PriceLevel.builder().id(req.id()).manifest(manifest).description(req.description()).color(color).build();
+                });
         return PriceLevelResponse.from(priceLevelRepository.save(pl));
     }
 

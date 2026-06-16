@@ -39,7 +39,13 @@ public class InventorySeat {
     @Column(name = "offer_id")
     UUID offerId;
 
+    @Column(name = "hold_group_id")
+    UUID holdGroupId;
+
+    @Column(name = "kill_group_id")
+    UUID killGroupId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    SeatInventoryStatus status; // AVAILABLE, HELD, SOLD
+    SeatInventoryStatus status; // AVAILABLE, HELD, SOLD, KILLED
 }

@@ -1,8 +1,7 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve */
 	/* eslint-disable @typescript-eslint/no-explicit-any */
 	import { enhance } from '$app/forms';
-	import { IconPlus, IconChevronDown, IconSearch, IconCheck } from '@tabler/icons-svelte';
+	import { IconPlus } from '@tabler/icons-svelte';
 	import Combobox from '$lib/components/ui/combobox.svelte';
 	import DateTimePicker from '$lib/components/common/DateTimePicker.svelte';
 
@@ -17,9 +16,48 @@
 	let { data, form } = $props();
 
 	let loading = $state(false);
-	let activeTab = $state('general');
+	let isAddOfferModalOpen = $state(false);
+
+	// Canvas Tools
 	let activeCanvasTool = $state<'select' | 'pan'>('select');
+	let selectionTool = $state<'seat' | 'row' | 'section'>('seat');
+	let showFilterDialog = $state(false);
+	let showAssistantDialog = $state(false);
+	let panX = $state(0);
+	let panY = $state(0);
+	let isPanning = $state(false);
+	let panStartX = $state(0);
+	let panStartY = $state(0);
+
+	function handleWheel(e: WheelEvent) {
+		e.preventDefault();
+		const oldZoom = canvasZoom;
+		let newZoom = e.deltaY < 0 ? oldZoom * 1.15 : oldZoom / 1.15;
+		canvasZoom = Math.max(0.1, Math.min(newZoom, 5));
+	}
+
+	function handlePointerDown(e: PointerEvent) {
+		if (e.button === 0 || e.button === 1) {
+			// Left or middle click pans
+			isPanning = true;
+			panStartX = e.clientX - panX;
+			panStartY = e.clientY - panY;
+			(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+		}
+	}
+	function handlePointerMove(e: PointerEvent) {
+		if (isPanning) {
+			panX = e.clientX - panStartX;
+			panY = e.clientY - panStartY;
+		}
+	}
+	function handlePointerUp(e: PointerEvent) {
+		isPanning = false;
+		(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+	}
 	let canvasZoom = $state(1);
+
+	let activeTab = $state('holds');
 
 	const event = $derived(form?.event || data.event);
 	const offers = $derived(data.offers || []);
@@ -41,13 +79,6 @@
 	let selectedAttractionIds = $state<string[]>(event.attractionIds || []);
 	let startAt = $state(event.startAt || '');
 
-	let showClassDropdown = $state(false);
-	let showAttractionDropdown = $state(false);
-	let showVenueDropdown = $state(false);
-	let classSearchQuery = $state('');
-	let attractionSearchQuery = $state('');
-	let venueSearchQuery = $state('');
-
 	const sortedClassifications = $derived.by(() => {
 		const raw = data.classifications || [];
 		const parents = raw.filter((c: any) => !c.parentId);
@@ -63,48 +94,6 @@
 		return result;
 	});
 
-	const filteredClassifications = $derived(
-		data.classifications?.filter((c: any) => {
-			const q = cleanVietnamese(classSearchQuery).toLowerCase();
-			return (
-				!q ||
-				cleanVietnamese(c.name || '')
-					.toLowerCase()
-					.includes(q)
-			);
-		}) || []
-	);
-	const filteredAttractions = $derived(
-		attractions.filter((a: any) => {
-			const q = cleanVietnamese(attractionSearchQuery).toLowerCase();
-			return (
-				!q ||
-				cleanVietnamese(a.name || '')
-					.toLowerCase()
-					.includes(q)
-			);
-		})
-	);
-	const filteredVenues = $derived(
-		data.venues?.filter((v: any) => {
-			const q = cleanVietnamese(venueSearchQuery).toLowerCase();
-			return (
-				!q ||
-				cleanVietnamese(v.name || '')
-					.toLowerCase()
-					.includes(q) ||
-				cleanVietnamese(v.city || '')
-					.toLowerCase()
-					.includes(q)
-			);
-		}) || []
-	);
-	const selectedVenue = $derived(data.venues?.find((v: any) => v.id === venueId));
-	const selectedClassification = $derived(
-		data.classifications?.find((c: any) => c.id === classificationId)
-	);
-
-	let isAddOfferModalOpen = $state(false);
 	let newOfferName = $state('');
 	let newOfferPrice = $state<number>(200000);
 	let newOfferLimit = $state<number>(300);
@@ -140,15 +129,47 @@
 	let newHoldReason = $state('');
 	let newHoldType = $state<'LOCKED' | 'KILLED'>('LOCKED');
 
-	let selectedSeatId = $state<string | null>(null);
+	let selectedSeatIds = $state<string[]>([]);
+	let selectedManifestId = $state(
+		data.manifests.length > 0
+			? data.manifests.find((m) => m.status === 'PUBLISHED')?.id || data.manifests[0].id
+			: ''
+	);
+	const selectedManifest = $derived(data.manifests.find((m: any) => m.id === selectedManifestId));
+
+	let manifestDetail = $state<any>(null);
+	$effect(() => {
+		const mid = selectedManifestId;
+		const vid = event.venueId;
+		if (!mid || !vid) {
+			manifestDetail = null;
+			return;
+		}
+		manifestDetail = null;
+		fetch(`/api/partner/venues/${vid}/manifests/${mid}`)
+			.then((r) => (r.ok ? r.json() : null))
+			.then((json) => {
+				manifestDetail = json?.data || null;
+			})
+			.catch(() => {
+				manifestDetail = null;
+			});
+	});
+
+	const hasLayoutData = $derived(
+		manifestDetail && (manifestDetail.gaAreas?.length > 0 || manifestDetail.rsAreas?.length > 0)
+	);
+
 	const seatR = 6;
 	function seatColor(status: string) {
 		if (status === 'Sold') return '#059669';
 		if (status === 'Reserved') return '#D97706';
-		if (status === 'Held') return '#DC2626';
+		if (status === 'Held') return '#F59E0B';
+		if (status === 'Killed') return '#EF4444';
 		return '#94A3B8';
 	}
 	const seats = $derived.by(() => {
+		if (hasLayoutData) return [];
 		const result: {
 			id: string;
 			rowLetter: string;
@@ -157,50 +178,81 @@
 			x: number;
 			y: number;
 		}[] = [];
-		for (let r = 0; r < 4; r++) {
+		const cap = selectedManifest?.totalCapacity || 500;
+		const isLarge = cap > 5000;
+		const rowCount = isLarge ? 6 : 4;
+		const colsPerRow = isLarge ? 14 : 10;
+		for (let r = 0; r < rowCount; r++) {
 			const rowLetter = String.fromCharCode(65 + r);
-			for (let c = 0; c < 10; c++) {
+			for (let c = 0; c < colsPerRow; c++) {
 				const seatNum = c + 1;
 				const id = `${rowLetter}-${seatNum}`;
-				const isLeftBlock = c < 5;
-				const localIndex = isLeftBlock ? c : c - 5;
-				const aisleOffset = isLeftBlock ? 0 : 44;
+				const isLeftBlock = c < colsPerRow / 2;
+				const localIndex = isLeftBlock ? c : c - colsPerRow / 2;
+				const aisleOffset = isLeftBlock ? 0 : isLarge ? 60 : 44;
 				const x = 75 + localIndex * 32 + aisleOffset;
-				const y = 80 + r * 42;
+				const y = 80 + r * (isLarge ? 50 : 42);
 				let status: string = 'Available';
-				if ((r === 0 && c < 3) || (r === 1 && c === 4)) status = 'Sold';
-				else if (r === 2 && c > 7) status = 'Held';
-				else if (r === 3 && c === 2) status = 'Reserved';
+				if (!isLarge) {
+					if ((r === 0 && c < 3) || (r === 1 && c === 4)) status = 'Sold';
+					else if (r === 2 && c > 7) status = 'Held';
+					else if (r === 3 && c === 2) status = 'Reserved';
+				} else {
+					if ((r === 0 && c > 10) || (r === 2 && c === 5)) status = 'Sold';
+					else if (r === 4 && c < 2) status = 'Held';
+				}
+				status = seatStatuses[id] || status;
 				result.push({ id, rowLetter, seatNum, status, x, y });
 			}
 		}
 		return result;
 	});
-	const selectedSeatDetail = $derived(seats.find((s) => s.id === selectedSeatId));
+	const selectedSeatDetails = $derived(seats.filter((s) => selectedSeatIds.includes(s.id)));
+	let seatPriceLevels = $state<Record<string, string>>({});
+	let seatStatuses = $state<Record<string, string>>({});
+
+	const selectedSeatsByPriceLevel = $derived.by(() => {
+		const counts: Record<string, number> = {};
+		selectedSeatDetails.forEach((s) => {
+			const plId = seatPriceLevels[s.id] || (s.rowLetter < 'C' ? 'VIP' : 'GA');
+			counts[plId] = (counts[plId] || 0) + 1;
+		});
+		return Object.entries(counts).map(([plId, count]) => ({
+			pl: basePriceLevels.find((p) => p.id === plId) || basePriceLevels[0],
+			count
+		}));
+	});
 	const totalSeats = $derived(seats.length);
 	const totalSold = $derived(seats.filter((s) => s.status === 'Sold').length);
 	const totalReserved = $derived(
 		seats.filter((s) => s.status === 'Reserved' || s.status === 'Held').length
 	);
+	const totalKilled = $derived(seats.filter((s) => s.status === 'Killed').length);
+	let basePriceLevels = $state([
+		{ id: 'VIP', color: '#7c3aed', label: 'VIP' },
+		{ id: 'GA', color: '#059669', label: 'General Admission' }
+	]);
+	const PRESET_COLORS = [
+		'#3b82f6', '#10b981', '#a855f7', '#ec4899', '#14b8a6', '#6366f1', '#84cc16', '#06b6d4'
+	];
+	function getNextPriceLevelColor() {
+		const used = basePriceLevels.map(p => (p.color || '').toLowerCase());
+		for (const color of PRESET_COLORS) {
+			if (!used.includes(color.toLowerCase())) return color;
+		}
+		return PRESET_COLORS[0];
+	}
 	const priceLevels = $derived.by(() => {
-		const vip = seats.filter((s) => s.rowLetter < 'C');
-		const ga = seats.filter((s) => s.rowLetter >= 'C');
-		return [
-			{
-				id: 'VIP',
-				color: '#7c3aed',
-				label: 'VIP',
-				count: vip.length,
-				avail: vip.filter((s) => s.status === 'Available').length
-			},
-			{
-				id: 'GA',
-				color: '#059669',
-				label: 'General Admission',
-				count: ga.length,
-				avail: ga.filter((s) => s.status === 'Available').length
-			}
-		];
+		return basePriceLevels.map((pl) => {
+			const plSeats = seats.filter(
+				(s) => (seatPriceLevels[s.id] || (s.rowLetter < 'C' ? 'VIP' : 'GA')) === pl.id
+			);
+			return {
+				...pl,
+				avail: plSeats.filter((s) => s.status === 'Available').length,
+				count: plSeats.length
+			};
+		});
 	});
 
 	function zoomIn() {
@@ -213,21 +265,8 @@
 		canvasZoom = 1;
 	}
 
-	function toDateTimeLocalString(isoString: string) {
-		if (!isoString) return '';
-		const d = new Date(isoString);
-		const pad = (n: number) => n.toString().padStart(2, '0');
-		return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-	}
-
 	function formatCurrency(amount: number) {
 		return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
-	}
-
-	function formatDateShort(iso: string) {
-		if (!iso) return '';
-		const d = new Date(iso);
-		return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 	}
 
 	function handleAddOffer(e: Event) {
@@ -271,10 +310,6 @@
 		newHoldType = 'LOCKED';
 		isAddHoldModalOpen = false;
 	}
-
-	function releaseHold(id: string) {
-		holds = holds.filter((h) => h.id !== id);
-	}
 </script>
 
 <svelte:head>
@@ -305,7 +340,7 @@
 				class="tab-btn"
 				class:active={activeTab === 'seats'}
 			>
-				<span>Seat Map & Inventory</span>
+				<span>Seat Map</span>
 			</button>
 			<button
 				type="button"
@@ -313,7 +348,7 @@
 				class="tab-btn"
 				class:active={activeTab === 'offers'}
 			>
-				<span>Offers & Presales</span>
+				<span>Offers</span>
 			</button>
 			<button
 				type="button"
@@ -364,7 +399,7 @@
 							displayFn={(c) => {
 								if (!c) return '';
 								if (c.parentId) {
-									const parent = sortedClassifications.find((p: any) => p.id === c.parentId);
+									const parent = sortedClassifications.find((p: any) => p.parentId === c.parentId);
 									return parent ? `${parent.name} > ${c.name}` : c.name;
 								}
 								return c.name;
@@ -470,198 +505,448 @@
 					</div>
 				</form>
 			</div>
-		{:else if activeTab === 'seats'}
+		{:else if activeTab === 'seats' || activeTab === 'holds'}
 			<div class="venue-bar">
-				<label for="seat-venue" class="venue-label">Venue</label>
-				<select id="seat-venue" name="venueId" class="input venue-select">
-					{#each data.venues as venue (venue.id)}
-						<option value={venue.id} selected={venue.id === event.venueId}>
-							{venue.name} ({venue.city}, {venue.countryCode})
+				<label for="seat-manifest" class="venue-label">Manifest</label>
+				<select
+					id="seat-manifest"
+					name="manifestId"
+					class="input venue-select"
+					bind:value={selectedManifestId}
+				>
+					{#each data.manifests as manifest (manifest.id)}
+						<option value={manifest.id}>
+							{manifest.name}
 						</option>
 					{/each}
 				</select>
-				<span class="manifest-badge">{venueName || 'No manifest'}</span>
+				<div class="venue-actions">
+					<span class="manifest-badge">{venueName || 'No manifest'}</span>
+				</div>
 			</div>
 
-			<div class="card canvas-editor">
-				<div class="canvas-toolbar">
-					<div class="toolbar-group">
-						<span class="toolbar-mode active">Scaling</span>
-					</div>
-					<div class="toolbar-group">
-						<button type="button" onclick={zoomOut} class="tool-icon-btn" title="Zoom Out">−</button
-						>
-						<span class="zoom-label">{Math.round(canvasZoom * 100)}%</span>
-						<button type="button" onclick={zoomIn} class="tool-icon-btn" title="Zoom In">+</button>
-					</div>
-					<div class="toolbar-group">
-						<button type="button" onclick={fitToView} class="tool-icon-btn" title="Fit to View"
-							>⌂</button
-						>
-					</div>
-					<div class="toolbar-spacer"></div>
-					<button type="button" class="tool-btn-save">Save</button>
-				</div>
-
-				<div class="canvas-body">
-					<aside class="canvas-sidebar">
-						<div class="sidebar-section-header">
-							<h3 class="sidebar-title">Price Levels</h3>
-						</div>
-						<div class="sidebar-list">
-							<div class="pl-item pl-unassigned">
-								<span class="pl-dot"></span>
-								<span class="pl-name">Unassigned</span>
-								<span class="pl-count">0</span>
+			<div
+				class="relative flex min-h-[600px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+			>
+				<div class="relative flex min-h-0 flex-1">
+					<aside class="flex w-[280px] shrink-0 flex-col border-r border-slate-200 bg-white">
+						{#if activeTab === 'seats'}
+							<div class="flex items-center justify-between border-b border-slate-200 px-4 py-2.5">
+								<h3 class="text-[10px] font-black tracking-widest text-slate-400 uppercase">
+									Price Levels
+								</h3>
+								<button
+									type="button"
+									onclick={() =>
+										basePriceLevels.push({
+											id: `PL-${Date.now()}`,
+											color: getNextPriceLevelColor(),
+											label: 'New Level'
+										})}
+									class="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+									aria-label="Add price level"
+								>
+									<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+										><path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2.5"
+											d="M12 4v16m8-8H4"
+										/></svg
+									>
+								</button>
 							</div>
-							{#each priceLevels as pl}
-								<div class="pl-item">
-									<span class="pl-dot" style="background:{pl.color}"></span>
-									<div class="pl-info">
-										<span class="pl-name">{pl.label}</span>
-										<div class="pl-meta">
-											<span class="pl-count">{pl.avail} avail</span>
-											<span class="pl-sep">·</span>
-											<span class="pl-count">{pl.count} total</span>
-										</div>
-									</div>
+							<div class="flex-1 space-y-px overflow-y-auto px-3 py-2">
+								<div class="flex items-center gap-2 rounded-lg px-2.5 py-2 text-[11px]">
+									<span
+										class="flex h-3 w-3 shrink-0 items-center justify-center rounded-full border-2 border-slate-300 bg-white"
+									></span>
+									<span class="flex-1 font-semibold text-slate-500">Unassigned</span>
+									<span class="font-bold text-slate-400">0</span>
 								</div>
-							{/each}
-						</div>
+								{#each basePriceLevels as bpl, i (bpl.id)}
+									{@const pl = priceLevels[i]}
+									<div
+										class="group flex items-center gap-2 rounded-lg px-2.5 py-2 text-[11px] transition-colors hover:bg-slate-50"
+										role="listitem"
+										ondragover={(e) => {
+											e.preventDefault();
+											if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+										}}
+										ondrop={(e) => {
+											e.preventDefault();
+											const data = e.dataTransfer?.getData('text/plain');
+											if (data === 'selected_seats' && selectedSeatIds.length > 0) {
+												const updated = { ...seatPriceLevels };
+												selectedSeatIds.forEach((id) => {
+													updated[id] = bpl.id;
+												});
+												seatPriceLevels = updated;
+												selectedSeatIds = []; // clear selection after assign
+											}
+										}}
+									>
+										<label
+											class="relative flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-white/50"
+											style="background:{bpl.color}"
+										>
+											<input
+												type="color"
+												bind:value={bpl.color}
+												class="absolute -inset-2 h-8 w-8 cursor-pointer opacity-0"
+											/>
+										</label>
+										<div class="flex flex-1 flex-col gap-0.5">
+											<input
+												type="text"
+												bind:value={bpl.label}
+												class="w-full border-none bg-transparent p-0 font-bold text-slate-800 outline-none focus:border-none focus:ring-0"
+											/>
+											<div class="flex items-center gap-1 text-[10px] text-slate-400">
+												<span class="font-semibold">{pl.avail} avail</span>
+												<span class="text-slate-300">·</span>
+												<span>{pl.count} total</span>
+											</div>
+										</div>
+										<button
+											type="button"
+											onclick={() => {
+												basePriceLevels = basePriceLevels.filter((p) => p.id !== bpl.id);
+											}}
+											class="hidden h-5 w-5 items-center justify-center rounded text-slate-400 group-hover:flex hover:bg-slate-200 hover:text-red-500"
+											aria-label="Remove {bpl.label}"
+										>
+											<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+												><path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M6 18L18 6M6 6l12 12"
+												/></svg
+											>
+										</button>
+									</div>
+								{/each}
+							</div>
+						{/if}
 
-						<div class="sidebar-section-header">
-							<h3 class="sidebar-title sidebar-title-sm">Financial Information</h3>
-						</div>
-						<div class="fin-row">
-							<span class="fin-label">Total Capacity</span>
-							<span class="fin-value">{totalSeats}</span>
-						</div>
-						<div class="fin-row">
-							<span class="fin-label">Sold</span>
-							<span class="fin-value fin-value-green">{totalSold}</span>
-						</div>
-						<div class="fin-row">
-							<span class="fin-label">Reserved / Held</span>
-							<span class="fin-value fin-value-amber">{totalReserved}</span>
+						{#if activeTab === 'holds'}
+							<div class="flex items-center justify-between border-b border-slate-200 px-4 py-2.5">
+								<h3 class="text-[10px] font-black tracking-widest text-slate-400 uppercase">
+									Holds & Kills
+								</h3>
+								<button
+									type="button"
+									onclick={() => (isAddHoldModalOpen = true)}
+									class="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+									aria-label="Add hold"
+								>
+									<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+										><path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2.5"
+											d="M12 4v16m8-8H4"
+										/></svg
+									>
+								</button>
+							</div>
+							<div class="flex-1 overflow-y-auto px-3 py-2">
+								{#if holds.some((h) => h.status === 'LOCKED')}
+									<div class="px-2.5 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+										Holds
+									</div>
+									<div class="space-y-px mb-2">
+										{#each holds.filter((h) => h.status === 'LOCKED') as hold}
+											<div
+												class="group flex items-center gap-2 rounded-lg px-2.5 py-2 text-[11px] transition-colors hover:bg-slate-50"
+												ondragover={(e) => {
+													e.preventDefault();
+													if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+												}}
+												ondrop={(e) => {
+													e.preventDefault();
+													const data = e.dataTransfer?.getData('text/plain');
+													if (data === 'selected_seats' && selectedSeatIds.length > 0) {
+														const updated = { ...seatStatuses };
+														selectedSeatIds.forEach((id) => {
+															updated[id] = 'Held';
+														});
+														seatStatuses = updated;
+														hold.count += selectedSeatIds.length;
+														selectedSeatIds = [];
+													}
+												}}
+											>
+												<span class="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm text-[8px] font-bold text-white bg-amber-500">
+													H
+												</span>
+												<div class="flex flex-1 flex-col gap-0.5">
+													<span class="font-bold text-slate-800 truncate">{hold.name}</span>
+													<div class="flex items-center gap-1 text-[10px] text-slate-400">
+														<span class="font-semibold">{seats.filter(s => seatStatuses[s.id] === 'Held' && (seatStatuses[s.id] === 'Held')).length} seats</span>
+													</div>
+												</div>
+											</div>
+										{/each}
+									</div>
+								{/if}
+
+								{#if holds.some((h) => h.status === 'KILLED')}
+									<div class="px-2.5 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+										Kills
+									</div>
+									<div class="space-y-px">
+										{#each holds.filter((h) => h.status === 'KILLED') as hold}
+											<div
+												class="group flex items-center gap-2 rounded-lg px-2.5 py-2 text-[11px] transition-colors hover:bg-slate-50"
+												ondragover={(e) => {
+													e.preventDefault();
+													if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+												}}
+												ondrop={(e) => {
+													e.preventDefault();
+													const data = e.dataTransfer?.getData('text/plain');
+													if (data === 'selected_seats' && selectedSeatIds.length > 0) {
+														const updated = { ...seatStatuses };
+														selectedSeatIds.forEach((id) => {
+															updated[id] = 'Killed';
+														});
+														seatStatuses = updated;
+														hold.count += selectedSeatIds.length;
+														selectedSeatIds = [];
+													}
+												}}
+											>
+												<span class="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm text-[8px] font-bold text-white bg-red-500">
+													K
+												</span>
+												<div class="flex flex-1 flex-col gap-0.5">
+													<span class="font-bold text-slate-800 truncate">{hold.name}</span>
+													<div class="flex items-center gap-1 text-[10px] text-slate-400">
+														<span class="font-semibold">{seats.filter(s => seatStatuses[s.id] === 'Killed').length} seats</span>
+													</div>
+												</div>
+											</div>
+										{/each}
+									</div>
+								{/if}
+							</div>
+						{/if}
+						<div class="border-t border-slate-200 bg-slate-50/50 px-4 py-3">
+							<h4 class="mb-2 text-[9px] font-black tracking-widest text-slate-400 uppercase">
+								Financial Information
+							</h4>
+							<div class="space-y-1.5 text-[11px]">
+								<div class="flex items-center justify-between">
+									<span class="font-medium text-slate-500">Total Capacity</span>
+									<span class="font-bold text-slate-800">{totalSeats}</span>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-medium text-slate-500">Sold</span>
+									<span class="font-bold text-emerald-700">{totalSold}</span>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-medium text-slate-500">Reserved / Held</span>
+									<span class="font-bold text-amber-600">{totalReserved}</span>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-medium text-slate-500">Killed</span>
+									<span class="font-bold text-slate-800">{totalKilled}</span>
+								</div>
+							</div>
 						</div>
 					</aside>
 
-					<main class="canvas-main">
-						<div class="canvas-viewport">
-							<div class="canvas-stage" style="transform: scale({canvasZoom})">
-								<svg viewBox="0 0 420 300" class="seating-canvas">
-									<rect
-										x="135"
-										y="12"
-										width="150"
-										height="36"
-										rx="4"
-										fill="#e2e8f0"
-										stroke="#cbd5e1"
-									/>
-									<text
-										x="210"
-										y="35"
-										text-anchor="middle"
-										fill="#64748b"
-										font-size="11"
-										font-weight="700"
-										letter-spacing="2">STAGE</text
-									>
-
-									<rect
-										x="55"
-										y="62"
-										width="310"
-										height="90"
-										rx="6"
-										fill="#f5f3ff"
-										stroke="#e9d5ff"
-										stroke-width="1"
-									/>
-									<rect
-										x="55"
-										y="165"
-										width="310"
-										height="90"
-										rx="6"
-										fill="#ecfdf5"
-										stroke="#a7f3d0"
-										stroke-width="1"
-									/>
-
-									<text
-										x="65"
-										y="77"
-										fill="#7c3aed"
-										font-size="8"
-										font-weight="700"
-										letter-spacing="1">VIP</text
-									>
-									<text
-										x="65"
-										y="180"
-										fill="#059669"
-										font-size="8"
-										font-weight="700"
-										letter-spacing="1">GA</text
-									>
-
-									{#each ['A', 'B', 'C', 'D'] as letter, i}
-										<text
-											x="70"
-											y={86 + i * 42 + 5}
-											text-anchor="end"
-											fill="#94a3b8"
-											font-size="10"
-											font-weight="700">{letter}</text
-										>
-									{/each}
-
-									{#each seats as seat (seat.id)}
-										<circle
-											cx={seat.x}
-											cy={seat.y}
-											r={selectedSeatId === seat.id ? seatR + 2 : seatR}
-											fill={seatColor(seat.status)}
-											stroke={selectedSeatId === seat.id ? '#3B82F6' : 'none'}
-											stroke-width={selectedSeatId === seat.id ? '2' : '0'}
-											onclick={() => (selectedSeatId = seat.id)}
-											role="button"
-											tabindex="0"
-											onkeydown={(e) => e.key === 'Enter' && (selectedSeatId = seat.id)}
-											aria-label="Seat {seat.id} ({seat.status})"
+					<main
+						class="relative flex flex-1 flex-col overflow-hidden bg-[#FAFAFA] select-none"
+						style="cursor: {activeCanvasTool === 'pan' || isPanning ? 'grabbing' : 'default'}"
+					>
+						<div
+							class="relative flex w-full flex-1 items-center justify-center overflow-hidden"
+							role="application"
+							aria-label="Seat map canvas"
+							onwheel={handleWheel}
+							onpointerdown={handlePointerDown}
+							onpointermove={handlePointerMove}
+							onpointerup={handlePointerUp}
+							onpointercancel={handlePointerUp}
+							oncontextmenu={(e) => e.preventDefault()}
+						>
+							<div
+								style="transform: translate({panX}px, {panY}px) scale({canvasZoom}); transform-origin: center; pointer-events: {activeCanvasTool ===
+								'pan'
+									? 'none'
+									: 'auto'};"
+							>
+								<svg viewBox="0 0 420 300" class="seating-canvas h-[300px] w-[420px]">
+									<!-- Stage -->
+									{#if selectedManifest?.objects}
+										{#each selectedManifest.objects.filter((o: any) => o.type === 'stage') as obj (obj.type)}
+											<rect
+												x={obj.x || 135}
+												y={obj.y || 12}
+												width={obj.width || 150}
+												height={obj.height || 36}
+												rx="4"
+												fill="#e2e8f0"
+												stroke="#cbd5e1"
+											/>
+											<text
+												x={(obj.x || 135) + (obj.width || 150) / 2}
+												y={(obj.y || 12) + (obj.height || 36) / 2 + 4}
+												text-anchor="middle"
+												fill="#64748b"
+												font-size="11"
+												font-weight="700"
+												letter-spacing="2">{obj.text || 'STAGE'}</text
+											>
+										{/each}
+									{:else}
+										<rect
+											x="135"
+											y="12"
+											width="150"
+											height="36"
+											rx="4"
+											fill="#e2e8f0"
+											stroke="#cbd5e1"
 										/>
-									{/each}
-								</svg>
-							</div>
+										<text
+											x="210"
+											y="35"
+											text-anchor="middle"
+											fill="#64748b"
+											font-size="11"
+											font-weight="700"
+											letter-spacing="2">STAGE</text
+										>
+									{/if}
 
-							<div class="zoom-controls">
-								<button type="button" onclick={zoomIn} class="zoom-btn" title="Zoom In">+</button>
-								<button type="button" onclick={zoomOut} class="zoom-btn" title="Zoom Out">−</button>
-								<div class="zoom-divider"></div>
-								<button type="button" onclick={fitToView} class="zoom-btn" title="Fit to View"
-									>⊞</button
-								>
-							</div>
+									{#if hasLayoutData}
+										<!-- GA Areas as colored blocks -->
+										{#each manifestDetail.gaAreas || [] as ga (ga.id ?? ga.sectionId)}
+											<rect
+												x={ga.x || 55}
+												y={ga.y || 60}
+												width={ga.width || 310}
+												height={ga.height || 180}
+												rx="8"
+												fill={manifestDetail.sections?.find((s: any) => s.id === ga.sectionId)
+													?.color || '#EF4444'}
+												opacity="0.15"
+											/>
+											<rect
+												x={ga.x || 55}
+												y={ga.y || 60}
+												width={ga.width || 310}
+												height={ga.height || 180}
+												rx="8"
+												fill="none"
+												stroke={manifestDetail.sections?.find((s: any) => s.id === ga.sectionId)
+													?.color || '#EF4444'}
+												stroke-width="2"
+												stroke-dasharray="6 3"
+											/>
+											<text
+												x={(ga.x || 55) + (ga.width || 310) / 2}
+												y={(ga.y || 60) + (ga.height || 180) / 2 - 8}
+												text-anchor="middle"
+												fill={manifestDetail.sections?.find((s: any) => s.id === ga.sectionId)
+													?.color || '#EF4444'}
+												font-size="12"
+												font-weight="800"
+												letter-spacing="1"
+											>
+												{manifestDetail.sections?.find((s: any) => s.id === ga.sectionId)?.name ||
+													'GA'}
+											</text>
+											<text
+												x={(ga.x || 55) + (ga.width || 310) / 2}
+												y={(ga.y || 60) + (ga.height || 180) / 2 + 12}
+												text-anchor="middle"
+												fill={manifestDetail.sections?.find((s: any) => s.id === ga.sectionId)
+													?.color || '#EF4444'}
+												font-size="10"
+												font-weight="600"
+												opacity="0.7"
+											>
+												{(ga.capacity || 0).toLocaleString()} standing
+											</text>
+										{/each}
 
-							<div class="minimap">
-								<div class="minimap-header">
-									<span>Map</span>
-									<span class="minimap-pct">{Math.round(canvasZoom * 100)}%</span>
-								</div>
-								<div class="minimap-body">
-									<svg viewBox="0 0 420 300" class="minimap-svg">
+										<!-- RS Areas as bordered sections -->
+										{#each manifestDetail.rsAreas || [] as rs (rs.id ?? rs.sectionId)}
+											<rect
+												x={rs.x || 55}
+												y={rs.y || 60}
+												width={rs.width || 310}
+												height={rs.height || 90}
+												rx="6"
+												fill={manifestDetail.sections?.find((s: any) => s.id === rs.sectionId)
+													?.color
+													? manifestDetail.sections.find((s: any) => s.id === rs.sectionId).color +
+														'15'
+													: '#f5f3ff'}
+												stroke={manifestDetail.sections?.find((s: any) => s.id === rs.sectionId)
+													?.color || '#e9d5ff'}
+												stroke-width="1"
+											/>
+											<text
+												x={(rs.x || 55) + 10}
+												y={(rs.y || 60) + 15}
+												fill={manifestDetail.sections?.find((s: any) => s.id === rs.sectionId)
+													?.color || '#7c3aed'}
+												font-size="8"
+												font-weight="700"
+												letter-spacing="1"
+											>
+												{manifestDetail.sections?.find((s: any) => s.id === rs.sectionId)?.name ||
+													'RS'}
+											</text>
+											<!-- Render seats within RS area -->
+											{#each rs.rows || [] as row (row.id ?? row.label)}
+												{#each row.seats || [] as seat (seat.id)}
+													<circle
+														cx={seat.positionX || 0}
+														cy={seat.positionY || 0}
+														r={seatR}
+														fill={seatColor(seat.status || 'AVAILABLE')}
+														stroke="none"
+														class="cursor-pointer transition-all hover:opacity-80"
+													/>
+													{#if selectedSeatIds.includes(seat.id)}
+														<circle
+															cx={seat.positionX || 0}
+															cy={seat.positionY || 0}
+															r={seatR - 0.75}
+															fill="none"
+															stroke="#000000"
+															stroke-width="1.5"
+															class="pointer-events-none"
+														/>
+													{/if}
+												{/each}
+											{/each}
+										{/each}
+
+										<!-- Fallback: no areas at all, show empty state -->
+										{#if (manifestDetail.gaAreas || []).length === 0 && (manifestDetail.rsAreas || []).length === 0}
+											<text x="210" y="160" text-anchor="middle" fill="#94a3b8" font-size="12"
+												>No layout areas defined</text
+											>
+										{/if}
+									{:else}
+										<!-- Fallback: no manifest detail, show hardcoded grid -->
 										<rect
 											x="55"
 											y="62"
 											width="310"
 											height="90"
 											rx="6"
-											fill="#e9d5ff"
-											fill-opacity="0.3"
-											stroke="#7c3aed"
-											stroke-width="2"
+											fill="#f5f3ff"
+											stroke="#e9d5ff"
+											stroke-width="1"
 										/>
 										<rect
 											x="55"
@@ -669,144 +954,387 @@
 											width="310"
 											height="90"
 											rx="6"
-											fill="#a7f3d0"
-											fill-opacity="0.3"
-											stroke="#059669"
-											stroke-width="2"
+											fill="#ecfdf5"
+											stroke="#a7f3d0"
+											stroke-width="1"
 										/>
+										<text
+											x="65"
+											y="77"
+											fill="#7c3aed"
+											font-size="8"
+											font-weight="700"
+											letter-spacing="1">VIP</text
+										>
+										<text
+											x="65"
+											y="180"
+											fill="#059669"
+											font-size="8"
+											font-weight="700"
+											letter-spacing="1">GA</text
+										>
+										{#each ['A', 'B', 'C', 'D'] as letter, i (letter)}
+											<text
+												x="70"
+												y={86 + i * 42 + 5}
+												text-anchor="end"
+												fill="#94a3b8"
+												font-size="10"
+												font-weight="700">{letter}</text
+											>
+										{/each}
 										{#each seats as seat (seat.id)}
 											<circle
 												cx={seat.x}
 												cy={seat.y}
-												r="2"
+												r={seatR}
 												fill={seat.status === 'Available'
-													? '#94a3b8'
-													: seat.status === 'Sold'
-														? '#059669'
-														: seat.status === 'Reserved'
-															? '#d97706'
-															: '#dc2626'}
-											/>
-										{/each}
-									</svg>
-								</div>
-							</div>
+														? basePriceLevels.find(
+																(p) =>
+																	p.id ===
+																	(seatPriceLevels[seat.id] ||
+																		(seat.rowLetter < 'C' ? 'VIP' : 'GA'))
+															)?.color || '#94A3B8'
+														: seatColor(seat.status)}
+												stroke="none"
+												stroke-width="0"
+												oncontextmenu={(e) => {
+													e.preventDefault();
+													e.stopPropagation();
+													let idsToToggle = [seat.id];
+													if (selectionTool === 'row')
+														idsToToggle = seats
+															.filter((s) => s.rowLetter === seat.rowLetter)
+															.map((s) => s.id);
+													else if (selectionTool === 'section')
+														idsToToggle = seats
+															.filter((s) => s.rowLetter < 'C' === seat.rowLetter < 'C')
+															.map((s) => s.id);
 
-							{#if selectedSeatDetail}
-								<div class="selected-bar">
-									<div class="selected-bar-icon">
-										<svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-											><path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"
-											/></svg
+													const allSelected = idsToToggle.every((id) =>
+														selectedSeatIds.includes(id)
+													);
+													if (allSelected) {
+														selectedSeatIds = selectedSeatIds.filter(
+															(id) => !idsToToggle.includes(id)
+														);
+													} else {
+														selectedSeatIds = [...new Set([...selectedSeatIds, ...idsToToggle])];
+													}
+												}}
+												role="button"
+												tabindex="0"
+												onkeydown={(e) => e.key === 'Enter' && (selectedSeatIds = [seat.id])}
+												aria-label="Seat {seat.id} ({seat.status})"
+												class="cursor-pointer transition-all outline-none hover:opacity-80 focus:outline-none"
+											/>
+											{#if selectedSeatIds.includes(seat.id)}
+												<circle
+													cx={seat.x}
+													cy={seat.y}
+													r={seatR - 0.75}
+													fill="none"
+													stroke="#000000"
+													stroke-width="1.5"
+													class="pointer-events-none"
+												/>
+											{/if}
+										{/each}
+									{/if}
+								</svg>
+							</div>
+						</div>
+
+						<div
+							class="absolute right-4 bottom-4 z-30 flex flex-col items-center gap-0.5 rounded-xl border border-slate-200/80 bg-white/90 p-0.5 shadow-lg backdrop-blur-md"
+						>
+							<button
+								type="button"
+								onclick={zoomIn}
+								class="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
+								title="Zoom In"
+							>
+								<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+									><path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2.5"
+										d="M12 4v16m8-8H4"
+									/></svg
+								>
+							</button>
+							<button
+								type="button"
+								onclick={zoomOut}
+								class="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
+								title="Zoom Out"
+							>
+								<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+									><path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2.5"
+										d="M20 12H4"
+									/></svg
+								>
+							</button>
+							<div class="h-px w-4 bg-slate-200"></div>
+							<button
+								type="button"
+								onclick={fitToView}
+								class="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
+								title="Fit to View"
+							>
+								<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+									><path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
+									/></svg
+								>
+							</button>
+						</div>
+
+						<!-- Mini-map -->
+						<div
+							class="absolute right-16 bottom-4 z-30 flex h-32 w-44 flex-col overflow-hidden rounded-xl border border-slate-200/80 bg-white/90 p-2 shadow-lg backdrop-blur-md"
+						>
+							<div
+								class="flex items-center justify-between pb-1 text-[8px] font-bold tracking-wider text-slate-400 uppercase"
+							>
+								<span>Map</span>
+								<span class="rounded bg-slate-100 px-1 py-0.5 font-mono text-[7px] text-slate-500"
+									>{Math.round(canvasZoom * 100)}%</span
+								>
+							</div>
+							<div
+								class="relative w-full flex-1 overflow-hidden rounded-lg border border-slate-200/60 bg-slate-50"
+							>
+								<svg viewBox="0 0 420 300" class="pointer-events-none h-full w-full">
+									<rect
+										x="55"
+										y="62"
+										width="310"
+										height="90"
+										rx="6"
+										fill="#e9d5ff"
+										fill-opacity="0.3"
+										stroke="#7c3aed"
+										stroke-width="2"
+									/>
+									<rect
+										x="55"
+										y="165"
+										width="310"
+										height="90"
+										rx="6"
+										fill="#a7f3d0"
+										fill-opacity="0.3"
+										stroke="#059669"
+										stroke-width="2"
+									/>
+									{#each seats as seat (seat.id)}
+										<circle
+											cx={seat.x}
+											cy={seat.y}
+											r="2"
+											fill={seat.status === 'Available'
+												? '#94a3b8'
+												: seat.status === 'Sold'
+													? '#059669'
+													: seat.status === 'Reserved'
+														? '#d97706'
+														: '#dc2626'}
+										/>
+									{/each}
+								</svg>
+							</div>
+						</div>
+
+						{#if selectedSeatDetails.length > 0}
+							<div
+								draggable="true"
+								ondragstart={(e) => {
+									e.dataTransfer?.setData('text/plain', 'selected_seats');
+									if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+								}}
+								role="region"
+								aria-label="Selected seats"
+								class="absolute top-3 left-3 z-30 flex min-w-[200px] cursor-grab flex-col rounded-xl border border-slate-200 bg-white/95 shadow-lg backdrop-blur-md active:cursor-grabbing"
+							>
+								<div class="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+									<div class="flex items-center gap-2.5">
+										<div
+											class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0070F3] text-white shadow-sm"
+										>
+											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+												><path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"
+												/></svg
+											>
+										</div>
+										<span class="text-xl font-semibold text-slate-700"
+											>{selectedSeatDetails.length}</span
 										>
 									</div>
-									<span class="selected-bar-text"
-										>Seat {selectedSeatDetail.id} · {selectedSeatDetail.status}</span
-									>
-									{#if selectedSeatDetail.status === 'Available'}
-										<button
-											type="button"
-											onclick={() => {
-												selectedSeatDetail.status = 'Held';
-												selectedSeatId = null;
-											}}
-											class="selected-btn selected-btn-red">Hold</button
-										>
-										<button
-											type="button"
-											onclick={() => {
-												selectedSeatDetail.status = 'Reserved';
-												selectedSeatId = null;
-											}}
-											class="selected-btn selected-btn-amber">Reserve</button
-										>
-									{:else}
-										<button
-											type="button"
-											onclick={() => {
-												selectedSeatDetail.status = 'Available';
-												selectedSeatId = null;
-											}}
-											class="selected-btn selected-btn-outline">Release</button
-										>
-									{/if}
 									<button
 										type="button"
-										onclick={() => (selectedSeatId = null)}
-										class="selected-btn selected-btn-ghost">Clear</button
+										onclick={() => (selectedSeatIds = [])}
+										class="text-xs font-medium text-[#0070F3] transition-colors hover:text-blue-700"
+										>Clear</button
 									>
 								</div>
-							{/if}
-						</div>
+
+								<div class="flex flex-col gap-1.5 p-2 text-xs">
+									{#each selectedSeatsByPriceLevel as item (item.pl?.id)}
+										<div class="flex items-center justify-between text-slate-600">
+											<div class="flex items-center gap-2">
+												<span
+													class="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full text-white"
+													style="background:{item.pl?.color}"
+												>
+													<svg
+														class="ml-px h-2 w-2"
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+														><path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															stroke-width="3.5"
+															d="M9 5l7 7-7 7"
+														/></svg
+													>
+												</span>
+												<span class="text-[11px] font-medium text-slate-500"
+													>{item.pl?.label || item.pl?.id}</span
+												>
+											</div>
+											<span class="text-[11px] font-bold text-slate-500">{item.count}</span>
+										</div>
+									{/each}
+								</div>
+							</div>
+						{/if}
 					</main>
 
-					<aside class="canvas-palette">
+					<aside
+						class="z-10 flex w-[56px] shrink-0 flex-col items-center gap-0.5 border-l border-slate-200 bg-white py-3 shadow-sm"
+					>
 						<button
-							type="button"
-							onclick={() => (activeCanvasTool = 'select')}
-							class="palette-btn"
-							class:palette-active={activeCanvasTool === 'select'}
-							title="Select"
+							onclick={() => {
+								activeCanvasTool = 'select';
+								selectionTool = 'seat';
+							}}
+							class="flex w-10 flex-col items-center gap-0.5 rounded-lg px-1 py-2 text-[9px] font-bold transition-colors {activeCanvasTool ===
+								'select' && selectionTool === 'seat'
+								? 'bg-slate-100 text-slate-900'
+								: 'text-slate-400 hover:bg-slate-50 hover:text-slate-700'}"
 						>
-							<svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+							<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
 								><path
 									stroke-linecap="round"
 									stroke-linejoin="round"
-									stroke-width="2"
-									d="M13 3l7 7-7 7M5 3l7 7-7 7"
+									stroke-width="1.5"
+									d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"
 								/></svg
 							>
+							Seat
 						</button>
 						<button
-							type="button"
-							onclick={() => (activeCanvasTool = 'pan')}
-							class="palette-btn"
-							class:palette-active={activeCanvasTool === 'pan'}
-							title="Pan"
+							onclick={() => {
+								activeCanvasTool = 'select';
+								selectionTool = 'row';
+							}}
+							class="flex w-10 flex-col items-center gap-0.5 rounded-lg px-1 py-2 text-[9px] font-bold transition-colors {activeCanvasTool ===
+								'select' && selectionTool === 'row'
+								? 'bg-slate-100 text-slate-900'
+								: 'text-slate-400 hover:bg-slate-50 hover:text-slate-700'}"
 						>
-							<svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+							<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
 								><path
 									stroke-linecap="round"
 									stroke-linejoin="round"
-									stroke-width="2"
+									stroke-width="1.5"
+									d="M4 6h16M4 12h16M4 18h16"
+								/></svg
+							>
+							Row
+						</button>
+						<button
+							onclick={() => {
+								activeCanvasTool = 'select';
+								selectionTool = 'section';
+							}}
+							class="flex w-10 flex-col items-center gap-0.5 rounded-lg px-1 py-2 text-[9px] font-bold transition-colors {activeCanvasTool ===
+								'select' && selectionTool === 'section'
+								? 'bg-slate-100 text-slate-900'
+								: 'text-slate-400 hover:bg-slate-50 hover:text-slate-700'}"
+						>
+							<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+								><path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="1.5"
+									d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"
+								/></svg
+							>
+							Section
+						</button>
+						<button
+							onclick={() => {
+								activeCanvasTool = 'pan';
+							}}
+							class="flex w-10 flex-col items-center gap-0.5 rounded-lg px-1 py-2 text-[9px] font-bold transition-colors {activeCanvasTool ===
+							'pan'
+								? 'bg-slate-100 text-slate-900'
+								: 'text-slate-400 hover:bg-slate-50 hover:text-slate-700'}"
+						>
+							<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+								><path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="1.5"
 									d="M5 15l7-7 7 7"
 								/></svg
 							>
+							Pan
 						</button>
-						<div class="palette-divider"></div>
-						<div class="palette-label">Zoom</div>
-						<button type="button" onclick={zoomIn} class="palette-btn" title="Zoom In">
-							<svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+						<div class="my-1.5 h-px w-8 bg-slate-100"></div>
+						<button
+							onclick={() => (showFilterDialog = !showFilterDialog)}
+							class="flex w-10 flex-col items-center gap-0.5 rounded-lg px-1 py-2 text-[9px] font-bold text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-700"
+						>
+							<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
 								><path
 									stroke-linecap="round"
 									stroke-linejoin="round"
-									stroke-width="2.5"
-									d="M12 4v16m8-8H4"
+									stroke-width="1.5"
+									d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
 								/></svg
 							>
+							Filters
 						</button>
-						<button type="button" onclick={zoomOut} class="palette-btn" title="Zoom Out">
-							<svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+						<button
+							onclick={() => (showAssistantDialog = !showAssistantDialog)}
+							class="flex w-10 flex-col items-center gap-0.5 rounded-lg px-1 py-2 text-[9px] font-bold text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-700"
+						>
+							<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
 								><path
 									stroke-linecap="round"
 									stroke-linejoin="round"
-									stroke-width="2.5"
-									d="M20 12H4"
+									stroke-width="1.5"
+									d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
 								/></svg
 							>
+							Assist
 						</button>
 					</aside>
-				</div>
-
-				<div class="canvas-legend">
-					<span><span class="dot-swatch swatch-avail"></span>Available</span>
-					<span><span class="dot-swatch swatch-sold"></span>Sold</span>
-					<span><span class="dot-swatch swatch-reserved"></span>Reserved</span>
-					<span><span class="dot-swatch swatch-held"></span>Held</span>
 				</div>
 			</div>
 		{:else if activeTab === 'offers'}
@@ -865,56 +1393,6 @@
 						No pricing offer tiers created yet. Tap "Add Offer Tier" to schedule VIP or GA tickets.
 					</div>
 				{/each}
-			</div>
-		{:else if activeTab === 'holds'}
-			<div class="section-header">
-				<div>
-					<h2 class="card-title">Held & Locked Blocks</h2>
-					<p class="section-desc">Reserve seat blocks for sponsors, media, or equipment.</p>
-				</div>
-				<button type="button" onclick={() => (isAddHoldModalOpen = true)} class="btn-secondary">
-					<IconPlus size={14} />
-					<span>Allocate Block</span>
-				</button>
-			</div>
-
-			<div class="table-wrap">
-				<table class="table">
-					<thead>
-						<tr>
-							<th>Block / Group</th>
-							<th>Held Count</th>
-							<th>Reason</th>
-							<th>Status</th>
-							<th class="th-right">Actions</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each holds as h (h.id)}
-							<tr>
-								<td class="td-name">{h.name}</td>
-								<td>{h.count} seats</td>
-								<td class="td-muted">{h.reason}</td>
-								<td>
-									{#if h.status === 'LOCKED'}
-										<span class="badge badge-amber">Locked</span>
-									{:else}
-										<span class="badge badge-red">Killed</span>
-									{/if}
-								</td>
-								<td class="td-actions">
-									<button type="button" onclick={() => releaseHold(h.id)} class="link-btn"
-										>Release</button
-									>
-								</td>
-							</tr>
-						{:else}
-							<tr>
-								<td colspan="5" class="empty-cell">No held seating blocks recorded.</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
 			</div>
 		{/if}
 	</div>
@@ -1571,465 +2049,6 @@
 		font-size: 10px;
 		font-weight: 600;
 		margin-left: auto;
-	}
-
-	.canvas-editor {
-		display: flex;
-		flex-direction: column;
-		gap: 0;
-		padding: 0;
-		overflow: hidden;
-	}
-	.canvas-toolbar {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 8px 12px;
-		border-bottom: 1px solid var(--border);
-	}
-	.toolbar-group {
-		display: flex;
-		align-items: center;
-		gap: 4px;
-	}
-	.toolbar-group + .toolbar-group {
-		margin-left: 8px;
-		padding-left: 8px;
-		border-left: 1px solid var(--border);
-	}
-	.toolbar-spacer {
-		flex: 1;
-	}
-	.toolbar-mode {
-		padding: 3px 10px;
-		border-radius: var(--radius-sm);
-		font-size: 10px;
-		font-weight: 700;
-		color: var(--muted);
-		background: transparent;
-	}
-	.toolbar-mode.active {
-		background: #fff;
-		color: var(--fg);
-		box-shadow: var(--elev-ring);
-	}
-	.tool-btn-save {
-		padding: 4px 14px;
-		border-radius: var(--radius-sm);
-		font-size: 10px;
-		font-weight: 700;
-		color: #fff;
-		background: var(--fg);
-		border: none;
-		cursor: pointer;
-	}
-	.tool-btn-save:hover {
-		opacity: 0.85;
-	}
-	.icon-sm {
-		width: 12px;
-		height: 12px;
-	}
-	.icon-md {
-		width: 16px;
-		height: 16px;
-	}
-	.tool-icon-btn {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 24px;
-		height: 24px;
-		border-radius: var(--radius-sm);
-		font-size: 13px;
-		font-weight: 600;
-		color: var(--muted);
-		background: transparent;
-		border: none;
-		cursor: pointer;
-		transition: all var(--motion-fast) var(--ease-standard);
-	}
-	.tool-icon-btn:hover {
-		background: #f5f5f5;
-		color: var(--fg);
-	}
-	.zoom-label {
-		font-size: 10px;
-		font-weight: 600;
-		color: var(--muted);
-		min-width: 32px;
-		text-align: center;
-		font-variant-numeric: tabular-nums;
-	}
-
-	.canvas-body {
-		display: flex;
-		flex: 1;
-		min-height: 400px;
-	}
-	.canvas-sidebar {
-		width: 220px;
-		flex-shrink: 0;
-		border-right: 1px solid var(--border);
-		padding: 16px;
-		overflow-y: auto;
-		background: #fafafa;
-	}
-	.sidebar-section-header {
-		margin-bottom: 10px;
-	}
-	.sidebar-title {
-		font-size: 10px;
-		font-weight: 800;
-		color: var(--muted);
-		text-transform: uppercase;
-		letter-spacing: 0.08em;
-		margin: 0;
-	}
-	.sidebar-title-sm {
-		font-size: 9px;
-		margin-top: 20px;
-	}
-	.sidebar-list {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-	}
-	.pl-item {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 8px;
-		border-radius: var(--radius-sm);
-		cursor: default;
-	}
-	.pl-item:hover {
-		background: #f0f0f0;
-	}
-	.pl-unassigned {
-		opacity: 0.6;
-	}
-	.pl-dot {
-		width: 10px;
-		height: 10px;
-		border-radius: 50%;
-		flex-shrink: 0;
-		border: 1px solid rgba(0, 0, 0, 0.08);
-	}
-	.pl-unassigned .pl-dot {
-		background: #fff;
-		border-color: #cbd5e1;
-	}
-	.pl-info {
-		flex: 1;
-		min-width: 0;
-	}
-	.pl-name {
-		display: block;
-		font-size: 11px;
-		font-weight: 600;
-		color: var(--fg);
-	}
-	.pl-meta {
-		display: flex;
-		align-items: center;
-		gap: 4px;
-		font-size: 10px;
-		color: var(--muted);
-		margin-top: 1px;
-	}
-	.pl-sep {
-		opacity: 0.4;
-	}
-	.pl-count {
-		font-variant-numeric: tabular-nums;
-	}
-	.fin-row {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 5px 0;
-		font-size: 11px;
-	}
-	.fin-label {
-		color: var(--muted);
-		font-weight: 500;
-	}
-	.fin-value {
-		font-weight: 600;
-		color: var(--fg);
-		font-variant-numeric: tabular-nums;
-	}
-	.fin-value-green {
-		color: #059669;
-	}
-	.fin-value-amber {
-		color: #d97706;
-	}
-
-	.canvas-main {
-		flex: 1;
-		position: relative;
-		overflow: hidden;
-	}
-	.canvas-viewport {
-		position: relative;
-		width: 100%;
-		height: 100%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: #fafafa;
-	}
-	.canvas-stage {
-		transform-origin: center center;
-		transition: transform 0.15s ease;
-	}
-	.seating-canvas {
-		width: 420px;
-		height: 300px;
-		display: block;
-		border-radius: var(--radius-sm);
-		box-shadow: var(--elev-ring);
-		background: #fff;
-	}
-	circle {
-		cursor: pointer;
-	}
-	circle:hover {
-		filter: brightness(0.85);
-	}
-
-	.zoom-controls {
-		position: absolute;
-		right: 12px;
-		bottom: 12px;
-		z-index: 20;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 2px;
-		padding: 3px;
-		border-radius: 10px;
-		border: 1px solid rgba(0, 0, 0, 0.06);
-		background: rgba(255, 255, 255, 0.95);
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-	}
-	.zoom-btn {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 26px;
-		height: 26px;
-		border-radius: 6px;
-		font-size: 15px;
-		font-weight: 600;
-		color: #64748b;
-		background: transparent;
-		border: none;
-		cursor: pointer;
-		transition: all 0.12s ease;
-	}
-	.zoom-btn:hover {
-		background: #f1f5f9;
-		color: #1e293b;
-	}
-	.zoom-divider {
-		width: 16px;
-		height: 1px;
-		background: #e2e8f0;
-		margin: 2px 0;
-	}
-
-	.minimap {
-		position: absolute;
-		right: 12px;
-		bottom: 100px;
-		z-index: 20;
-		width: 160px;
-		height: 120px;
-		border-radius: 10px;
-		border: 1px solid rgba(0, 0, 0, 0.06);
-		background: rgba(255, 255, 255, 0.95);
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-		padding: 8px;
-	}
-	.minimap-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding-bottom: 4px;
-		font-size: 8px;
-		font-weight: 700;
-		color: #94a3b8;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-	}
-	.minimap-pct {
-		padding: 1px 5px;
-		border-radius: 3px;
-		background: #f1f5f9;
-		font-size: 7px;
-		color: #64748b;
-	}
-	.minimap-body {
-		width: 100%;
-		height: calc(100% - 14px);
-		overflow: hidden;
-		border-radius: 4px;
-		border: 1px solid #e2e8f0;
-		background: #f8fafc;
-	}
-	.minimap-svg {
-		width: 100%;
-		height: 100%;
-		display: block;
-	}
-
-	.selected-bar {
-		position: absolute;
-		top: 12px;
-		left: 50%;
-		transform: translateX(-50%);
-		z-index: 20;
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		padding: 8px 16px;
-		border-radius: 10px;
-		border: 1px solid rgba(0, 0, 0, 0.06);
-		background: rgba(255, 255, 255, 0.96);
-		box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-		font-size: 11px;
-	}
-	.selected-bar-icon {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 28px;
-		height: 28px;
-		border-radius: 6px;
-		background: #eff6ff;
-		color: #2563eb;
-	}
-	.selected-bar-text {
-		font-weight: 600;
-		color: var(--fg);
-		white-space: nowrap;
-	}
-	.selected-btn {
-		padding: 5px 12px;
-		border-radius: 6px;
-		font-size: 10px;
-		font-weight: 600;
-		border: none;
-		cursor: pointer;
-	}
-	.selected-btn-red {
-		background: #fef2f2;
-		color: #dc2626;
-	}
-	.selected-btn-red:hover {
-		opacity: 0.8;
-	}
-	.selected-btn-amber {
-		background: #fffbeb;
-		color: #d97706;
-	}
-	.selected-btn-amber:hover {
-		opacity: 0.8;
-	}
-	.selected-btn-outline {
-		background: transparent;
-		box-shadow: 0 0 0 1px var(--border);
-		color: var(--fg-2);
-	}
-	.selected-btn-outline:hover {
-		background: #f5f5f5;
-	}
-	.selected-btn-ghost {
-		background: transparent;
-		color: var(--muted);
-	}
-	.selected-btn-ghost:hover {
-		background: #f5f5f5;
-	}
-
-	.canvas-palette {
-		width: 44px;
-		flex-shrink: 0;
-		border-left: 1px solid var(--border);
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 2px;
-		padding: 8px 2px;
-		background: #fafafa;
-	}
-	.palette-btn {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 32px;
-		height: 32px;
-		border-radius: 6px;
-		color: #94a3b8;
-		background: transparent;
-		border: none;
-		cursor: pointer;
-		transition: all 0.12s ease;
-	}
-	.palette-btn:hover {
-		background: #f1f5f9;
-		color: #334155;
-	}
-	.palette-btn.palette-active {
-		background: #1e293b;
-		color: #fff;
-	}
-	.palette-divider {
-		width: 20px;
-		height: 1px;
-		background: #e2e8f0;
-		margin: 4px 0;
-	}
-	.palette-label {
-		font-size: 7px;
-		font-weight: 700;
-		color: #94a3b8;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		margin: 2px 0;
-	}
-
-	.canvas-legend {
-		display: flex;
-		justify-content: center;
-		gap: 18px;
-		padding: 10px 12px;
-		border-top: 1px solid var(--border);
-		font-size: 10px;
-		color: var(--muted);
-	}
-	.dot-swatch {
-		display: inline-block;
-		width: 10px;
-		height: 10px;
-		border-radius: 50%;
-		margin-right: 4px;
-		vertical-align: middle;
-	}
-	.swatch-avail {
-		background: #94a3b8;
-	}
-	.swatch-sold {
-		background: #059669;
-	}
-	.swatch-reserved {
-		background: #d97706;
-	}
-	.swatch-held {
-		background: #dc2626;
 	}
 
 	.table-wrap {

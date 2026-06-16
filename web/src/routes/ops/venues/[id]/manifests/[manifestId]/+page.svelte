@@ -19,6 +19,16 @@
 			? data.priceLevels
 			: [{ id: 'STANDARD', description: 'Standard Tier', color: '#3B82F6' }]
 	);
+	const PRESET_COLORS = [
+		'#3b82f6', '#10b981', '#a855f7', '#ec4899', '#14b8a6', '#6366f1', '#84cc16', '#06b6d4'
+	];
+	function getNextPriceLevelColor() {
+		const used = priceLevels.map(p => (p.color || '').toLowerCase());
+		for (const color of PRESET_COLORS) {
+			if (!used.includes(color.toLowerCase())) return color;
+		}
+		return PRESET_COLORS[0];
+	}
 	let gaSections = $state<any[]>(data.gaSections || []);
 	let rsSections = $state<any[]>(data.rsSections || []);
 	let brushPriceLevelId = $state(data.priceLevels?.[0]?.id || 'STANDARD');
@@ -665,7 +675,11 @@
 
 						const isSeatSel = selectedSeatIds.includes(seat.id);
 						let color = secColor;
-						if (!isSeatSel && activeMode !== 'inventory' && seat.status !== 'UNAVAILABLE') {
+						if (activeMode === 'inventory') {
+							color = seat.status === 'AVAILABLE' ? '#10B981' : '#EF4444';
+						} else if (seat.status === 'UNAVAILABLE') {
+							color = '#E2E8F0';
+						} else {
 							const sec = seat.sectionId ? sections.find((s) => s.id === seat.sectionId) : null;
 							if (sec?.color) color = sec.color;
 							else {
@@ -675,10 +689,6 @@
 								if (pl?.color) color = pl.color;
 							}
 						}
-						if (isSeatSel) color = '#1A1A1A';
-						else if (activeMode === 'inventory')
-							color = seat.status === 'AVAILABLE' ? '#10B981' : '#EF4444';
-						else if (seat.status === 'UNAVAILABLE') color = '#E2E8F0';
 
 						const sg = new Konva.Group({
 							x: sx - boxX,
@@ -686,15 +696,28 @@
 							id: seat.id,
 							draggable: activeMode === 'floor-edit'
 						});
+						
 						sg.add(
 							new Konva.Circle({
 								radius: SEAT_R,
 								fill: color,
 								opacity: isFiltered ? 0.15 : 1,
-								stroke: isSeatSel ? '#FFFFFF' : 'transparent',
-								strokeWidth: isSeatSel ? 1.5 / sc : 0
+								stroke: 'transparent',
+								strokeWidth: 0
 							})
 						);
+
+						if (isSeatSel) {
+							const sw = Math.max(1.5 / sc, 1);
+							sg.add(
+								new Konva.Circle({
+									radius: SEAT_R - sw / 2,
+									stroke: '#000000',
+									strokeWidth: sw,
+									listening: false
+								})
+							);
+						}
 
 						const circle = sg.getChildren()[0];
 						circle.on('click tap', (e: any) => {
@@ -1344,7 +1367,7 @@
 				</h3>
 				<button
 					onclick={() =>
-						priceLevels.push({ id: 'NEW', description: 'New Level', color: '#3B82F6' })}
+						priceLevels.push({ id: 'NEW', description: 'New Level', color: getNextPriceLevelColor() })}
 					class="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
 				>
 					<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
