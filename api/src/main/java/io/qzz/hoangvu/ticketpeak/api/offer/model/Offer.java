@@ -42,6 +42,9 @@ public class Offer {
     @Column(name = "ticket_type_id", nullable = false)
     UUID ticketTypeId;
 
+    @Column(nullable = false, length = 64)
+    String code;
+
     @Column(nullable = false)
     String name;
 

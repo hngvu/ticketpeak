@@ -193,7 +193,7 @@ class OfferControllerIT {
     }
     private CreateOfferRequest createOfferRequest(java.util.UUID ticketTypeId, String name, BigDecimal faceValue, SeatingMode seatingMode, List<CreateSaleWindowRequest> windows) {
         return new CreateOfferRequest(
-                ticketTypeId, name, null,
+                ticketTypeId, "CODE-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase(), name, null,
                 "VND", faceValue, false, 1,
                 100,
                 List.of(1, 2, 4), windows,
@@ -204,7 +204,7 @@ class OfferControllerIT {
     @Test
     void create_offer_persists_and_is_returned_by_event_lookup() throws Exception {
         CreateOfferRequest request = new CreateOfferRequest(
-                createTicketType(publishedEvent.getId(), "VIP-001"), "VIP Package", "Front row package",
+                createTicketType(publishedEvent.getId(), "VIP-001"), "VIP-PKG-01", "VIP Package", "Front row package",
                 "VND", new BigDecimal("1250000.00"), false, 1,
                 100,
                 List.of(1, 2, 4),
@@ -258,7 +258,7 @@ class OfferControllerIT {
     @Test
     void duplicate_ticket_type_id_within_same_event_is_rejected() throws Exception {
         CreateOfferRequest request = new CreateOfferRequest(
-                createTicketType(publishedEvent.getId(), "vip-dup"), "Standard Ticket", null,
+                createTicketType(publishedEvent.getId(), "vip-dup"), "STD-CODE", "Standard Ticket", null,
                 "VND", new BigDecimal("250000.00"), false, 1,
                 100,
                 List.of(1, 2, 4),
@@ -277,7 +277,41 @@ class OfferControllerIT {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error").value("OFFER_TICKET_TYPE_ALREADY_EXISTS"));
+                .andExpect(jsonPath("$.error").value("OFFER_CODE_ALREADY_EXISTS"));
+    }
+
+    @Test
+    void duplicate_code_within_same_event_is_rejected() throws Exception {
+        CreateOfferRequest request1 = new CreateOfferRequest(
+                createTicketType(publishedEvent.getId(), "tt-1"), "DUP-CODE", "Standard Ticket", null,
+                "VND", new BigDecimal("250000.00"), false, 1,
+                100,
+                List.of(1, 2, 4),
+                List.of(createSaleWindowRequest(SaleWindowType.GENERAL_SALE, 3600, 7200)),
+                SeatingMode.GENERAL_ADMISSION, null, null, List.of()
+        );
+
+        mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
+                        .header("Authorization", "Bearer " + organizerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request1)))
+                .andExpect(status().isCreated());
+
+        CreateOfferRequest request2 = new CreateOfferRequest(
+                createTicketType(publishedEvent.getId(), "tt-2"), "DUP-CODE", "Another Ticket", null,
+                "VND", new BigDecimal("350000.00"), false, 1,
+                100,
+                List.of(1, 2, 4),
+                List.of(createSaleWindowRequest(SaleWindowType.GENERAL_SALE, 3600, 7200)),
+                SeatingMode.GENERAL_ADMISSION, null, null, List.of()
+        );
+
+        mockMvc.perform(post("/api/partner/events/" + publishedEvent.getId() + "/offers")
+                        .header("Authorization", "Bearer " + organizerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request2)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("OFFER_CODE_ALREADY_EXISTS"));
     }
 
     @Test
@@ -368,7 +402,7 @@ class OfferControllerIT {
                 .andExpect(status().isCreated());
 
         UpdateOfferRequest updateRequest = new UpdateOfferRequest(
-                "Updated Name", "Updated description",
+                "UPDATED-CODE", "Updated Name", "Updated description",
                 "USD", new BigDecimal("200000.00"), true, 2, 100,
                 List.of(2, 4),
                 List.of(updateSaleWindowRequest(SaleWindowType.GENERAL_SALE, 3600, 7200)),
@@ -446,7 +480,7 @@ class OfferControllerIT {
     @Test
     void invalid_currency_is_rejected() throws Exception {
         CreateOfferRequest request = new CreateOfferRequest(
-                createTicketType(publishedEvent.getId(), "bad-cur"), "Bad Currency", null,
+                createTicketType(publishedEvent.getId(), "bad-cur"), "BAD-CUR-CODE", "Bad Currency", null,
                 "XYZ", new BigDecimal("100000.00"), false, 1,
                 100,
                 List.of(1), List.of(),
@@ -473,10 +507,11 @@ class OfferControllerIT {
                 .timezone("Asia/Ho_Chi_Minh")
                 .saleStartAt(Instant.now().plusSeconds(3600))
                 .saleEndAt(Instant.now().plusSeconds(7200))
+                .serviceFeePercent(0)
                 .build());
 
         CreateOfferRequest request = new CreateOfferRequest(
-                createTicketType(publishedEvent.getId(), "bad-window"), "Bad Window", null,
+                createTicketType(publishedEvent.getId(), "bad-window"), "BAD-WIN-CODE", "Bad Window", null,
                 "VND", new BigDecimal("100000.00"), false, 1,
                 100,
                 List.of(1),
@@ -529,7 +564,7 @@ class OfferControllerIT {
     @Test
     void impossible_sale_window_is_rejected() throws Exception {
         CreateOfferRequest request = new CreateOfferRequest(
-                createTicketType(publishedEvent.getId(), "WIN-001"), "Bad Window", null,
+                createTicketType(publishedEvent.getId(), "WIN-001"), "IMP-WIN-CODE", "Bad Window", null,
                 "VND", new BigDecimal("100000.00"), false, 1,
                 100,
                 List.of(1, 2),
@@ -627,7 +662,7 @@ class OfferControllerIT {
     @Test
     void reserved_seating_offer_validates_section_and_price_level() throws Exception {
         CreateOfferRequest requestNoManifest = new CreateOfferRequest(
-                createTicketType(publishedEvent.getId(), "rs-no-man"), "RS No Manifest", null,
+                createTicketType(publishedEvent.getId(), "rs-no-man"), "RS-NO-MAN-CODE", "RS No Manifest", null,
                 "VND", new BigDecimal("500000.00"), false, 1,
                 100,
                 List.of(1), null,
@@ -654,7 +689,7 @@ class OfferControllerIT {
         priceLevelRepository.saveAndFlush(PriceLevel.builder().id("PL-1").manifest(manifest).build());
 
         CreateOfferRequest requestValid = new CreateOfferRequest(
-                createTicketType(publishedEvent.getId(), "rs-valid"), "RS Valid", null,
+                createTicketType(publishedEvent.getId(), "rs-valid"), "RS-VALID-CODE", "RS Valid", null,
                 "VND", new BigDecimal("500000.00"), false, 1,
                 100,
                 List.of(1), null,
@@ -669,7 +704,7 @@ class OfferControllerIT {
                 .andExpect(jsonPath("$.data.ticketTypeId").value("rs-valid"));
 
         CreateOfferRequest requestInvalidSection = new CreateOfferRequest(
-                createTicketType(publishedEvent.getId(), "rs-invalid-sec"), "RS Invalid Sec", null,
+                createTicketType(publishedEvent.getId(), "rs-invalid-sec"), "RS-INV-SEC", "RS Invalid Sec", null,
                 "VND", new BigDecimal("500000.00"), false, 1,
                 100,
                 List.of(1), null,
@@ -684,7 +719,7 @@ class OfferControllerIT {
                 .andExpect(jsonPath("$.error").value("SECTION_NOT_FOUND"));
 
         CreateOfferRequest requestInvalidPL = new CreateOfferRequest(
-                createTicketType(publishedEvent.getId(), "rs-invalid-pl"), "RS Invalid PL", null,
+                createTicketType(publishedEvent.getId(), "rs-invalid-pl"), "RS-INV-PL", "RS Invalid PL", null,
                 "VND", new BigDecimal("500000.00"), false, 1,
                 100,
                 List.of(1), null,
@@ -711,7 +746,7 @@ class OfferControllerIT {
         try {
             // 1. Check faceValue < 0
             CreateOfferRequest negativePriceReq = new CreateOfferRequest(
-                createTicketType(publishedEvent.getId(), "NEG-SVC"), "Invalid Price Service", null,
+                createTicketType(publishedEvent.getId(), "NEG-SVC"), "NEG-PR-CODE", "Invalid Price Service", null,
                     "VND", new BigDecimal("-50.00"), false, 1,
                     100,
                     List.of(1, 2), null,
@@ -726,7 +761,7 @@ class OfferControllerIT {
 
             // 2. Check eventTicketMinimum < 1
             CreateOfferRequest badMinLimitReq = new CreateOfferRequest(
-                createTicketType(publishedEvent.getId(), "MIN-SVC"), "Invalid Min Service", null,
+                createTicketType(publishedEvent.getId(), "MIN-SVC"), "MIN-LMT-CODE", "Invalid Min Service", null,
                     "VND", new BigDecimal("1000.00"), false, 0,
                     100,
                     List.of(1, 2), null,
@@ -753,6 +788,7 @@ class OfferControllerIT {
                 .status(status)
                 .startAt(Instant.now().plusSeconds(86400))
                 .timezone("Asia/Ho_Chi_Minh")
+                .serviceFeePercent(0)
                 .build());
     }
 

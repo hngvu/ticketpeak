@@ -58,9 +58,14 @@ public class OfferService {
         validateQuantity(request.eventTicketMinimum(), request.sellableQuantities());
         validateSeatingMode(request.seatingMode(), request.sectionId(), request.priceLevelId(), event);
 
+        if (offerRepository.existsByEventIdAndCode(eventId, request.code())) {
+            throw OfferException.codeAlreadyExists();
+        }
+
         Offer offer = Offer.builder()
                 .eventId(eventId)
                 .ticketTypeId(ticketType.getId())
+                .code(request.code())
                 .name(trimToNull(request.name()))
                 .description(trimToNull(request.description()))
                 .currency(request.currency().trim().toUpperCase(Locale.ROOT))
@@ -109,6 +114,11 @@ public class OfferService {
         validateQuantity(request.eventTicketMinimum(), request.sellableQuantities());
         validateSeatingMode(request.seatingMode(), request.sectionId(), request.priceLevelId(), event);
 
+        if (!offer.getCode().equals(request.code()) && offerRepository.existsByEventIdAndCode(eventId, request.code())) {
+            throw OfferException.codeAlreadyExists();
+        }
+
+        offer.setCode(request.code());
         offer.setName(trimToNull(request.name()));
         offer.setDescription(trimToNull(request.description()));
         offer.setCurrency(request.currency().trim().toUpperCase(Locale.ROOT));

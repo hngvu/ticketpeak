@@ -14,6 +14,8 @@ public interface OfferRepository extends JpaRepository<Offer, UUID> {
     Optional<Offer> findByEventIdAndTicketTypeId(UUID eventId, UUID ticketTypeId);
 
     boolean existsByEventIdAndTicketTypeId(UUID eventId, UUID ticketTypeId);
+    
+    boolean existsByEventIdAndCode(UUID eventId, String code);
 
     void deleteByEventIdAndTicketTypeId(UUID eventId, UUID ticketTypeId);
     

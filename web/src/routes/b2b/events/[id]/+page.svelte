@@ -57,7 +57,7 @@
 	}
 	let canvasZoom = $state(1);
 
-	let activeTab = $state('holds');
+	let activeTab = $state('general');
 
 	const event = $derived(form?.event || data.event);
 	const offers = $derived(data.offers || []);
@@ -94,10 +94,7 @@
 		return result;
 	});
 
-	let newOfferName = $state('');
-	let newOfferPrice = $state<number>(200000);
-	let newOfferLimit = $state<number>(300);
-	let newOfferActive = $state(true);
+	let editingOffer = $state<any>(null);
 
 	let holds = $state([
 		{
@@ -168,6 +165,20 @@
 		if (status === 'Killed') return '#EF4444';
 		return '#94A3B8';
 	}
+	
+	function getSeatFill(seat: any, currentTab: string) {
+		if (currentTab === 'holds') {
+			// In Holds mode, emphasize ONLY holds and kills. Fade out Sold and Available.
+			if (seat.status === 'Held') return '#F59E0B';
+			if (seat.status === 'Killed') return '#EF4444';
+			if (seat.status === 'Sold' || seat.status === 'Reserved') return '#CBD5E1'; // darker grey for unavailable seats
+			return '#E2E8F0'; // light grey for available seats
+		} else {
+			// In Seats mode (Scaling), emphasize Price Level assignments
+			const plId = seatPriceLevels[seat.id] || (seat.rowLetter < 'C' ? 'VIP' : 'GA');
+			return basePriceLevels.find((p) => p.id === plId)?.color || '#e2e8f0';
+		}
+	}
 	const seats = $derived.by(() => {
 		if (hasLayoutData) return [];
 		const result: {
@@ -194,12 +205,9 @@
 				const y = 80 + r * (isLarge ? 50 : 42);
 				let status: string = 'Available';
 				if (!isLarge) {
-					if ((r === 0 && c < 3) || (r === 1 && c === 4)) status = 'Sold';
-					else if (r === 2 && c > 7) status = 'Held';
-					else if (r === 3 && c === 2) status = 'Reserved';
+					if (r === 2 && c > 7) status = 'Held';
 				} else {
-					if ((r === 0 && c > 10) || (r === 2 && c === 5)) status = 'Sold';
-					else if (r === 4 && c < 2) status = 'Held';
+					if (r === 4 && c < 2) status = 'Held';
 				}
 				status = seatStatuses[id] || status;
 				result.push({ id, rowLetter, seatNum, status, x, y });
@@ -210,6 +218,7 @@
 	const selectedSeatDetails = $derived(seats.filter((s) => selectedSeatIds.includes(s.id)));
 	let seatPriceLevels = $state<Record<string, string>>({});
 	let seatStatuses = $state<Record<string, string>>({});
+	let seatHoldIds = $state<Record<string, string>>({});
 
 	const selectedSeatsByPriceLevel = $derived.by(() => {
 		const counts: Record<string, number> = {};
@@ -233,14 +242,23 @@
 		{ id: 'GA', color: '#059669', label: 'General Admission' }
 	]);
 	const PRESET_COLORS = [
-		'#3b82f6', '#10b981', '#a855f7', '#ec4899', '#14b8a6', '#6366f1', '#84cc16', '#06b6d4'
+		'#2563eb', // blue-600
+		'#db2777', // pink-600
+		'#0891b2', // cyan-600
+		'#4f46e5', // indigo-600
+		'#65a30d', // lime-600
+		'#0d9488', // teal-600
+		'#c026d3', // fuchsia-600
+		'#0284c7', // sky-600
+		'#047857', // emerald-700
+		'#6d28d9'  // violet-700
 	];
 	function getNextPriceLevelColor() {
 		const used = basePriceLevels.map(p => (p.color || '').toLowerCase());
 		for (const color of PRESET_COLORS) {
 			if (!used.includes(color.toLowerCase())) return color;
 		}
-		return PRESET_COLORS[0];
+		return PRESET_COLORS[basePriceLevels.length % PRESET_COLORS.length];
 	}
 	const priceLevels = $derived.by(() => {
 		return basePriceLevels.map((pl) => {
@@ -266,28 +284,59 @@
 	}
 
 	function formatCurrency(amount: number) {
+		if (amount === null || amount === undefined) return '';
 		return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
 	}
 
-	function handleAddOffer(e: Event) {
+	function formatDateTime(isoString: string) {
+		if (!isoString) return 'TBA';
+		try {
+			return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(isoString));
+		} catch (e) {
+			return 'Invalid Date';
+		}
+	}
+
+	function openAddOfferModal() {
+		editingOffer = {
+			name: '',
+			description: '',
+			ticketTypeId: 'tt-1', // default mock
+			saleWindows: [{ type: 'GENERAL_SALE', startAt: '', endAt: '' }],
+			currency: 'VND',
+			faceValue: 200000,
+			capacityCap: 300,
+			eventTicketMinimum: 1,
+			seatingMode: 'GA',
+			priceLevelId: 'P1',
+			restrictedPayment: false,
+			active: true
+		};
+		isAddOfferModalOpen = true;
+	}
+
+	function openUpdateOfferModal(offer: any) {
+		editingOffer = { ...offer };
+		isAddOfferModalOpen = true;
+	}
+
+	function handleSaveOffer(e: Event) {
 		e.preventDefault();
-		if (!newOfferName.trim()) return;
-		const mockId = `offer-${Date.now()}`;
-		localOffers = [
-			...localOffers,
-			{
-				id: mockId,
-				name: newOfferName,
-				price: newOfferPrice,
-				limitQuantity: newOfferLimit,
-				quantitySold: 0,
-				active: newOfferActive
-			}
-		];
-		newOfferName = '';
-		newOfferPrice = 200000;
-		newOfferLimit = 300;
-		newOfferActive = true;
+		if (!editingOffer?.name?.trim()) return;
+
+		if (editingOffer.id) {
+			localOffers = localOffers.map(o => o.id === editingOffer.id ? { ...editingOffer } : o);
+		} else {
+			const mockId = `offer-${Date.now()}`;
+			localOffers = [
+				...localOffers,
+				{
+					...editingOffer,
+					id: mockId,
+					quantitySold: 0
+				}
+			];
+		}
 		isAddOfferModalOpen = false;
 	}
 
@@ -394,12 +443,12 @@
 							items={sortedClassifications}
 							bind:value={classificationId}
 							name="classificationId"
-							placeholder="-- Select a Category --"
+							placeholder="Select a Category"
 							searchPlaceholder="Search classification..."
 							displayFn={(c) => {
 								if (!c) return '';
 								if (c.parentId) {
-									const parent = sortedClassifications.find((p: any) => p.parentId === c.parentId);
+									const parent = sortedClassifications.find((p: any) => p.id === c.parentId);
 									return parent ? `${parent.name} > ${c.name}` : c.name;
 								}
 								return c.name;
@@ -407,10 +456,13 @@
 						>
 							{#snippet itemSnippet(item)}
 								<div class="flex w-full items-center">
-									<span
-										class={item?.parentId ? 'pl-4 text-slate-600' : 'font-semibold text-slate-900'}
-									>
-										{item?.parentId ? `↳ ${item?.name}` : item?.name}
+									<span class={item?.parentId ? 'text-slate-600' : 'font-semibold text-slate-900'}>
+										{#if item?.parentId}
+											{@const parent = sortedClassifications.find((p: any) => p.id === item.parentId)}
+											{parent ? `${parent.name} > ${item.name}` : item.name}
+										{:else}
+											{item?.name}
+										{/if}
 									</span>
 								</div>
 							{/snippet}
@@ -423,7 +475,7 @@
 							bind:values={selectedAttractionIds}
 							multiple={true}
 							name="attractionIds"
-							placeholder="-- Select an Attraction --"
+							placeholder="Select an Attraction"
 							searchPlaceholder="Search attraction..."
 						>
 							{#snippet itemSnippet(item)}
@@ -446,7 +498,7 @@
 							items={data.venues || []}
 							bind:value={venueId}
 							name="venueId"
-							placeholder="-- Select a Venue --"
+							placeholder="Select a Venue"
 							searchPlaceholder="Search venue..."
 							displayFn={(v) => v?.name || ''}
 							searchFn={(items, query) => {
@@ -557,12 +609,12 @@
 								</button>
 							</div>
 							<div class="flex-1 space-y-px overflow-y-auto px-3 py-2">
-								<div class="flex items-center gap-2 rounded-lg px-2.5 py-2 text-[11px]">
+								<div class="flex items-center gap-2 rounded-lg px-2.5 py-2">
 									<span
-										class="flex h-3 w-3 shrink-0 items-center justify-center rounded-full border-2 border-slate-300 bg-white"
+										class="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 border-slate-300 bg-white"
 									></span>
-									<span class="flex-1 font-semibold text-slate-500">Unassigned</span>
-									<span class="font-bold text-slate-400">0</span>
+									<span class="flex-1 text-sm font-medium text-slate-500">Unassigned</span>
+									<span class="text-sm text-slate-500">0</span>
 								</div>
 								{#each basePriceLevels as bpl, i (bpl.id)}
 									{@const pl = priceLevels[i]}
@@ -596,16 +648,14 @@
 												class="absolute -inset-2 h-8 w-8 cursor-pointer opacity-0"
 											/>
 										</label>
-										<div class="flex flex-1 flex-col gap-0.5">
+										<div class="flex flex-1 items-center justify-between gap-2">
 											<input
 												type="text"
 												bind:value={bpl.label}
-												class="w-full border-none bg-transparent p-0 font-bold text-slate-800 outline-none focus:border-none focus:ring-0"
+												class="w-full border-none bg-transparent p-0 text-sm font-medium text-slate-500 outline-none focus:border-none focus:ring-0"
 											/>
-											<div class="flex items-center gap-1 text-[10px] text-slate-400">
-												<span class="font-semibold">{pl.avail} avail</span>
-												<span class="text-slate-300">·</span>
-												<span>{pl.count} total</span>
+											<div class="text-sm text-slate-500">
+												<span>{pl.count}</span>
 											</div>
 										</div>
 										<button
@@ -631,106 +681,115 @@
 						{/if}
 
 						{#if activeTab === 'holds'}
+							{#snippet holdItem(hold)}
+								<div
+									class="group flex items-center gap-2 rounded-lg px-2.5 py-2 transition-colors hover:bg-slate-50"
+									ondragover={(e) => {
+										e.preventDefault();
+										if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+									}}
+									ondrop={(e) => {
+										e.preventDefault();
+										const data = e.dataTransfer?.getData('text/plain');
+										if (data === 'selected_seats' && selectedSeatIds.length > 0) {
+											const updatedStatuses = { ...seatStatuses };
+											const updatedHoldIds = { ...seatHoldIds };
+											selectedSeatIds.forEach((id) => {
+												updatedStatuses[id] = hold.status === 'LOCKED' ? 'Held' : 'Killed';
+												updatedHoldIds[id] = hold.id;
+											});
+											seatStatuses = updatedStatuses;
+											seatHoldIds = updatedHoldIds;
+											selectedSeatIds = [];
+										}
+									}}
+								>
+									<button
+										type="button"
+										class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full hover:bg-slate-200"
+										onclick={(e) => {
+											e.stopPropagation();
+											selectedSeatIds = seats.filter(s => seatHoldIds[s.id] === hold.id).map(s => s.id);
+										}}
+										aria-label="Select seats in {hold.name}"
+									>
+										<span class="block h-3 w-3 rounded-full {hold.status === 'LOCKED' ? 'bg-amber-500' : 'bg-red-500'}"></span>
+									</button>
+									<div class="flex flex-1 items-center justify-between gap-2">
+										<input
+											type="text"
+											bind:value={hold.name}
+											class="w-full min-w-0 border-none bg-transparent p-0 text-sm font-medium text-slate-500 outline-none hover:text-slate-700 focus:text-slate-900 focus:ring-0"
+										/>
+										<div class="text-sm text-slate-500">
+											<span>{hold.count === 0 ? 0 : hold.count + seats.filter(s => seatHoldIds[s.id] === hold.id).length}</span>
+										</div>
+									</div>
+									<button
+										type="button"
+										onclick={() => {
+											holds = holds.filter((h) => h.id !== hold.id);
+										}}
+										class="hidden h-5 w-5 items-center justify-center rounded text-slate-400 group-hover:flex hover:bg-slate-200 hover:text-red-500"
+										aria-label="Remove {hold.name}"
+									>
+										<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+											><path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M6 18L18 6M6 6l12 12"
+											/></svg
+										>
+									</button>
+								</div>
+							{/snippet}
+
 							<div class="flex items-center justify-between border-b border-slate-200 px-4 py-2.5">
 								<h3 class="text-[10px] font-black tracking-widest text-slate-400 uppercase">
 									Holds & Kills
 								</h3>
-								<button
-									type="button"
-									onclick={() => (isAddHoldModalOpen = true)}
-									class="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-									aria-label="Add hold"
-								>
-									<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-										><path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2.5"
-											d="M12 4v16m8-8H4"
-										/></svg
-									>
-								</button>
 							</div>
 							<div class="flex-1 overflow-y-auto px-3 py-2">
-								{#if holds.some((h) => h.status === 'LOCKED')}
-									<div class="px-2.5 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+								<div class="flex items-center justify-between px-2.5 py-1.5">
+									<div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
 										Holds
 									</div>
-									<div class="space-y-px mb-2">
-										{#each holds.filter((h) => h.status === 'LOCKED') as hold}
-											<div
-												class="group flex items-center gap-2 rounded-lg px-2.5 py-2 text-[11px] transition-colors hover:bg-slate-50"
-												ondragover={(e) => {
-													e.preventDefault();
-													if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
-												}}
-												ondrop={(e) => {
-													e.preventDefault();
-													const data = e.dataTransfer?.getData('text/plain');
-													if (data === 'selected_seats' && selectedSeatIds.length > 0) {
-														const updated = { ...seatStatuses };
-														selectedSeatIds.forEach((id) => {
-															updated[id] = 'Held';
-														});
-														seatStatuses = updated;
-														hold.count += selectedSeatIds.length;
-														selectedSeatIds = [];
-													}
-												}}
-											>
-												<span class="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm text-[8px] font-bold text-white bg-amber-500">
-													H
-												</span>
-												<div class="flex flex-1 flex-col gap-0.5">
-													<span class="font-bold text-slate-800 truncate">{hold.name}</span>
-													<div class="flex items-center gap-1 text-[10px] text-slate-400">
-														<span class="font-semibold">{seats.filter(s => seatStatuses[s.id] === 'Held' && (seatStatuses[s.id] === 'Held')).length} seats</span>
-													</div>
-												</div>
-											</div>
-										{/each}
-									</div>
-								{/if}
+									<button
+										type="button"
+										onclick={() => holds.push({ id: `hold_${Date.now()}`, name: 'New Hold', status: 'LOCKED', count: 0 })}
+										class="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+										aria-label="Add hold"
+									>
+										<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+											><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" /></svg>
+									</button>
+								</div>
+								<div class="space-y-px mb-2">
+									{#each holds.filter(h => h.status === 'LOCKED') as hold (hold.id)}
+										{@render holdItem(hold)}
+									{/each}
+								</div>
 
-								{#if holds.some((h) => h.status === 'KILLED')}
-									<div class="px-2.5 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+								<div class="flex items-center justify-between px-2.5 py-1.5 mt-2">
+									<div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
 										Kills
 									</div>
-									<div class="space-y-px">
-										{#each holds.filter((h) => h.status === 'KILLED') as hold}
-											<div
-												class="group flex items-center gap-2 rounded-lg px-2.5 py-2 text-[11px] transition-colors hover:bg-slate-50"
-												ondragover={(e) => {
-													e.preventDefault();
-													if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
-												}}
-												ondrop={(e) => {
-													e.preventDefault();
-													const data = e.dataTransfer?.getData('text/plain');
-													if (data === 'selected_seats' && selectedSeatIds.length > 0) {
-														const updated = { ...seatStatuses };
-														selectedSeatIds.forEach((id) => {
-															updated[id] = 'Killed';
-														});
-														seatStatuses = updated;
-														hold.count += selectedSeatIds.length;
-														selectedSeatIds = [];
-													}
-												}}
-											>
-												<span class="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm text-[8px] font-bold text-white bg-red-500">
-													K
-												</span>
-												<div class="flex flex-1 flex-col gap-0.5">
-													<span class="font-bold text-slate-800 truncate">{hold.name}</span>
-													<div class="flex items-center gap-1 text-[10px] text-slate-400">
-														<span class="font-semibold">{seats.filter(s => seatStatuses[s.id] === 'Killed').length} seats</span>
-													</div>
-												</div>
-											</div>
-										{/each}
-									</div>
-								{/if}
+									<button
+										type="button"
+										onclick={() => holds.push({ id: `kill_${Date.now()}`, name: 'New Kill', status: 'KILLED', count: 0 })}
+										class="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+										aria-label="Add kill"
+									>
+										<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+											><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" /></svg>
+									</button>
+								</div>
+								<div class="space-y-px">
+									{#each holds.filter(h => h.status === 'KILLED') as hold (hold.id)}
+										{@render holdItem(hold)}
+									{/each}
+								</div>
 							</div>
 						{/if}
 						<div class="border-t border-slate-200 bg-slate-50/50 px-4 py-3">
@@ -911,7 +970,7 @@
 														cx={seat.positionX || 0}
 														cy={seat.positionY || 0}
 														r={seatR}
-														fill={seatColor(seat.status || 'AVAILABLE')}
+														fill={getSeatFill(seat, activeTab)}
 														stroke="none"
 														class="cursor-pointer transition-all hover:opacity-80"
 													/>
@@ -989,16 +1048,8 @@
 												cx={seat.x}
 												cy={seat.y}
 												r={seatR}
-												fill={seat.status === 'Available'
-														? basePriceLevels.find(
-																(p) =>
-																	p.id ===
-																	(seatPriceLevels[seat.id] ||
-																		(seat.rowLetter < 'C' ? 'VIP' : 'GA'))
-															)?.color || '#94A3B8'
-														: seatColor(seat.status)}
+												fill={getSeatFill(seat, activeTab)}
 												stroke="none"
-												stroke-width="0"
 												oncontextmenu={(e) => {
 													e.preventDefault();
 													e.stopPropagation();
@@ -1338,122 +1389,257 @@
 				</div>
 			</div>
 		{:else if activeTab === 'offers'}
-			<div class="section-header">
-				<div>
-					<h2 class="card-title">Active Pricing Offers</h2>
-					<p class="section-desc">Create and configure pricing tiers, limits, and pre-sales.</p>
+			<div class="card">
+				<div class="flex items-center justify-end">
+					<button
+						type="button"
+						onclick={openAddOfferModal}
+						class="flex items-center gap-2 rounded-none bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-blue-500 hover:shadow-md"
+					>
+						<IconPlus size={16} />
+						<span>Add Offer Tier</span>
+					</button>
 				</div>
-				<button type="button" onclick={() => (isAddOfferModalOpen = true)} class="btn-secondary">
-					<IconPlus size={14} />
-					<span>Add Offer Tier</span>
-				</button>
-			</div>
 
-			<div class="offer-grid">
-				{#each localOffers as offer (offer.id)}
-					<div class="card">
-						<div class="offer-top">
-							<div>
-								<h3 class="offer-name">{offer.name}</h3>
-							</div>
-							<div class="offer-right">
-								<span class="offer-price">{formatCurrency(offer.faceValue ?? offer.price)}</span>
-								{#if offer.active ?? true}
-									<span class="badge badge-green">Active</span>
-								{:else}
-									<span class="badge">Inactive</span>
-								{/if}
-							</div>
-						</div>
-						<div class="progress-section">
-							<div class="progress-label">
-								<span>Sales Limit</span>
-								<span
-									>{offer.quantitySold || 0} / {offer.capacityCap ??
-										offer.limitQuantity ??
-										'Unlimited'}</span
-								>
-							</div>
-							<div class="progress-bar">
-								<div
-									class="progress-fill"
-									style="width: {(offer.capacityCap ?? offer.limitQuantity ?? 0) > 0
-										? Math.round(
-												((offer.quantitySold || 0) /
-													(offer.capacityCap ?? offer.limitQuantity ?? 1)) *
-													100
-											)
-										: 0}%"
-								></div>
-							</div>
-						</div>
-					</div>
-				{:else}
-					<div class="empty-state">
-						No pricing offer tiers created yet. Tap "Add Offer Tier" to schedule VIP or GA tickets.
-					</div>
-				{/each}
+				<div class="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+					<table class="min-w-full divide-y divide-slate-200 text-left text-sm">
+						<thead class="bg-slate-50">
+							<tr>
+								<th scope="col" class="px-6 py-4 font-semibold text-slate-900">Offer Name</th>
+								<th scope="col" class="px-6 py-4 font-semibold text-slate-900">Ticket Type</th>
+								<th scope="col" class="px-6 py-4 font-semibold text-slate-900">Price (VND)</th>
+								<th scope="col" class="px-6 py-4 font-semibold text-slate-900">Config</th>
+								<th scope="col" class="px-6 py-4 font-semibold text-slate-900">Sale Window</th>
+								<th scope="col" class="px-6 py-4 font-semibold text-slate-900">Status</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-slate-200 bg-white">
+							{#each localOffers as offer (offer.id)}
+								<tr class="transition-colors hover:bg-slate-50">
+									<td class="whitespace-nowrap px-6 py-4 font-bold text-slate-900">
+										<button type="button" class="hover:text-blue-600 hover:underline" onclick={() => openUpdateOfferModal(offer)}>
+											{offer.name}
+										</button>
+										{#if offer.description}
+											<div class="text-xs font-normal text-slate-500 max-w-[200px] truncate">{offer.description}</div>
+										{/if}
+									</td>
+									<td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-700">
+										<span class="inline-flex rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 ring-1 ring-inset ring-slate-200">{offer.ticketTypeId === 'tt-1' ? 'General Admission' : (offer.ticketTypeId === 'tt-2' ? 'VIP' : 'Standard')}</span>
+									</td>
+									<td class="whitespace-nowrap px-6 py-4 font-black tracking-tight text-blue-600">{formatCurrency(offer.faceValue ?? offer.price)}</td>
+									<td class="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
+										<div class="font-semibold text-slate-900">{offer.seatingMode === 'RESERVED' ? 'Reserved Seating' : 'General Admission'}</div>
+										<div class="text-xs">
+											Price Level:
+											{#if offer.priceLevelId}
+												<span class="inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[10px] font-bold ring-1 ring-inset ring-slate-200" style="color: {basePriceLevels.find(p => p.id === offer.priceLevelId)?.color || 'inherit'}">
+													{basePriceLevels.find(p => p.id === offer.priceLevelId)?.label || offer.priceLevelId}
+												</span>
+											{:else}
+												None
+											{/if}
+										</div>
+										<div class="text-xs mt-0.5">Min/Max: {offer.eventTicketMinimum || 1}/{offer.capacityCap || '∞'}</div>
+									</td>
+									<td class="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
+										{#if offer.saleWindows && offer.saleWindows.length > 0}
+											<div class="font-semibold text-slate-900">{offer.saleWindows[0].type === 'PRESALE' ? 'Pre-Sale' : 'General Sale'}</div>
+											<div class="text-xs">{formatDateTime(offer.saleWindows[0].startAt)} - {formatDateTime(offer.saleWindows[0].endAt)}</div>
+										{:else}
+											<span class="text-xs text-slate-400">Not configured</span>
+										{/if}
+									</td>
+									<td class="whitespace-nowrap px-6 py-4">
+										{#if offer.active ?? true}
+											<span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-600 ring-1 ring-emerald-500/20">Active</span>
+										{:else}
+											<span class="inline-flex items-center rounded-full bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-500 ring-1 ring-slate-200">Inactive</span>
+										{/if}
+									</td>
+								</tr>
+							{:else}
+								<tr>
+									<td colspan="4" class="px-6 py-16 text-center">
+										<div class="mx-auto mb-3 w-12 rounded-full bg-slate-100 p-3 text-slate-400">
+											<IconPlus size={24} />
+										</div>
+										<h3 class="text-sm font-bold text-slate-900">No offers yet</h3>
+										<p class="mt-1 text-sm text-slate-500">Create your first pricing tier to start selling tickets.</p>
+										<button type="button" onclick={openAddOfferModal} class="mt-4 text-sm font-semibold text-blue-600 hover:text-blue-700">
+											+ Add Offer Tier
+										</button>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
 			</div>
 		{/if}
 	</div>
 </div>
 
 {#if isAddOfferModalOpen}
-	<div class="modal-overlay" role="dialog">
-		<div class="modal">
-			<div class="modal-header">
-				<h3 class="modal-title">Add New Pricing Tier</h3>
-				<button type="button" onclick={() => (isAddOfferModalOpen = false)} class="modal-close"
-					>&times;</button
-				>
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 transition-all backdrop-blur-sm" role="dialog">
+		<div class="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200">
+			<div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+				<h3 class="text-lg font-bold tracking-tight text-slate-900">{editingOffer?.id ? 'Update Pricing Tier' : 'Add New Pricing Tier'}</h3>
+				<button type="button" onclick={() => (isAddOfferModalOpen = false)} class="rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600">
+					<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+				</button>
 			</div>
-			<form onsubmit={handleAddOffer} class="modal-form">
-				<div class="field">
-					<label for="offer-name" class="label">Tier Name <span class="required">*</span></label>
-					<input
-						type="text"
-						id="offer-name"
-						bind:value={newOfferName}
-						required
-						placeholder="e.g. VIP Front Row"
-						class="input"
-					/>
-				</div>
-				<div class="field-row">
-					<div class="field">
-						<label for="offer-price" class="label"
-							>Price (VND) <span class="required">*</span></label
-						>
-						<input
-							type="number"
-							id="offer-price"
-							bind:value={newOfferPrice}
-							required
-							min="0"
-							class="input"
-						/>
+			<form onsubmit={handleSaveOffer} class="p-6">
+				<div class="space-y-5">
+					<div class="grid grid-cols-2 gap-4">
+						<div>
+							<label for="offer-name" class="mb-1.5 block text-sm font-semibold text-slate-700">Offer Name <span class="text-red-500">*</span></label>
+							<input
+								type="text"
+								id="offer-name"
+								bind:value={editingOffer.name}
+								required
+								placeholder="e.g. VIP Early Bird"
+								class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
+							/>
+						</div>
+						<div>
+							<label for="offer-desc" class="mb-1.5 block text-sm font-semibold text-slate-700">Description</label>
+							<input
+								type="text"
+								id="offer-desc"
+								bind:value={editingOffer.description}
+								placeholder="Optional description"
+								class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
+							/>
+						</div>
 					</div>
-					<div class="field">
-						<label for="offer-limit" class="label">Max Limit <span class="required">*</span></label>
-						<input
-							type="number"
-							id="offer-limit"
-							bind:value={newOfferLimit}
-							required
-							min="1"
-							class="input"
-						/>
+					<div class="grid grid-cols-2 gap-4">
+						<div>
+							<label for="ticket-type" class="mb-1.5 block text-sm font-semibold text-slate-700">Ticket Type <span class="text-red-500">*</span></label>
+							<select
+								id="ticket-type"
+								bind:value={editingOffer.ticketTypeId}
+								required
+								class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
+							>
+								<option value="tt-1">General Admission</option>
+								<option value="tt-2">VIP</option>
+							</select>
+						</div>
+						<div>
+							<label for="price-level" class="mb-1.5 block text-sm font-semibold text-slate-700">Price Level</label>
+							<select
+								id="price-level"
+								bind:value={editingOffer.priceLevelId}
+								class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
+							>
+								<option value="">None (Applies to all)</option>
+								{#each basePriceLevels as pl}
+									<option value={pl.id}>{pl.label}</option>
+								{/each}
+							</select>
+						</div>
+					</div>
+					<div class="grid grid-cols-2 gap-4">
+						<div>
+							<label for="offer-price" class="mb-1.5 block text-sm font-semibold text-slate-700">Price (VND) <span class="text-red-500">*</span></label>
+							<input
+								type="number"
+								id="offer-price"
+								bind:value={editingOffer.faceValue}
+								required
+								min="0"
+								class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
+							/>
+						</div>
+						<div>
+							<label for="offer-limit" class="mb-1.5 block text-sm font-semibold text-slate-700">Capacity Cap <span class="text-red-500">*</span></label>
+							<input
+								type="number"
+								id="offer-limit"
+								bind:value={editingOffer.capacityCap}
+								required
+								min="1"
+								class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
+							/>
+						</div>
+					</div>
+					<div class="grid grid-cols-2 gap-4">
+						<div>
+							<label for="offer-min" class="mb-1.5 block text-sm font-semibold text-slate-700">Min Tickets/Order</label>
+							<input
+								type="number"
+								id="offer-min"
+								bind:value={editingOffer.eventTicketMinimum}
+								min="1"
+								class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
+							/>
+						</div>
+						<div>
+							<label for="offer-mode" class="mb-1.5 block text-sm font-semibold text-slate-700">Seating Mode</label>
+							<select
+								id="offer-mode"
+								bind:value={editingOffer.seatingMode}
+								class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
+							>
+								<option value="GA">General Admission</option>
+								<option value="RESERVED">Reserved Seating</option>
+							</select>
+						</div>
+					</div>
+					
+					<div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+						<h4 class="mb-3 text-sm font-bold text-slate-900">Sale Window</h4>
+						<div class="space-y-4">
+							{#if editingOffer.saleWindows && editingOffer.saleWindows.length > 0}
+								<div>
+									<label for="sale-type" class="mb-1.5 block text-xs font-semibold text-slate-700">Window Type</label>
+									<select
+										id="sale-type"
+										bind:value={editingOffer.saleWindows[0].type}
+										class="block w-full rounded-md border-0 px-3 py-2 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
+									>
+										<option value="PRESALE">Pre-Sale</option>
+										<option value="GENERAL_SALE">General Sale</option>
+									</select>
+								</div>
+								<div class="grid grid-cols-2 gap-3">
+									<div>
+										<label for="sale-start" class="mb-1.5 block text-xs font-semibold text-slate-700">Start Time</label>
+										<input type="datetime-local" id="sale-start" bind:value={editingOffer.saleWindows[0].startAt} class="block w-full rounded-md border-0 px-3 py-2 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm" />
+									</div>
+									<div>
+										<label for="sale-end" class="mb-1.5 block text-xs font-semibold text-slate-700">End Time</label>
+										<input type="datetime-local" id="sale-end" bind:value={editingOffer.saleWindows[0].endAt} class="block w-full rounded-md border-0 px-3 py-2 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm" />
+									</div>
+								</div>
+							{:else}
+								<button type="button" class="text-sm font-semibold text-blue-600 hover:text-blue-700" onclick={() => editingOffer.saleWindows = [{ type: 'GENERAL_SALE', startAt: '', endAt: '' }]}>
+									+ Add Sale Window
+								</button>
+							{/if}
+						</div>
+					</div>
+
+					<div class="flex items-center gap-6">
+						<label class="flex cursor-pointer items-center gap-3 transition-colors hover:opacity-80">
+							<input type="checkbox" bind:checked={editingOffer.active} class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600" />
+							<span class="text-sm font-medium text-slate-700">Active for sales</span>
+						</label>
+						<label class="flex cursor-pointer items-center gap-3 transition-colors hover:opacity-80">
+							<input type="checkbox" bind:checked={editingOffer.restrictedPayment} class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600" />
+							<span class="text-sm font-medium text-slate-700">Restricted Payment</span>
+						</label>
 					</div>
 				</div>
-				<label class="checkbox-label">
-					<input type="checkbox" bind:checked={newOfferActive} class="checkbox" />
-					<span>Mark tier as active for sales</span>
-				</label>
-				<div class="modal-actions">
-					<button type="button" onclick={() => (isAddOfferModalOpen = false)} class="btn-ghost"
-						>Cancel</button
-					>
-					<button type="submit" class="btn-primary">Add Tier</button>
+				<div class="mt-8 flex items-center justify-end gap-3">
+					<button type="button" onclick={() => (isAddOfferModalOpen = false)} class="rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100">
+						Cancel
+					</button>
+					<button type="submit" class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-500 hover:shadow-md">
+						{editingOffer?.id ? 'Save Changes' : 'Add Tier'}
+					</button>
 				</div>
 			</form>
 		</div>
