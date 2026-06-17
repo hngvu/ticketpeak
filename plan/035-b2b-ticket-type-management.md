@@ -12,4 +12,6 @@ This plan outlines the steps to add Ticket Type management capabilities to the B
 done
 
 ## Outcome
-Implemented a "Manage Ticket Types" modal inside the Offers tab that allows creating and deleting Ticket Types. Integrated Ticket Types dynamically into the Offer creation/edit form via API fetching in `+page.server.ts`. Mock IDs like `tt-1` were replaced with actual UUIDs. Tested the types with `npm run check` and no errors were found.
+Implemented a "Manage Ticket Types" modal inside the Offers tab that allows creating and deleting Ticket Types.
+Refactored the data model, replacing `slug` and `description` with standardized `code` fields (ADULT, CHILD, STUDENT, COMP, VIP, GROUP).
+Created a database migration `V58` to apply changes, built a SvelteKit B2B API proxy to securely handle client-side queries, and updated all frontend forms/modals to use dropdown selectors. All frontend checks, unit, and integration tests passed, and changes were successfully pushed to `main`.
