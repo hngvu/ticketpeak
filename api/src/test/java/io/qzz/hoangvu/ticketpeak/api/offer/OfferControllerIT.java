@@ -184,11 +184,11 @@ class OfferControllerIT {
     }
 
     
-    private java.util.UUID createTicketType(java.util.UUID eventId, String slug) {
+    private java.util.UUID createTicketType(java.util.UUID eventId, String code) {
         return ticketTypeRepository.saveAndFlush(TicketType.builder()
                 .eventId(eventId)
-                .name(slug)
-                .slug(slug)
+                .name(code)
+                .code(code.toUpperCase().replace("-", "_"))
                 .build()).getId();
     }
     private CreateOfferRequest createOfferRequest(java.util.UUID ticketTypeId, String name, BigDecimal faceValue, SeatingMode seatingMode, List<CreateSaleWindowRequest> windows) {
@@ -507,7 +507,7 @@ class OfferControllerIT {
                 .timezone("Asia/Ho_Chi_Minh")
                 .saleStartAt(Instant.now().plusSeconds(3600))
                 .saleEndAt(Instant.now().plusSeconds(7200))
-                .serviceFeePercent(0)
+                .serviceFeePercent(BigDecimal.ZERO)
                 .build());
 
         CreateOfferRequest request = new CreateOfferRequest(
@@ -788,7 +788,7 @@ class OfferControllerIT {
                 .status(status)
                 .startAt(Instant.now().plusSeconds(86400))
                 .timezone("Asia/Ho_Chi_Minh")
-                .serviceFeePercent(0)
+                .serviceFeePercent(BigDecimal.ZERO)
                 .build());
     }
 

@@ -12,8 +12,8 @@ export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 	}
 
 	try {
-		// Fetch event details, offers, inventory, venues, categories, attractions concurrently
-		const [event, offers, inventory, venuesRes, classifications, attractions] = await Promise.all([
+		// Fetch event details, offers, inventory, venues, categories, attractions, ticketTypes concurrently
+		const [event, offers, inventory, venuesRes, classifications, attractions, ticketTypes] = await Promise.all([
 			apiFetch<any>(fetch, `/api/partner/events/${id}`, {
 				headers: {
 					Authorization: `Bearer ${accessToken}`
@@ -27,7 +27,10 @@ export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 			apiFetch<any[]>(fetch, '/api/classifications')
 				.then((res) => (res && res.length > 0 ? res : [...MOCK_CLASSIFICATIONS]))
 				.catch(() => [...MOCK_CLASSIFICATIONS]),
-			apiFetch<any[]>(fetch, '/api/attractions').catch(() => [])
+			apiFetch<any[]>(fetch, '/api/attractions').catch(() => []),
+			apiFetch<any[]>(fetch, `/api/partner/events/${id}/ticket-types`, {
+				headers: { Authorization: `Bearer ${accessToken}` }
+			}).catch(() => [])
 		]);
 
 		let manifests: any[] = [];
@@ -44,6 +47,7 @@ export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 			venues: venuesRes?.content || [],
 			classifications,
 			attractions,
+			ticketTypes,
 			manifests
 		};
 	} catch (err: any) {

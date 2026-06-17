@@ -76,11 +76,10 @@ export const actions: Actions = {
 		const data = await request.formData();
 		const eventId = data.get('eventId') as string;
 		const name = data.get('name') as string;
-		const slug = data.get('slug') as string;
-		const description = data.get('description') as string;
+		const code = data.get('code') as string;
 
-		if (!eventId || !name || !slug) {
-			return fail(400, { error: 'Event ID, name, and slug are required fields' });
+		if (!eventId || !name || !code) {
+			return fail(400, { error: 'Event ID, name, and code are required fields' });
 		}
 
 		try {
@@ -90,7 +89,7 @@ export const actions: Actions = {
 					'Content-Type': 'application/json',
 					Authorization: `Bearer ${accessToken}`
 				},
-				body: JSON.stringify({ name, slug, description })
+				body: JSON.stringify({ name, code })
 			});
 			return { success: true, message: 'Ticket type created successfully' };
 		} catch (err: any) {
@@ -104,14 +103,14 @@ export const actions: Actions = {
 
 		const data = await request.formData();
 		const eventId = data.get('eventId') as string;
-		const slug = data.get('slug') as string;
+		const code = data.get('code') as string;
 
-		if (!eventId || !slug) {
-			return fail(400, { error: 'Event ID and ticket type slug are required' });
+		if (!eventId || !code) {
+			return fail(400, { error: 'Event ID and ticket type code are required' });
 		}
 
 		try {
-			await apiFetch<any>(fetch, `/api/partner/events/${eventId}/ticket-types/${slug}`, {
+			await apiFetch<any>(fetch, `/api/partner/events/${eventId}/ticket-types/${code}`, {
 				method: 'DELETE',
 				headers: {
 					Authorization: `Bearer ${accessToken}`

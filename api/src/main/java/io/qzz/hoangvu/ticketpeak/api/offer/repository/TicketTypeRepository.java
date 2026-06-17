@@ -13,7 +13,7 @@ public interface TicketTypeRepository extends JpaRepository<TicketType, UUID> {
 
     List<TicketType> findByEventIdOrderByCreatedAtAsc(UUID eventId);
 
-    Optional<TicketType> findByEventIdAndSlug(UUID eventId, String slug);
+    Optional<TicketType> findByEventIdAndCode(UUID eventId, String code);
 
-    boolean existsByEventIdAndSlug(UUID eventId, String slug);
+    boolean existsByEventIdAndCode(UUID eventId, String code);
 }

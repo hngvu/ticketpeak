@@ -37,21 +37,21 @@ public class PartnerTicketTypeController {
         return ResponseEntity.ok(ApiResponse.success(ticketTypeService.listEventTicketTypes(eventId), "OK"));
     }
 
-    @GetMapping("/{slug}")
+    @GetMapping("/{code}")
     public ResponseEntity<ApiResponse<TicketTypeResponse>> getEventTicketTypeForPartner(
             @PathVariable UUID eventId,
-            @PathVariable String slug
+            @PathVariable String code
     ) {
         return ResponseEntity.ok(ApiResponse.success(
-                ticketTypeService.getEventTicketTypeForPartner(eventId, slug), "OK"));
+                ticketTypeService.getEventTicketTypeForPartner(eventId, code), "OK"));
     }
 
-    @DeleteMapping("/{slug}")
+    @DeleteMapping("/{code}")
     public ResponseEntity<ApiResponse<Void>> deleteTicketType(
             @PathVariable UUID eventId,
-            @PathVariable String slug
+            @PathVariable String code
     ) {
-        ticketTypeService.deleteTicketType(eventId, slug);
+        ticketTypeService.deleteTicketType(eventId, code);
         return ResponseEntity.ok(ApiResponse.success(null, "Ticket type deleted"));
     }
 }

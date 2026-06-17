@@ -96,6 +96,57 @@
 
 	let editingOffer = $state<any>(null);
 
+	let ticketTypes = $state<any[]>(data.ticketTypes || []);
+	let isTicketTypeModalOpen = $state(false);
+	let newTicketType = $state<any>({ name: '', code: '' });
+	let savingTicketType = $state(false);
+
+	function getTicketTypeName(id: string) {
+		const tt = ticketTypes.find(t => t.id === id);
+		return tt ? tt.name : id;
+	}
+
+	async function createTicketType() {
+		savingTicketType = true;
+		try {
+			const payload = {
+				name: newTicketType.name,
+				code: newTicketType.code
+			};
+
+			const res = await fetch(`/api/partner/events/${event.id}/ticket-types`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload)
+			});
+			if (!res.ok) {
+				const err = await res.json();
+				throw new Error(err.message || 'Failed to save ticket type');
+			}
+			const json = await res.json();
+			ticketTypes = [...ticketTypes, json.data];
+			newTicketType = { name: '', code: '' };
+		} catch (err: any) {
+			alert(err.message);
+		} finally {
+			savingTicketType = false;
+		}
+	}
+
+	async function deleteTicketType(code: string) {
+		if (!confirm('Are you sure you want to delete this ticket type?')) return;
+		try {
+			const res = await fetch(`/api/partner/events/${event.id}/ticket-types/${code}`, { method: 'DELETE' });
+			if (!res.ok) {
+				const err = await res.json();
+				throw new Error(err.message || 'Failed to delete ticket type');
+			}
+			ticketTypes = ticketTypes.filter(t => t.code !== code);
+		} catch (err: any) {
+			alert(err.message);
+		}
+	}
+
 	let holds = $state([
 		{
 			id: 'hold-1',
@@ -301,7 +352,7 @@
 		editingOffer = {
 			name: '',
 			description: '',
-			ticketTypeId: 'tt-1', // default mock
+			ticketTypeId: ticketTypes.length > 0 ? ticketTypes[0].id : '',
 			saleWindows: [{ type: 'GENERAL_SALE', startAt: '', endAt: '' }],
 			currency: 'VND',
 			faceValue: 200000,
@@ -681,7 +732,7 @@
 						{/if}
 
 						{#if activeTab === 'holds'}
-							{#snippet holdItem(hold)}
+							{#snippet holdItem(hold: any)}
 								<div
 									class="group flex items-center gap-2 rounded-lg px-2.5 py-2 transition-colors hover:bg-slate-50"
 									ondragover={(e) => {
@@ -757,7 +808,7 @@
 									</div>
 									<button
 										type="button"
-										onclick={() => holds.push({ id: `hold_${Date.now()}`, name: 'New Hold', status: 'LOCKED', count: 0 })}
+										onclick={() => holds.push({ id: `hold_${Date.now()}`, name: 'New Hold', status: 'LOCKED', count: 0, reason: '' })}
 										class="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
 										aria-label="Add hold"
 									>
@@ -777,7 +828,7 @@
 									</div>
 									<button
 										type="button"
-										onclick={() => holds.push({ id: `kill_${Date.now()}`, name: 'New Kill', status: 'KILLED', count: 0 })}
+										onclick={() => holds.push({ id: `kill_${Date.now()}`, name: 'New Kill', status: 'KILLED', count: 0, reason: '' })}
 										class="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
 										aria-label="Add kill"
 									>
@@ -1390,7 +1441,14 @@
 			</div>
 		{:else if activeTab === 'offers'}
 			<div class="card">
-				<div class="flex items-center justify-end">
+				<div class="flex items-center justify-end gap-3">
+					<button
+						type="button"
+						onclick={() => (isTicketTypeModalOpen = true)}
+						class="flex items-center gap-2 rounded-none bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 transition-all duration-200 hover:bg-slate-50"
+					>
+						<span>Manage Ticket Types</span>
+					</button>
 					<button
 						type="button"
 						onclick={openAddOfferModal}
@@ -1425,7 +1483,7 @@
 										{/if}
 									</td>
 									<td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-700">
-										<span class="inline-flex rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 ring-1 ring-inset ring-slate-200">{offer.ticketTypeId === 'tt-1' ? 'General Admission' : (offer.ticketTypeId === 'tt-2' ? 'VIP' : 'Standard')}</span>
+										<span class="inline-flex rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 ring-1 ring-inset ring-slate-200">{getTicketTypeName(offer.ticketTypeId)}</span>
 									</td>
 									<td class="whitespace-nowrap px-6 py-4 font-black tracking-tight text-blue-600">{formatCurrency(offer.faceValue ?? offer.price)}</td>
 									<td class="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
@@ -1480,6 +1538,98 @@
 	</div>
 </div>
 
+{#if isTicketTypeModalOpen}
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+		<div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick={() => (isTicketTypeModalOpen = false)} aria-hidden="true"></div>
+		<div class="relative w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+			<div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+				<h3 class="text-lg font-bold tracking-tight text-slate-900">Manage Ticket Types</h3>
+				<button type="button" onclick={() => (isTicketTypeModalOpen = false)} class="rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600">
+					<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+				</button>
+			</div>
+			
+			<div class="px-6 py-6 max-h-[70vh] overflow-y-auto">
+				<div class="mb-6 space-y-4">
+					{#if ticketTypes.length === 0}
+						<div class="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+							No ticket types found. Create one to get started.
+						</div>
+					{:else}
+						<div class="overflow-hidden rounded-xl border border-slate-200">
+							<table class="min-w-full divide-y divide-slate-200 text-left text-sm">
+								<thead class="bg-slate-50">
+									<tr>
+										<th scope="col" class="px-4 py-3 font-semibold text-slate-900">Name</th>
+										<th scope="col" class="px-4 py-3 font-semibold text-slate-900">Code</th>
+										<th scope="col" class="px-4 py-3 text-right font-semibold text-slate-900">Actions</th>
+									</tr>
+								</thead>
+								<tbody class="divide-y divide-slate-200 bg-white">
+									{#each ticketTypes as tt}
+										<tr>
+											<td class="whitespace-nowrap px-4 py-3 font-medium text-slate-900">{tt.name}</td>
+											<td class="whitespace-nowrap px-4 py-3 text-slate-500">{tt.code}</td>
+											<td class="whitespace-nowrap px-4 py-3 text-right">
+												<button type="button" onclick={() => deleteTicketType(tt.code)} class="text-red-600 hover:text-red-800 font-medium text-xs">Delete</button>
+											</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					{/if}
+				</div>
+
+				<div class="rounded-xl border border-slate-200 bg-slate-50 p-5">
+					<h4 class="mb-4 text-sm font-bold text-slate-900">Create New Ticket Type</h4>
+					<div class="grid grid-cols-2 gap-4">
+						<div>
+							<label class="mb-1.5 block text-sm font-semibold text-slate-700">Code <span class="text-red-500">*</span></label>
+							<select
+								bind:value={newTicketType.code}
+								onchange={() => {
+									if (!newTicketType.name && newTicketType.code) {
+										newTicketType.name = newTicketType.code.charAt(0) + newTicketType.code.slice(1).toLowerCase();
+									}
+								}}
+								class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
+							>
+								<option value="">Select Code</option>
+								<option value="ADULT">ADULT</option>
+								<option value="CHILD">CHILD</option>
+								<option value="STUDENT">STUDENT</option>
+								<option value="COMP">COMP</option>
+								<option value="VIP">VIP</option>
+								<option value="GROUP">GROUP</option>
+							</select>
+						</div>
+						<div>
+							<label class="mb-1.5 block text-sm font-semibold text-slate-700">Name <span class="text-red-500">*</span></label>
+							<input
+								type="text"
+								bind:value={newTicketType.name}
+								placeholder="e.g. Adult Ticket"
+								class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
+							/>
+						</div>
+					</div>
+					<div class="mt-4 flex justify-end">
+						<button
+							type="button"
+							disabled={!newTicketType.name || !newTicketType.code || savingTicketType}
+							onclick={createTicketType}
+							class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
+						>
+							{savingTicketType ? 'Saving...' : 'Add Ticket Type'}
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}
+
 {#if isAddOfferModalOpen}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 transition-all backdrop-blur-sm" role="dialog">
 		<div class="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200">
@@ -1523,8 +1673,12 @@
 								required
 								class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
 							>
-								<option value="tt-1">General Admission</option>
-								<option value="tt-2">VIP</option>
+								{#each ticketTypes as tt}
+									<option value={tt.id}>{tt.name}</option>
+								{/each}
+								{#if ticketTypes.length === 0}
+									<option value="" disabled>Please create a Ticket Type first</option>
+								{/if}
 							</select>
 						</div>
 						<div>

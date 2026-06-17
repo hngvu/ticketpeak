@@ -243,16 +243,13 @@
 										<span
 											class="mt-1 inline-block rounded bg-slate-100 px-2 py-0.5 font-mono text-[10px] text-slate-600"
 										>
-											slug: {tt.slug}
+											code: {tt.code}
 										</span>
-										<p class="mt-1.5 text-xs text-slate-500">
-											{tt.description || 'No description provided.'}
-										</p>
 									</div>
 
 									<form method="POST" action="?/deleteTicketType" use:enhance>
 										<input type="hidden" name="eventId" value={data.selectedEventId} />
-										<input type="hidden" name="slug" value={tt.slug} />
+										<input type="hidden" name="code" value={tt.code} />
 										<button
 											type="submit"
 											class="cursor-pointer rounded-full border border-red-100 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-100"
@@ -279,6 +276,26 @@
 						<input type="hidden" name="eventId" value={data.selectedEventId} />
 
 						<div>
+							<label for="tt-code" class="mb-1.5 block text-xs font-bold text-slate-500 uppercase"
+								>Code *</label
+							>
+							<select
+								id="tt-code"
+								name="code"
+								required
+								class="w-full rounded-lg border border-slate-200 bg-white p-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none"
+							>
+								<option value="">Select Code</option>
+								<option value="ADULT">ADULT</option>
+								<option value="CHILD">CHILD</option>
+								<option value="STUDENT">STUDENT</option>
+								<option value="COMP">COMP</option>
+								<option value="VIP">VIP</option>
+								<option value="GROUP">GROUP</option>
+							</select>
+						</div>
+
+						<div>
 							<label for="tt-name" class="mb-1.5 block text-xs font-bold text-slate-500 uppercase"
 								>Name *</label
 							>
@@ -287,38 +304,9 @@
 								id="tt-name"
 								name="name"
 								required
-								placeholder="e.g. Vé VIP Sân"
+								placeholder="e.g. Adult Ticket"
 								class="w-full rounded-lg border border-slate-200 bg-white p-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none"
 							/>
-						</div>
-
-						<div>
-							<label for="tt-slug" class="mb-1.5 block text-xs font-bold text-slate-500 uppercase"
-								>Slug (kebab-case) *</label
-							>
-							<input
-								type="text"
-								id="tt-slug"
-								name="slug"
-								required
-								pattern="^[a-z0-9-]+$"
-								placeholder="e.g. ve-vip-san"
-								class="w-full rounded-lg border border-slate-200 bg-white p-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none"
-							/>
-						</div>
-
-						<div>
-							<label
-								for="tt-description"
-								class="mb-1.5 block text-xs font-bold text-slate-500 uppercase">Description</label
-							>
-							<textarea
-								id="tt-description"
-								name="description"
-								rows="3"
-								placeholder="Describe the privileges..."
-								class="w-full rounded-lg border border-slate-200 bg-white p-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none"
-							></textarea>
 						</div>
 
 						<button

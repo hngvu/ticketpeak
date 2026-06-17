@@ -9,8 +9,7 @@ public record TicketTypeResponse(
         UUID id,
         UUID eventId,
         String name,
-        String slug,
-        String description,
+        String code,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -19,8 +18,7 @@ public record TicketTypeResponse(
                 t.getId(),
                 t.getEventId(),
                 t.getName(),
-                t.getSlug(),
-                t.getDescription(),
+                t.getCode(),
                 t.getCreatedAt(),
                 t.getUpdatedAt()
         );

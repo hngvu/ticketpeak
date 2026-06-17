@@ -40,15 +40,14 @@ public class TicketTypeService {
             throw OfferException.invalidEventState("Cannot create ticket type for canceled or completed event");
         }
 
-        if (ticketTypeRepository.existsByEventIdAndSlug(eventId, request.slug())) {
+        if (ticketTypeRepository.existsByEventIdAndCode(eventId, request.code())) {
             throw OfferException.ticketTypeAlreadyExists();
         }
 
         TicketType ticketType = TicketType.builder()
                 .eventId(eventId)
                 .name(request.name().trim())
-                .slug(request.slug())
-                .description(request.description() != null && !request.description().isBlank() ? request.description().trim() : null)
+                .code(request.code())
                 .build();
 
         return TicketTypeResponse.from(ticketTypeRepository.save(ticketType));
@@ -64,28 +63,26 @@ public class TicketTypeService {
     }
 
     @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#eventId))")
-    public TicketTypeResponse getEventTicketTypeForPartner(UUID eventId, String slug) {
+    public TicketTypeResponse getEventTicketTypeForPartner(UUID eventId, String code) {
         eventService.getEventForPartner(eventId);
-        TicketType ticketType = ticketTypeRepository.findByEventIdAndSlug(eventId, slug)
+        TicketType ticketType = ticketTypeRepository.findByEventIdAndCode(eventId, code)
                 .orElseThrow(OfferException::ticketTypeNotFound);
         return TicketTypeResponse.from(ticketType);
     }
 
     @Transactional
     @PreAuthorize("hasRole('ADMIN') or (hasRole('ORGANIZER') and @orgSecurity.isEventOwnerOrMember(#eventId))")
-    public void deleteTicketType(UUID eventId, String slug) {
+    public void deleteTicketType(UUID eventId, String code) {
         EventResponse event = eventService.getEventForPartner(eventId);
 
         if (event.status() == EventStatus.CANCELED || event.status() == EventStatus.COMPLETED) {
             throw OfferException.invalidEventState("Cannot delete ticket type for canceled or completed event");
         }
 
-        TicketType ticketType = ticketTypeRepository.findByEventIdAndSlug(eventId, slug)
+        TicketType ticketType = ticketTypeRepository.findByEventIdAndCode(eventId, code)
                 .orElseThrow(OfferException::ticketTypeNotFound);
 
         // Check if there are any offers referencing this ticket type
-        // Wait, the plan says: delete (chỉ khi không có offer nào ref)
-        // Let's implement that
         if (offerRepository.existsByEventIdAndTicketTypeId(eventId, ticketType.getId())) {
             throw OfferException.ticketTypeInUse("Cannot delete ticket type because it is referenced by one or more offers");
         }

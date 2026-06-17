@@ -10,11 +10,8 @@ public record CreateTicketTypeRequest(
         String name,
 
         @NotBlank(message = "must not be blank")
-        @Size(max = 255, message = "must be at most 255 characters")
-        @Pattern(regexp = "^[a-z0-9-]+$", message = "must contain only lowercase letters, numbers, and hyphens")
-        String slug,
-
-        @Size(max = 4000, message = "must be at most 4000 characters")
-        String description
+        @Size(max = 20, message = "must be at most 20 characters")
+        @Pattern(regexp = "^[A-Z_]+$", message = "must contain only uppercase letters and underscores")
+        String code
 ) {
 }

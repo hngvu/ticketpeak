@@ -11,7 +11,7 @@ public final class OfferException {
     }
 
     public static ApiException ticketTypeAlreadyExists() {
-        return new ApiException(HttpStatus.CONFLICT, "TICKET_TYPE_ALREADY_EXISTS", "Ticket type slug is already registered for this event");
+        return new ApiException(HttpStatus.CONFLICT, "TICKET_TYPE_ALREADY_EXISTS", "Ticket type code is already registered for this event");
     }
 
     public static ApiException codeAlreadyExists() {

@@ -108,7 +108,7 @@ public class OrderServiceIT {
         TicketType ticketType = ticketTypeRepository.save(TicketType.builder()
                 .eventId(event.getId())
                 .name("Standard")
-                .slug("standard")
+                .code("STANDARD")
                 .build());
 
         offer = offerRepository.save(Offer.builder()

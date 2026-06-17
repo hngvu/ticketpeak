@@ -14,7 +14,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "ticket_type", uniqueConstraints = {
-        @UniqueConstraint(name = "uq_ticket_type_event_slug", columnNames = {"event_id", "slug"})
+        @UniqueConstraint(name = "uq_ticket_type_event_code", columnNames = {"event_id", "code"})
 })
 @Getter
 @Setter
@@ -36,11 +36,8 @@ public class TicketType {
     @Column(nullable = false, length = 255)
     String name;
 
-    @Column(nullable = false, length = 255)
-    String slug;
-
-    @Column(columnDefinition = "TEXT")
-    String description;
+    @Column(nullable = false, length = 20)
+    String code;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)
