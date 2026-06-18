@@ -16,6 +16,8 @@ import io.qzz.hoangvu.ticketpeak.api.payment.model.PaymentStatus;
 import io.qzz.hoangvu.ticketpeak.api.payment.service.PaymentWebhookHandler;
 import io.qzz.hoangvu.ticketpeak.api.payment.service.WebhookContext;
 import io.qzz.hoangvu.ticketpeak.api.security.AuthenticatedAccount;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +44,7 @@ import java.util.UUID;
 @Slf4j
 @RestController
 @RequestMapping("/api/payments")
+@RateLimiter(name = "publicAPI")
 public class PaymentController {
 
     private final PaymentManager paymentManager;

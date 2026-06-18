@@ -364,7 +364,7 @@
 	{/if}
 
 	<!-- Top Header Menu with Horizontal Navigation Tabs (Left) & Dropdown Button (Right) -->
-	<div class="flex items-center justify-between border-b border-slate-200 pb-2">
+	<div class="flex items-center justify-between border-b border-slate-200">
 		<!-- Horizontal Tabs (Top Left) -->
 		<nav class="-mb-px flex space-x-6" aria-label="Events sub-navigation">
 			<button

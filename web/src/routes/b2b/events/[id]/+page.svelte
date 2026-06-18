@@ -1,7 +1,7 @@
 <script lang="ts">
 	/* eslint-disable @typescript-eslint/no-explicit-any */
 	import { enhance } from '$app/forms';
-	import { IconPlus } from '@tabler/icons-svelte';
+	import { IconPlus, IconChevronDown, IconTicket, IconFolderPlus } from '@tabler/icons-svelte';
 	import Combobox from '$lib/components/ui/combobox.svelte';
 	import DateTimePicker from '$lib/components/common/DateTimePicker.svelte';
 
@@ -98,6 +98,7 @@
 
 	let ticketTypes = $state<any[]>(data.ticketTypes || []);
 	let isTicketTypeModalOpen = $state(false);
+	let isCreateMenuOpen = $state(false);
 	let newTicketType = $state<any>({ name: '', code: '' });
 	let savingTicketType = $state(false);
 
@@ -239,10 +240,12 @@
 			status: string;
 			x: number;
 			y: number;
+			isArea?: boolean;
+			capacity?: number;
 		}[] = [];
 		const cap = selectedManifest?.totalCapacity || 500;
 		const isLarge = cap > 5000;
-		const rowCount = isLarge ? 6 : 4;
+		const rowCount = isLarge ? 6 : 2;
 		const colsPerRow = isLarge ? 14 : 10;
 		for (let r = 0; r < rowCount; r++) {
 			const rowLetter = String.fromCharCode(65 + r);
@@ -252,17 +255,34 @@
 				const isLeftBlock = c < colsPerRow / 2;
 				const localIndex = isLeftBlock ? c : c - colsPerRow / 2;
 				const aisleOffset = isLeftBlock ? 0 : isLarge ? 60 : 44;
-				const x = 75 + localIndex * 32 + aisleOffset;
-				const y = 80 + r * (isLarge ? 50 : 42);
+				let x = 75 + localIndex * 32 + aisleOffset;
+				let y = 80 + r * (isLarge ? 50 : 42);
+				if (!isLarge) {
+					x = 100 + localIndex * 28 + aisleOffset;
+					y = 85 + r * 40;
+				}
 				let status: string = 'Available';
 				if (!isLarge) {
-					if (r === 2 && c > 7) status = 'Held';
+					if (r === 1 && c > 7) status = 'Held';
 				} else {
 					if (r === 4 && c < 2) status = 'Held';
 				}
 				status = seatStatuses[id] || status;
 				result.push({ id, rowLetter, seatNum, status, x, y });
 			}
+		}
+
+		if (!isLarge) {
+			result.push({
+				id: 'GA',
+				rowLetter: 'C', // to map to 'GA' base price level
+				seatNum: 0,
+				status: seatStatuses['GA'] || 'Available',
+				x: 0,
+				y: 0,
+				isArea: true,
+				capacity: 1000
+			});
 		}
 		return result;
 	});
@@ -275,12 +295,20 @@
 		const counts: Record<string, number> = {};
 		selectedSeatDetails.forEach((s) => {
 			const plId = seatPriceLevels[s.id] || (s.rowLetter < 'C' ? 'VIP' : 'GA');
-			counts[plId] = (counts[plId] || 0) + 1;
+			counts[plId] = (counts[plId] || 0) + (s.capacity || 1);
 		});
 		return Object.entries(counts).map(([plId, count]) => ({
 			pl: basePriceLevels.find((p) => p.id === plId) || basePriceLevels[0],
 			count
 		}));
+	});
+
+	const totalSelectedCount = $derived.by(() => {
+		let total = 0;
+		selectedSeatDetails.forEach((s) => {
+			total += (s.capacity || 1);
+		});
+		return total;
 	});
 	const totalSeats = $derived(seats.length);
 	const totalSold = $derived(seats.filter((s) => s.status === 'Sold').length);
@@ -316,10 +344,17 @@
 			const plSeats = seats.filter(
 				(s) => (seatPriceLevels[s.id] || (s.rowLetter < 'C' ? 'VIP' : 'GA')) === pl.id
 			);
+			let count = 0;
+			let avail = 0;
+			plSeats.forEach((s) => {
+				const c = s.capacity || 1;
+				count += c;
+				if (s.status === 'Available') avail += c;
+			});
 			return {
 				...pl,
-				avail: plSeats.filter((s) => s.status === 'Available').length,
-				count: plSeats.length
+				avail,
+				count
 			};
 		});
 	});
@@ -424,39 +459,35 @@
 {/if}
 
 <div class="page">
-	<div class="tabs">
-		<nav class="tab-nav">
+	<div class="flex items-center justify-between border-b border-slate-200 mb-6">
+		<nav class="-mb-px flex space-x-6" aria-label="Main sub-navigation">
 			<button
 				type="button"
 				onclick={() => (activeTab = 'general')}
-				class="tab-btn"
-				class:active={activeTab === 'general'}
+				class="border-b-2 px-1 py-3 text-sm font-semibold transition-all duration-150 focus:outline-none {activeTab === 'general' ? 'border-[#026CDF] font-extrabold text-[#026CDF]' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'}"
 			>
-				<span>General</span>
+				General
 			</button>
 			<button
 				type="button"
 				onclick={() => (activeTab = 'seats')}
-				class="tab-btn"
-				class:active={activeTab === 'seats'}
+				class="border-b-2 px-1 py-3 text-sm font-semibold transition-all duration-150 focus:outline-none {activeTab === 'seats' ? 'border-[#026CDF] font-extrabold text-[#026CDF]' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'}"
 			>
-				<span>Seat Map</span>
+				Seat Map
 			</button>
 			<button
 				type="button"
 				onclick={() => (activeTab = 'offers')}
-				class="tab-btn"
-				class:active={activeTab === 'offers'}
+				class="border-b-2 px-1 py-3 text-sm font-semibold transition-all duration-150 focus:outline-none {activeTab === 'offers' ? 'border-[#026CDF] font-extrabold text-[#026CDF]' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'}"
 			>
-				<span>Offers</span>
+				Offers
 			</button>
 			<button
 				type="button"
 				onclick={() => (activeTab = 'holds')}
-				class="tab-btn"
-				class:active={activeTab === 'holds'}
+				class="border-b-2 px-1 py-3 text-sm font-semibold transition-all duration-150 focus:outline-none {activeTab === 'holds' ? 'border-[#026CDF] font-extrabold text-[#026CDF]' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'}"
 			>
-				<span>Holds & Kills</span>
+				Holds & Kills
 			</button>
 		</nav>
 	</div>
@@ -1049,45 +1080,77 @@
 									{:else}
 										<!-- Fallback: no manifest detail, show hardcoded grid -->
 										<rect
-											x="55"
-											y="62"
-											width="310"
-											height="90"
+											x="65"
+											y="65"
+											width="300"
+											height="80"
 											rx="6"
 											fill="#f5f3ff"
 											stroke="#e9d5ff"
 											stroke-width="1"
 										/>
 										<rect
-											x="55"
-											y="165"
-											width="310"
-											height="90"
-											rx="6"
-											fill="#ecfdf5"
-											stroke="#a7f3d0"
-											stroke-width="1"
-										/>
-										<text
 											x="65"
-											y="77"
+											y="165"
+											width="300"
+											height="80"
+											rx="6"
+											fill={getSeatFill({ id: 'GA', rowLetter: 'C', status: 'Available' }, activeTab)}
+											stroke="#a7f3d0"
+											stroke-dasharray="4 2"
+											stroke-width="1.5"
+											class="cursor-pointer transition-all hover:opacity-80"
+											oncontextmenu={(e) => {
+												e.preventDefault();
+												e.stopPropagation();
+												if (selectedSeatIds.includes('GA')) {
+													selectedSeatIds = selectedSeatIds.filter((id) => id !== 'GA');
+												} else {
+													selectedSeatIds = [...selectedSeatIds, 'GA'];
+												}
+											}}
+											onclick={() => {
+												selectedSeatIds = ['GA'];
+											}}
+											role="button"
+											tabindex="0"
+											onkeydown={(e) => e.key === 'Enter' && (selectedSeatIds = ['GA'])}
+											aria-label="GA Area"
+										/>
+										{#if selectedSeatIds.includes('GA')}
+											<rect
+												x="65"
+												y="165"
+												width="300"
+												height="80"
+												rx="6"
+												fill="none"
+												stroke="#000000"
+												stroke-width="2"
+												class="pointer-events-none"
+											/>
+										{/if}
+										<text
+											x="75"
+											y="80"
 											fill="#7c3aed"
 											font-size="8"
 											font-weight="700"
 											letter-spacing="1">VIP</text
 										>
 										<text
-											x="65"
-											y="180"
-											fill="#059669"
-											font-size="8"
-											font-weight="700"
-											letter-spacing="1">GA</text
+											x="215"
+											y="210"
+											text-anchor="middle"
+											fill="#000000"
+											font-size="16"
+											font-weight="800"
+											letter-spacing="2">GA</text
 										>
-										{#each ['A', 'B', 'C', 'D'] as letter, i (letter)}
+										{#each ['A', 'B'] as letter, i (letter)}
 											<text
-												x="70"
-												y={86 + i * 42 + 5}
+												x="85"
+												y={88 + i * 40}
 												text-anchor="end"
 												fill="#94a3b8"
 												font-size="10"
@@ -1095,6 +1158,7 @@
 											>
 										{/each}
 										{#each seats as seat (seat.id)}
+											{#if !seat.isArea}
 											<circle
 												cx={seat.x}
 												cy={seat.y}
@@ -1141,6 +1205,7 @@
 													stroke-width="1.5"
 													class="pointer-events-none"
 												/>
+											{/if}
 											{/if}
 										{/each}
 									{/if}
@@ -1281,7 +1346,7 @@
 											>
 										</div>
 										<span class="text-xl font-semibold text-slate-700"
-											>{selectedSeatDetails.length}</span
+											>{totalSelectedCount}</span
 										>
 									</div>
 									<button
@@ -1440,190 +1505,218 @@
 				</div>
 			</div>
 		{:else if activeTab === 'offers'}
-			<div class="card">
-				<div class="flex items-center justify-end gap-3">
-					<button
-						type="button"
-						onclick={() => (isTicketTypeModalOpen = true)}
-						class="flex items-center gap-2 rounded-none bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 transition-all duration-200 hover:bg-slate-50"
-					>
-						<span>Manage Ticket Types</span>
-					</button>
-					<button
-						type="button"
-						onclick={openAddOfferModal}
-						class="flex items-center gap-2 rounded-none bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-blue-500 hover:shadow-md"
-					>
-						<IconPlus size={16} />
-						<span>Add Offer Tier</span>
-					</button>
+			<div class="flex flex-col gap-6" onclick={() => isCreateMenuOpen = false} role="presentation">
+				<div class="flex items-center justify-between">
+					<div>
+						<h2 class="text-2xl font-bold tracking-tight text-slate-900">Ticketing & Offers</h2>
+						<p class="mt-1 text-sm text-slate-500">Manage your ticket types and pricing strategies</p>
+					</div>
+					
+					<!-- prominent [+ Create] dropdown button (Top Right) -->
+					<div class="relative" onclick={(e) => e.stopPropagation()} role="presentation">
+						<button
+							type="button"
+							onclick={() => isCreateMenuOpen = !isCreateMenuOpen}
+							class="flex cursor-pointer items-center justify-center gap-1.5 rounded-none bg-[#026CDF] px-5 py-2.5 text-xs font-bold text-white shadow-none transition hover:bg-blue-700 focus:outline-none"
+						>
+							<span>Create</span>
+							<IconChevronDown
+								size={12}
+								class="transition-transform duration-150 {isCreateMenuOpen ? 'rotate-180' : ''}"
+							/>
+						</button>
+
+						<!-- Floating Create Dropdown -->
+						{#if isCreateMenuOpen}
+							<button
+								type="button"
+								class="fixed inset-0 z-40 cursor-default bg-transparent"
+								onclick={() => (isCreateMenuOpen = false)}
+								aria-label="Close creation dropdown"
+							></button>
+							<div
+								class="absolute right-0 z-50 mt-1.5 w-44 rounded-none border border-slate-200 bg-white p-1.5 shadow-xl"
+							>
+								<button
+									type="button"
+									onclick={() => {
+										isCreateMenuOpen = false;
+										isTicketTypeModalOpen = true;
+									}}
+									class="flex w-full cursor-pointer items-center gap-2 rounded-none px-3 py-2 text-left text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+								>
+									<IconTicket size={14} class="text-slate-400" />
+									<span>Ticket Type</span>
+								</button>
+								<button
+									type="button"
+									onclick={() => {
+										isCreateMenuOpen = false;
+										openAddOfferModal();
+									}}
+									class="flex w-full cursor-pointer items-center gap-2 rounded-none px-3 py-2 text-left text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+								>
+									<IconFolderPlus size={14} class="text-slate-400" />
+									<span>Pricing Tier</span>
+								</button>
+							</div>
+						{/if}
+					</div>
 				</div>
 
-				<div class="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-					<table class="min-w-full divide-y divide-slate-200 text-left text-sm">
-						<thead class="bg-slate-50">
-							<tr>
-								<th scope="col" class="px-6 py-4 font-semibold text-slate-900">Offer Name</th>
-								<th scope="col" class="px-6 py-4 font-semibold text-slate-900">Ticket Type</th>
-								<th scope="col" class="px-6 py-4 font-semibold text-slate-900">Price (VND)</th>
-								<th scope="col" class="px-6 py-4 font-semibold text-slate-900">Config</th>
-								<th scope="col" class="px-6 py-4 font-semibold text-slate-900">Sale Window</th>
-								<th scope="col" class="px-6 py-4 font-semibold text-slate-900">Status</th>
-							</tr>
-						</thead>
-						<tbody class="divide-y divide-slate-200 bg-white">
-							{#each localOffers as offer (offer.id)}
-								<tr class="transition-colors hover:bg-slate-50">
-									<td class="whitespace-nowrap px-6 py-4 font-bold text-slate-900">
-										<button type="button" class="hover:text-blue-600 hover:underline" onclick={() => openUpdateOfferModal(offer)}>
-											{offer.name}
-										</button>
-										{#if offer.description}
-											<div class="text-xs font-normal text-slate-500 max-w-[200px] truncate">{offer.description}</div>
-										{/if}
-									</td>
-									<td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-700">
-										<span class="inline-flex rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 ring-1 ring-inset ring-slate-200">{getTicketTypeName(offer.ticketTypeId)}</span>
-									</td>
-									<td class="whitespace-nowrap px-6 py-4 font-black tracking-tight text-blue-600">{formatCurrency(offer.faceValue ?? offer.price)}</td>
-									<td class="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
-										<div class="font-semibold text-slate-900">{offer.seatingMode === 'RESERVED' ? 'Reserved Seating' : 'General Admission'}</div>
-										<div class="text-xs">
-											Price Level:
-											{#if offer.priceLevelId}
-												<span class="inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[10px] font-bold ring-1 ring-inset ring-slate-200" style="color: {basePriceLevels.find(p => p.id === offer.priceLevelId)?.color || 'inherit'}">
-													{basePriceLevels.find(p => p.id === offer.priceLevelId)?.label || offer.priceLevelId}
-												</span>
-											{:else}
-												None
-											{/if}
-										</div>
-										<div class="text-xs mt-0.5">Min/Max: {offer.eventTicketMinimum || 1}/{offer.capacityCap || '∞'}</div>
-									</td>
-									<td class="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
-										{#if offer.saleWindows && offer.saleWindows.length > 0}
-											<div class="font-semibold text-slate-900">{offer.saleWindows[0].type === 'PRESALE' ? 'Pre-Sale' : 'General Sale'}</div>
-											<div class="text-xs">{formatDateTime(offer.saleWindows[0].startAt)} - {formatDateTime(offer.saleWindows[0].endAt)}</div>
-										{:else}
-											<span class="text-xs text-slate-400">Not configured</span>
-										{/if}
-									</td>
-									<td class="whitespace-nowrap px-6 py-4">
-										{#if offer.active ?? true}
-											<span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-600 ring-1 ring-emerald-500/20">Active</span>
-										{:else}
-											<span class="inline-flex items-center rounded-full bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-500 ring-1 ring-slate-200">Inactive</span>
-										{/if}
-									</td>
-								</tr>
-							{:else}
-								<tr>
-									<td colspan="4" class="px-6 py-16 text-center">
-										<div class="mx-auto mb-3 w-12 rounded-full bg-slate-100 p-3 text-slate-400">
-											<IconPlus size={24} />
-										</div>
-										<h3 class="text-sm font-bold text-slate-900">No offers yet</h3>
-										<p class="mt-1 text-sm text-slate-500">Create your first pricing tier to start selling tickets.</p>
-										<button type="button" onclick={openAddOfferModal} class="mt-4 text-sm font-semibold text-blue-600 hover:text-blue-700">
-											+ Add Offer Tier
-										</button>
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
-			</div>
-		{/if}
-	</div>
-</div>
+				<div class="flex flex-col gap-6 mt-2">
+					<!-- Top Area: Ticket Types (Compact Badges) -->
+					<div class="flex items-center gap-2 flex-wrap">
+						{#each ticketTypes as tt}
+							<div class="group flex items-center gap-1.5 rounded bg-slate-100 pl-2.5 pr-2 py-1 transition-colors hover:bg-slate-200">
+								<span class="text-[13px] text-slate-700">{tt.name}</span>
+								<button type="button" onclick={() => deleteTicketType(tt.code)} class="text-slate-400 hover:text-slate-600 transition-colors focus:outline-none" title="Delete">
+									<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12" /></svg>
+								</button>
+							</div>
+						{:else}
+							<span class="text-sm text-slate-500 italic">No ticket types defined. Click "Create" to add one.</span>
+						{/each}
+					</div>
 
-{#if isTicketTypeModalOpen}
-	<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-		<div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick={() => (isTicketTypeModalOpen = false)} aria-hidden="true"></div>
-		<div class="relative w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
-			<div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-				<h3 class="text-lg font-bold tracking-tight text-slate-900">Manage Ticket Types</h3>
-				<button type="button" onclick={() => (isTicketTypeModalOpen = false)} class="rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600">
-					<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-				</button>
-			</div>
-			
-			<div class="px-6 py-6 max-h-[70vh] overflow-y-auto">
-				<div class="mb-6 space-y-4">
-					{#if ticketTypes.length === 0}
-						<div class="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
-							No ticket types found. Create one to get started.
+					<!-- Main Area: Pricing Tiers -->
+					<div class="w-full space-y-4">
+						<div class="flex items-center justify-between">
+							<h3 class="text-sm font-bold uppercase tracking-wider text-slate-500">Pricing Tiers</h3>
 						</div>
-					{:else}
-						<div class="overflow-hidden rounded-xl border border-slate-200">
-							<table class="min-w-full divide-y divide-slate-200 text-left text-sm">
-								<thead class="bg-slate-50">
+
+						<div class="overflow-hidden rounded-none border border-slate-200 bg-white shadow-sm">
+							<table class="min-w-full divide-y divide-slate-100 text-left text-sm">
+								<thead class="bg-slate-50/50">
 									<tr>
-										<th scope="col" class="px-4 py-3 font-semibold text-slate-900">Name</th>
-										<th scope="col" class="px-4 py-3 font-semibold text-slate-900">Code</th>
-										<th scope="col" class="px-4 py-3 text-right font-semibold text-slate-900">Actions</th>
+										<th scope="col" class="px-6 py-4 font-semibold text-slate-900">Offer Name</th>
+										<th scope="col" class="px-6 py-4 font-semibold text-slate-900">Ticket Type</th>
+										<th scope="col" class="px-6 py-4 font-semibold text-slate-900">Price (VND)</th>
+										<th scope="col" class="px-6 py-4 font-semibold text-slate-900">Sale Window</th>
+										<th scope="col" class="px-6 py-4 font-semibold text-slate-900">Status</th>
 									</tr>
 								</thead>
-								<tbody class="divide-y divide-slate-200 bg-white">
-									{#each ticketTypes as tt}
+								<tbody class="divide-y divide-slate-100 bg-white">
+									{#each localOffers as offer (offer.id)}
+										<tr class="group transition-colors duration-200 hover:bg-slate-50/80">
+											<td class="whitespace-nowrap px-6 py-4 font-bold text-slate-900">
+												<button type="button" class="hover:text-blue-600 hover:underline" onclick={() => openUpdateOfferModal(offer)}>
+													{offer.name}
+												</button>
+											</td>
+											<td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-700">
+												<span class="inline-flex rounded-md bg-slate-100/80 px-2 py-1 text-xs font-semibold text-slate-700 ring-1 ring-inset ring-slate-200/50">{getTicketTypeName(offer.ticketTypeId)}</span>
+											</td>
+											<td class="whitespace-nowrap px-6 py-4 font-black tracking-tight text-slate-900">{formatCurrency(offer.faceValue ?? offer.price)}</td>
+											<td class="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
+												{#if offer.saleWindows && offer.saleWindows.length > 0}
+													<div class="flex flex-col gap-1.5">
+														{#each offer.saleWindows as sw}
+															<div class="flex items-center gap-2">
+																<span class="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">{sw.type === 'PRESALE' ? 'Pre' : 'Gen'}</span>
+																<span class="text-xs font-medium text-slate-700">{formatDateTime(sw.startAt)} - {formatDateTime(sw.endAt)}</span>
+															</div>
+														{/each}
+													</div>
+												{:else}
+													<span class="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">Needs schedule</span>
+												{/if}
+											</td>
+											<td class="whitespace-nowrap px-6 py-4">
+												{#if offer.active ?? true}
+													<span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 ring-1 ring-inset ring-emerald-500/20">Active</span>
+												{:else}
+													<span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-500 ring-1 ring-inset ring-slate-500/20">Inactive</span>
+												{/if}
+											</td>
+										</tr>
+									{:else}
 										<tr>
-											<td class="whitespace-nowrap px-4 py-3 font-medium text-slate-900">{tt.name}</td>
-											<td class="whitespace-nowrap px-4 py-3 text-slate-500">{tt.code}</td>
-											<td class="whitespace-nowrap px-4 py-3 text-right">
-												<button type="button" onclick={() => deleteTicketType(tt.code)} class="text-red-600 hover:text-red-800 font-medium text-xs">Delete</button>
+											<td colspan="5" class="px-6 py-16 text-center">
+												<div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-50 text-slate-400 ring-1 ring-slate-100">
+													<IconPlus size={24} />
+												</div>
+												<h3 class="text-sm font-bold text-slate-900">No offers yet</h3>
+												<p class="mt-1 text-sm text-slate-500">Create your first pricing tier to start selling tickets.</p>
 											</td>
 										</tr>
 									{/each}
 								</tbody>
 							</table>
 						</div>
-					{/if}
+					</div>
 				</div>
+			</div>
+		{/if}
+	</div>
+</div>
 
-				<div class="rounded-xl border border-slate-200 bg-slate-50 p-5">
-					<h4 class="mb-4 text-sm font-bold text-slate-900">Create New Ticket Type</h4>
-					<div class="grid grid-cols-2 gap-4">
-						<div>
-							<label class="mb-1.5 block text-sm font-semibold text-slate-700">Code <span class="text-red-500">*</span></label>
-							<select
-								bind:value={newTicketType.code}
-								onchange={() => {
-									if (!newTicketType.name && newTicketType.code) {
-										newTicketType.name = newTicketType.code.charAt(0) + newTicketType.code.slice(1).toLowerCase();
-									}
-								}}
-								class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
-							>
-								<option value="">Select Code</option>
-								<option value="ADULT">ADULT</option>
-								<option value="CHILD">CHILD</option>
-								<option value="STUDENT">STUDENT</option>
-								<option value="COMP">COMP</option>
-								<option value="VIP">VIP</option>
-								<option value="GROUP">GROUP</option>
-							</select>
-						</div>
-						<div>
-							<label class="mb-1.5 block text-sm font-semibold text-slate-700">Name <span class="text-red-500">*</span></label>
-							<input
-								type="text"
-								bind:value={newTicketType.name}
-								placeholder="e.g. Adult Ticket"
-								class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
-							/>
-						</div>
-					</div>
-					<div class="mt-4 flex justify-end">
-						<button
-							type="button"
-							disabled={!newTicketType.name || !newTicketType.code || savingTicketType}
-							onclick={createTicketType}
-							class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
+
+
+{#if isTicketTypeModalOpen}
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+		<div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onclick={() => (isTicketTypeModalOpen = false)} aria-hidden="true" role="presentation"></div>
+		<div class="relative w-full max-w-md overflow-hidden rounded-none bg-white shadow-2xl ring-1 ring-slate-200 animate-in fade-in zoom-in-95 duration-200">
+			<div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+				<h3 class="text-lg font-bold tracking-tight text-slate-900">New Ticket Type</h3>
+				<button type="button" onclick={() => (isTicketTypeModalOpen = false)} class="rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600">
+					<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+				</button>
+			</div>
+			
+			<div class="px-6 py-6">
+				<div class="space-y-5">
+					<div>
+						<label class="mb-1.5 block text-sm font-semibold text-slate-700">Code <span class="text-red-500">*</span></label>
+						<select
+							bind:value={newTicketType.code}
+							onchange={() => {
+								if (!newTicketType.name && newTicketType.code) {
+									newTicketType.name = newTicketType.code.charAt(0) + newTicketType.code.slice(1).toLowerCase();
+								}
+							}}
+							class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 						>
-							{savingTicketType ? 'Saving...' : 'Add Ticket Type'}
-						</button>
+							<option value="">Select Code</option>
+							<option value="ADULT">ADULT</option>
+							<option value="CHILD">CHILD</option>
+							<option value="STUDENT">STUDENT</option>
+							<option value="COMP">COMP</option>
+							<option value="VIP">VIP</option>
+							<option value="GROUP">GROUP</option>
+						</select>
+						<p class="mt-1.5 text-[11px] text-slate-500">System identifier for integration and reporting.</p>
 					</div>
+					<div>
+						<label class="mb-1.5 block text-sm font-semibold text-slate-700">Name <span class="text-red-500">*</span></label>
+						<input
+							type="text"
+							bind:value={newTicketType.name}
+							placeholder="e.g. Adult Ticket"
+							class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+						/>
+						<p class="mt-1.5 text-[11px] text-slate-500">Display name shown to buyers.</p>
+					</div>
+				</div>
+				<div class="mt-8 flex justify-end gap-3">
+					<button
+						type="button"
+						onclick={() => (isTicketTypeModalOpen = false)}
+						class="rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100"
+					>
+						Cancel
+					</button>
+					<button
+						type="button"
+						disabled={!newTicketType.name || !newTicketType.code || savingTicketType}
+						onclick={async () => {
+							await createTicketType();
+							isTicketTypeModalOpen = false;
+						}}
+						class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-500 hover:shadow-md disabled:opacity-50"
+					>
+						{savingTicketType ? 'Saving...' : 'Create Ticket Type'}
+					</button>
 				</div>
 			</div>
 		</div>
@@ -1631,17 +1724,22 @@
 {/if}
 
 {#if isAddOfferModalOpen}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 transition-all backdrop-blur-sm" role="dialog">
-		<div class="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200">
-			<div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+	<div class="fixed inset-0 z-50 flex justify-end bg-slate-900/40 transition-all backdrop-blur-sm" role="dialog">
+		<div class="absolute inset-0" onclick={() => (isAddOfferModalOpen = false)} role="button" aria-label="Close"></div>
+		
+		<div class="relative flex h-full w-full max-w-xl flex-col bg-white shadow-2xl ring-1 ring-slate-200">
+			<!-- Header -->
+			<div class="flex shrink-0 items-center justify-between border-b border-slate-100 bg-white px-6 py-4">
 				<h3 class="text-lg font-bold tracking-tight text-slate-900">{editingOffer?.id ? 'Update Pricing Tier' : 'Add New Pricing Tier'}</h3>
-				<button type="button" onclick={() => (isAddOfferModalOpen = false)} class="rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600">
+				<button type="button" onclick={() => (isAddOfferModalOpen = false)} class="rounded-none p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600">
 					<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
 				</button>
 			</div>
-			<form onsubmit={handleSaveOffer} class="p-6">
-				<div class="space-y-5">
-					<div class="grid grid-cols-2 gap-4">
+
+			<!-- Form Content -->
+			<form onsubmit={handleSaveOffer} class="flex flex-1 flex-col overflow-hidden">
+				<div class="flex-1 overflow-y-auto p-6 space-y-6">
+					<div class="grid grid-cols-1 gap-4">
 						<div>
 							<label for="offer-name" class="mb-1.5 block text-sm font-semibold text-slate-700">Offer Name <span class="text-red-500">*</span></label>
 							<input
@@ -1650,20 +1748,13 @@
 								bind:value={editingOffer.name}
 								required
 								placeholder="e.g. VIP Early Bird"
-								class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
-							/>
-						</div>
-						<div>
-							<label for="offer-desc" class="mb-1.5 block text-sm font-semibold text-slate-700">Description</label>
-							<input
-								type="text"
-								id="offer-desc"
-								bind:value={editingOffer.description}
-								placeholder="Optional description"
-								class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
+								class="block w-full rounded-md border-0 px-3.5 py-2 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#026CDF] sm:text-sm"
 							/>
 						</div>
 					</div>
+
+					<hr class="border-slate-100">
+
 					<div class="grid grid-cols-2 gap-4">
 						<div>
 							<label for="ticket-type" class="mb-1.5 block text-sm font-semibold text-slate-700">Ticket Type <span class="text-red-500">*</span></label>
@@ -1671,7 +1762,7 @@
 								id="ticket-type"
 								bind:value={editingOffer.ticketTypeId}
 								required
-								class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
+								class="block w-full rounded-md border-0 px-3.5 py-2 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-[#026CDF] sm:text-sm"
 							>
 								{#each ticketTypes as tt}
 									<option value={tt.id}>{tt.name}</option>
@@ -1686,7 +1777,7 @@
 							<select
 								id="price-level"
 								bind:value={editingOffer.priceLevelId}
-								class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
+								class="block w-full rounded-md border-0 px-3.5 py-2 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-[#026CDF] sm:text-sm"
 							>
 								<option value="">None (Applies to all)</option>
 								{#each basePriceLevels as pl}
@@ -1695,6 +1786,7 @@
 							</select>
 						</div>
 					</div>
+
 					<div class="grid grid-cols-2 gap-4">
 						<div>
 							<label for="offer-price" class="mb-1.5 block text-sm font-semibold text-slate-700">Price (VND) <span class="text-red-500">*</span></label>
@@ -1704,7 +1796,7 @@
 								bind:value={editingOffer.faceValue}
 								required
 								min="0"
-								class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
+								class="block w-full rounded-md border-0 px-3.5 py-2 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-[#026CDF] sm:text-sm"
 							/>
 						</div>
 						<div>
@@ -1715,19 +1807,20 @@
 								bind:value={editingOffer.capacityCap}
 								required
 								min="1"
-								class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
+								class="block w-full rounded-md border-0 px-3.5 py-2 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-[#026CDF] sm:text-sm"
 							/>
 						</div>
 					</div>
+
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<label for="offer-min" class="mb-1.5 block text-sm font-semibold text-slate-700">Min Tickets/Order</label>
+							<label for="offer-quantities" class="mb-1.5 block text-sm font-semibold text-slate-700">Allowed Quantities</label>
 							<input
-								type="number"
-								id="offer-min"
-								bind:value={editingOffer.eventTicketMinimum}
-								min="1"
-								class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
+								type="text"
+								id="offer-quantities"
+								bind:value={editingOffer.sellableQuantitiesStr}
+								placeholder="e.g. 1, 2, 3, 4"
+								class="block w-full rounded-md border-0 px-3.5 py-2 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-[#026CDF] sm:text-sm"
 							/>
 						</div>
 						<div>
@@ -1735,7 +1828,7 @@
 							<select
 								id="offer-mode"
 								bind:value={editingOffer.seatingMode}
-								class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
+								class="block w-full rounded-md border-0 px-3.5 py-2 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-[#026CDF] sm:text-sm"
 							>
 								<option value="GA">General Admission</option>
 								<option value="RESERVED">Reserved Seating</option>
@@ -1743,55 +1836,66 @@
 						</div>
 					</div>
 					
+					<hr class="border-slate-100">
+
 					<div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
 						<h4 class="mb-3 text-sm font-bold text-slate-900">Sale Window</h4>
 						<div class="space-y-4">
 							{#if editingOffer.saleWindows && editingOffer.saleWindows.length > 0}
-								<div>
-									<label for="sale-type" class="mb-1.5 block text-xs font-semibold text-slate-700">Window Type</label>
-									<select
-										id="sale-type"
-										bind:value={editingOffer.saleWindows[0].type}
-										class="block w-full rounded-md border-0 px-3 py-2 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
-									>
-										<option value="PRESALE">Pre-Sale</option>
-										<option value="GENERAL_SALE">General Sale</option>
-									</select>
-								</div>
-								<div class="grid grid-cols-2 gap-3">
-									<div>
-										<label for="sale-start" class="mb-1.5 block text-xs font-semibold text-slate-700">Start Time</label>
-										<input type="datetime-local" id="sale-start" bind:value={editingOffer.saleWindows[0].startAt} class="block w-full rounded-md border-0 px-3 py-2 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm" />
+								{#each editingOffer.saleWindows as window, i}
+									<div class="relative rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+										{#if editingOffer.saleWindows.length > 1}
+											<button type="button" onclick={() => editingOffer.saleWindows = editingOffer.saleWindows.filter((_, idx) => idx !== i)} class="absolute right-2 top-2 text-slate-400 hover:text-red-600" title="Remove Window">
+												<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+											</button>
+										{/if}
+										<div class="mb-3">
+											<label class="mb-1.5 block text-xs font-semibold text-slate-700">Window Type</label>
+											<select
+												bind:value={window.type}
+												class="block w-full rounded-md border-0 px-3 py-2 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-[#026CDF] sm:text-sm"
+											>
+												<option value="PRESALE">Pre-Sale</option>
+												<option value="GENERAL_SALE">General Sale</option>
+											</select>
+										</div>
+										<div class="grid grid-cols-2 gap-3">
+											<div>
+												<label class="mb-1 block text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Start Time</label>
+												<DateTimePicker bind:value={window.startAt} placeholder="Select date & time" />
+											</div>
+											<div>
+												<label class="mb-1 block text-[10px] font-semibold text-slate-500 uppercase tracking-wider">End Time</label>
+												<DateTimePicker bind:value={window.endAt} placeholder="Select date & time" />
+											</div>
+										</div>
+										{#if window.type === 'PRESALE'}
+										<div class="mt-3">
+											<label class="mb-1.5 block text-xs font-semibold text-slate-700">Access Code (Optional)</label>
+											<input type="text" bind:value={window.accessCode} placeholder="e.g. EARLYBIRD2026" class="block w-full rounded-md border-0 px-3 py-2 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-[#026CDF] sm:text-sm" />
+										</div>
+										{/if}
 									</div>
-									<div>
-										<label for="sale-end" class="mb-1.5 block text-xs font-semibold text-slate-700">End Time</label>
-										<input type="datetime-local" id="sale-end" bind:value={editingOffer.saleWindows[0].endAt} class="block w-full rounded-md border-0 px-3 py-2 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm" />
-									</div>
-								</div>
+								{/each}
+								<button type="button" class="mt-2 text-sm font-semibold text-[#026CDF] hover:text-blue-700" onclick={() => editingOffer.saleWindows = [...editingOffer.saleWindows, { type: 'PRESALE', startAt: '', endAt: '' }]}>
+									+ Add Another Window
+								</button>
 							{:else}
-								<button type="button" class="text-sm font-semibold text-blue-600 hover:text-blue-700" onclick={() => editingOffer.saleWindows = [{ type: 'GENERAL_SALE', startAt: '', endAt: '' }]}>
+								<button type="button" class="text-sm font-semibold text-[#026CDF] hover:text-blue-700" onclick={() => editingOffer.saleWindows = [{ type: 'GENERAL_SALE', startAt: '', endAt: '' }]}>
 									+ Add Sale Window
 								</button>
 							{/if}
 						</div>
 					</div>
 
-					<div class="flex items-center gap-6">
-						<label class="flex cursor-pointer items-center gap-3 transition-colors hover:opacity-80">
-							<input type="checkbox" bind:checked={editingOffer.active} class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600" />
-							<span class="text-sm font-medium text-slate-700">Active for sales</span>
-						</label>
-						<label class="flex cursor-pointer items-center gap-3 transition-colors hover:opacity-80">
-							<input type="checkbox" bind:checked={editingOffer.restrictedPayment} class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600" />
-							<span class="text-sm font-medium text-slate-700">Restricted Payment</span>
-						</label>
-					</div>
 				</div>
-				<div class="mt-8 flex items-center justify-end gap-3">
-					<button type="button" onclick={() => (isAddOfferModalOpen = false)} class="rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100">
+
+				<!-- Footer / Actions -->
+				<div class="flex shrink-0 items-center justify-between border-t border-slate-100 bg-white px-6 py-4">
+					<button type="button" onclick={() => (isAddOfferModalOpen = false)} class="rounded-none px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100">
 						Cancel
 					</button>
-					<button type="submit" class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-500 hover:shadow-md">
+					<button type="submit" class="rounded-none bg-[#026CDF] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 hover:shadow-md">
 						{editingOffer?.id ? 'Save Changes' : 'Add Tier'}
 					</button>
 				</div>

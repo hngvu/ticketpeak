@@ -87,6 +87,7 @@ public class OfferService {
                         .type(sw.type())
                         .startAt(sw.startAt())
                         .endAt(sw.endAt())
+                        .accessCode(trimToNull(sw.accessCode()))
                         .build();
                 offer.getSaleWindows().add(window);
             }
@@ -140,6 +141,7 @@ public class OfferService {
                         .type(sw.type())
                         .startAt(sw.startAt())
                         .endAt(sw.endAt())
+                        .accessCode(trimToNull(sw.accessCode()))
                         .build();
                 offer.getSaleWindows().add(window);
             }

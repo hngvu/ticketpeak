@@ -12,6 +12,8 @@ import io.qzz.hoangvu.ticketpeak.api.payment.model.PaymentProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import io.github.resilience4j.retry.annotation.Retry;
+import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -47,6 +49,7 @@ public class StripeService implements PaymentService, PaymentWebhookHandler {
     }
 
     @Override
+    @Retry(name = "externalPaymentAPI")
     public String initiateCheckout(Payment payment, String clientIp) {
         return stripeCheckoutBuilder.createPaymentIntentSecret(payment);
     }

@@ -9,6 +9,7 @@ import io.qzz.hoangvu.ticketpeak.api.payment.model.PaymentProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import io.github.resilience4j.retry.annotation.Retry;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -55,6 +56,7 @@ public class VnpayService implements PaymentService, PaymentWebhookHandler {
     }
 
     @Override
+    @Retry(name = "externalPaymentAPI")
     public String initiateCheckout(Payment payment, String clientIp) {
         return vnpayCheckoutBuilder.buildRedirectUrl(
                 payment, vnpayTmnCode, vnpayHashSecret, vnpayPayUrl, vnpayReturnUrl, clientIp);

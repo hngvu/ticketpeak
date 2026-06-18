@@ -1,5 +1,6 @@
 package io.qzz.hoangvu.ticketpeak.api.order.controller;
 
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.qzz.hoangvu.ticketpeak.api.common.api.ApiResponse;
 import io.qzz.hoangvu.ticketpeak.api.order.dto.OrderResponse;
 import io.qzz.hoangvu.ticketpeak.api.order.service.OrderService;
@@ -19,6 +20,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/orders")
 @RequiredArgsConstructor
+@RateLimiter(name = "publicAPI")
 public class OrderController {
 
     private final OrderService orderService;

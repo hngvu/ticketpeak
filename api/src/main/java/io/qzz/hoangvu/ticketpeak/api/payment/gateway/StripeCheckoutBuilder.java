@@ -32,7 +32,10 @@ public class StripeCheckoutBuilder {
                 .build();
 
         try {
-            PaymentIntent intent = PaymentIntent.create(params);
+            com.stripe.net.RequestOptions requestOptions = com.stripe.net.RequestOptions.builder()
+                    .setIdempotencyKey(payment.getId().toString())
+                    .build();
+            PaymentIntent intent = PaymentIntent.create(params, requestOptions);
             return intent.getClientSecret();
         } catch (Exception e) {
             throw PaymentException.gatewayError("Stripe PaymentIntent creation failed: " + e.getMessage());

@@ -501,6 +501,14 @@ The typography system uses two primary typefaces:
 
 ## Modals
 
+### Modal Styling & Layout
+
+- **Sharp Corners:** All modals must use sharp, square corners (`rounded-none`). Avoid using border-radius for modal containers to maintain the structured, architectural B2B aesthetic.
+- **Multi-step vs Full Forms:**
+  - **For Create (New Data):** Modals should not be overwhelmingly large. If a creation form requires many inputs, break it down into multiple steps (e.g., Step 1: Basic Info, Step 2: Pricing) with internal navigation to reduce cognitive load.
+  - **For Update (Editing Data):** Users editing data usually want to jump straight to a specific field without being forced to click "Next" through a wizard. Therefore, Update forms should display all fields in a single, well-sectioned view. 
+  - **Avoid Scrolling Modals:** If an Update form (or any form) contains so many fields that it would require vertical scrolling, **do not use a Modal**. Instead, promote the form to a **Side Drawer (Slide-over)** or a **Dedicated Page**. Modals must be compact enough to fit entirely within the viewport without internal scrollbars.
+
 ### Modal Action Buttons
 
 - **Split alignment:** Modal actions with two buttons (e.g., Cancel + Confirm) must align one button to the left and the other to the right using `justify-content: space-between`. This improves reachability and visual balance over grouping both on the same side.

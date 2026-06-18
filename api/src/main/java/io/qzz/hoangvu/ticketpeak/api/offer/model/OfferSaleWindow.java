@@ -54,6 +54,9 @@ public class OfferSaleWindow {
     @Column(name = "end_at", nullable = false)
     Instant endAt;
 
+    @Column(name = "access_code")
+    String accessCode;
+
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)
     Instant createdAt;

@@ -10,14 +10,16 @@ public record OfferSaleWindowResponse(
         UUID id,
         SaleWindowType type,
         Instant startAt,
-        Instant endAt
+        Instant endAt,
+        String accessCode
 ) {
     public static OfferSaleWindowResponse from(OfferSaleWindow window) {
         return new OfferSaleWindowResponse(
                 window.getId(),
                 window.getType(),
                 window.getStartAt(),
-                window.getEndAt()
+                window.getEndAt(),
+                window.getAccessCode()
         );
     }
 }

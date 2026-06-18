@@ -11,5 +11,6 @@ public record CreateSaleWindowRequest(
         @NotNull(message = "must not be null")
         Instant startAt,
         @NotNull(message = "must not be null")
-        Instant endAt
+        Instant endAt,
+        String accessCode
 ) {}

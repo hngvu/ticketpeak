@@ -80,6 +80,9 @@ server:
 
 # ── Actuator ─────────────────────────────────────────────────────────────────
 management:
+  tracing:
+    sampling:
+      probability: 1.0
   endpoints:
     web:
       exposure:
@@ -145,7 +148,7 @@ logging:
     org.hibernate.SQL: WARN
     org.flywaydb: INFO
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [traceId=%X{traceId:-},spanId=%X{spanId:-}] %logger{36} - %msg%n"
 
 # ── SpringDoc / Swagger UI ────────────────────────────────────────────────────
 springdoc:
@@ -165,3 +168,28 @@ ticketpeak:
     encryption-key: ${TOTP_ENCRYPTION_KEY:QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=}
   encryption:
     secret-key: ${ENCRYPTION_SECRET_KEY:dGhpcy1pcy1hLTMyLWJ5dGUtYWVzLWtleS1mb3ItdGU=}
+
+# ── Resilience4j ──────────────────────────────────────────────────────────────
+resilience4j:
+  retry:
+    instances:
+      externalPaymentAPI:
+        max-attempts: 3
+        wait-duration: 1s
+        retry-exceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+          - org.springframework.web.client.ResourceAccessException
+  timelimiter:
+    instances:
+      externalPaymentAPI:
+        timeout-duration: 3s
+        cancel-running-future: true
+  ratelimiter:
+    instances:
+      publicAPI:
+        limit-for-period: 20
+        limit-refresh-period: 1s
+        timeout-duration: 0s
+
+# ── Tracing ───────────────────────────────────────────────────────────────────
