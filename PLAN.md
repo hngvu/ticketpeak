@@ -76,7 +76,7 @@ Venue Manager creates a venue and publishes a seat map
 - The B2B portal only allows creating/editing basic venue info (name, address, city, description).
 
 ### Status
-- [-] B2B: create / edit venue info
+- [x] B2B: create / edit venue info
 - [~] Create / build manifest UI (Skipped for demo, manifest data is seeded directly to DB)
 
 ---
@@ -122,19 +122,19 @@ DRAFT ──► PENDING_APPROVAL ──► PUBLISHED ──► ON_SALE ──►
 ```
 
 ### Status
-- [ ] B2B: create / edit event (title, date, banner)
-- [ ] Select venue → select published manifest
-- [ ] View seat categories from manifest (read-only: name, color, seat count)
-- [ ] Create offers: name, price, quantity, sale window, seat category
-- [ ] Presale access list per offer
-- [ ] Max tickets per order
-- [ ] Submit for approval (DRAFT → PENDING_APPROVAL)
-- [ ] Admin approve / reject
-- [ ] Auto ON_SALE when sale window opens
-- [ ] Auto ENDED when all offers close
-- [ ] Cancel event → void tickets + refund + notify
-- [ ] Postpone event → notify + allow refund request
-- [ ] Public event page (consumer site)
+- [x] B2B: create / edit event (title, date, banner)
+- [x] Select venue → select published manifest
+- [x] View seat categories from manifest (read-only: name, color, seat count)
+- [x] Create offers: name, price, quantity, sale window, seat category
+- [x] Presale access list per offer
+- [x] Max tickets per order
+- [x] Submit for approval (DRAFT → PENDING_APPROVAL)
+- [x] Admin approve / reject
+- [x] Auto ON_SALE when sale window opens
+- [x] Auto ENDED when all offers close
+- [x] Cancel event → void tickets + refund + notify
+- [x] Postpone event → notify + allow refund request
+- [x] Public event page (consumer site)
 
 ---
 
@@ -170,17 +170,17 @@ PENDING ──► CONFIRMED
 ```
 
 ### Status
-- [ ] Seat map on event page: colored by offer tier, clickable (RS) / quantity picker (GA)
-- [ ] 10-minute reservation hold with countdown
-- [ ] Release reservation on timeout
-- [ ] Apply promo code
-- [ ] Order summary before payment
-- [ ] Payment (VNPay / Stripe)
-- [ ] Confirm order + issue tickets on success
-- [ ] Release reservation on failure
-- [ ] Buyer order history
-- [ ] Cancel order within allowed window
-- [ ] Auto-refund when event is cancelled
+- [x] Seat map on event page: colored by offer tier, clickable (RS) / quantity picker (GA)
+- [x] 10-minute reservation hold with countdown
+- [x] Release reservation on timeout
+- [x] Apply promo code
+- [x] Order summary before payment
+- [x] Payment (VNPay / Stripe)
+- [x] Confirm order + issue tickets on success
+- [x] Release reservation on failure
+- [x] Buyer order history
+- [x] Cancel order within allowed window
+- [x] Auto-refund when event is cancelled
 
 ---
 
@@ -216,13 +216,13 @@ ISSUED ──► CHECKED_IN
 ```
 
 ### Status
-- [ ] Issue ticket on order confirmation
-- [ ] QR generated on-demand from TOTP, rotates every 30s
-- [ ] Buyer ticket screen (QR + event details)
-- [ ] Check-in screen in B2B portal (gate staff)
-- [ ] Validate QR at scan time, reject duplicates
-- [ ] Transfer ticket → accept / cancel flow
-- [ ] Void ticket on refund or event cancellation
+- [x] Issue ticket on order confirmation
+- [x] QR generated on-demand from TOTP, rotates every 30s
+- [x] Buyer ticket screen (QR + event details)
+- [x] Check-in screen in B2B portal (gate staff)
+- [x] Validate QR at scan time, reject duplicates
+- [x] Transfer ticket → accept / cancel flow
+- [x] Void ticket on refund or event cancellation
 
 ---
 

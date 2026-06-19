@@ -35,10 +35,16 @@ export const load: PageServerLoad = async ({ fetch, params, locals }) => {
 			}))
 		]);
 
+		let manifestDetail: any = null;
+		if (event?.venueId && event?.manifestId) {
+			manifestDetail = await apiFetch<any>(fetch, `/api/partner/venues/${event.venueId}/manifests/${event.manifestId}`).catch(() => null);
+		}
+
 		return {
 			event,
 			offers: offers || [],
 			inventory: inventory || { gaInventory: [], reservedInventory: [] },
+			manifestDetail,
 			currentUser: locals.user ?? null,
 			slug: paramSlug
 		};

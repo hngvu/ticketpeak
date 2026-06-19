@@ -9,7 +9,8 @@
 		selectedQty = 0,
 		isExpanded = false,
 		onToggle,
-		onQtyChange
+		onQtyChange,
+		onChooseSeats
 	} = $props<{
 		offer: any;
 		inventory: any;
@@ -17,6 +18,7 @@
 		isExpanded: boolean;
 		onToggle: () => void;
 		onQtyChange: (qty: number) => void;
+		onChooseSeats?: () => void;
 	}>();
 
 	function formatCurrency(amount: number, currency: string = 'VND') {
@@ -181,6 +183,16 @@
 					checkout.
 				</p>
 			</div>
+
+			{#if offer.seatingMode === 'RESERVED_SEATING'}
+				<button
+					type="button"
+					onclick={onChooseSeats}
+					class="mt-4 w-full cursor-pointer rounded-full bg-primary py-2.5 font-mono text-[10px] font-bold text-on-primary hover:bg-primary/95 transition text-center uppercase tracking-wider"
+				>
+					Select Seats on Seating Chart
+				</button>
+			{/if}
 		</div>
 	{/if}
 </div>

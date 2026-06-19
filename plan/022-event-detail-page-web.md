@@ -756,8 +756,13 @@ Plan này phụ thuộc vào:
 
 ## Status
 
-`planned`
+`done`
 
 ## Outcome
 
-_To be filled after implementation._
+Successfully implemented the Event Detail Page (EDP) using Svelte 5 and SvelteKit.
+- Implemented parallel SSR fetches for event, offers, inventory, and venue manifest details.
+- Connected the seat layout and GA ticket picker.
+- Integrated the client-side reservation API `POST /api/reservations` on "Get Tickets" click.
+- Handled errors and status banners (CANCELLED, POSTPONED, DRAFT) dynamically.
+- Verified build and TypeScript compiles cleanly.

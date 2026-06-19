@@ -33,7 +33,6 @@
 		entry: false,
 		reports: false,
 		marketing: false,
-		attractions: false,
 		tools: false
 	});
 
@@ -67,13 +66,6 @@
 					active: false
 				}
 			]
-		},
-		{
-			id: 'attractions',
-			label: 'ATTRACTIONS',
-			subtitle: 'Nghệ sĩ & Diễn viên',
-			icon: IconSparkles,
-			items: []
 		},
 		{
 			id: 'reports',
