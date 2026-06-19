@@ -26,6 +26,7 @@
 	let { data, children }: { data: any; children: Snippet } = $props();
 
 	let showAccountMenu = $state(false);
+	let showOrgSwitcher = $state(false);
 
 	let openFolders = $state<Record<string, boolean>>({
 		events: true,
@@ -164,6 +165,13 @@
 	]);
 
 	const activeOrg = $derived(data.organizations?.find((o: any) => o.id === data.selectedOrgId));
+
+	function switchOrg(orgId: string) {
+		showOrgSwitcher = false;
+		const url = new URL(window.location.href);
+		url.searchParams.set('organizationId', orgId);
+		window.location.href = url.toString();
+	}
 
 	const activeCategory = $derived(categories.find((cat) => cat.items.some((item) => item.active)));
 	const activeItem = $derived(activeCategory?.items.find((item) => item.active));
@@ -334,6 +342,81 @@
 
 				<!-- Bottom Actions and Profile Block -->
 				<div class="shrink-0 space-y-1 border-t border-slate-100 bg-white p-3.5">
+					<!-- Organization Switcher -->
+					{#if data.organizations && data.organizations.length > 1}
+						<div class="relative mb-2">
+							<button
+								type="button"
+								onclick={() => (showOrgSwitcher = !showOrgSwitcher)}
+								class="flex w-full cursor-pointer items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left transition-all hover:bg-slate-100"
+							>
+								<div class="flex min-w-0 flex-col">
+									<span class="text-[9px] font-semibold tracking-wider text-slate-400 uppercase">
+										Organization
+									</span>
+									<span class="mt-0.5 truncate text-xs font-bold text-slate-800">
+										{activeOrg?.name || 'Select organization'}
+									</span>
+								</div>
+								<IconChevronDown
+									size={14}
+									stroke={2.5}
+									class="shrink-0 text-slate-400 transition-transform duration-200 {showOrgSwitcher
+										? 'rotate-180'
+										: ''}"
+								/>
+							</button>
+
+							{#if showOrgSwitcher}
+								<button
+									type="button"
+									class="fixed inset-0 z-45 cursor-default bg-transparent"
+									onclick={() => (showOrgSwitcher = false)}
+									aria-label="Close organization switcher"
+								></button>
+								<div
+									class="absolute bottom-full left-0 right-0 z-50 mb-1 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl"
+								>
+									{#each data.organizations as org (org.id)}
+										<button
+											type="button"
+											onclick={() => switchOrg(org.id)}
+											class="flex w-full cursor-pointer items-center gap-2 rounded-lg border-0 bg-transparent px-3 py-2 text-left text-xs font-medium transition hover:bg-slate-50 {org.id ===
+											data.selectedOrgId
+												? 'text-blue-600 font-semibold'
+												: 'text-slate-700'}"
+										>
+											<div
+												class="flex h-5 w-5 shrink-0 items-center justify-center rounded border {org.id ===
+												data.selectedOrgId
+													? 'border-blue-600 bg-blue-600 text-white'
+													: 'border-slate-300 text-slate-400'} text-[9px] font-bold"
+											>
+												{org.name?.[0]?.toUpperCase() || '?'}
+											</div>
+											<span class="truncate">{org.name}</span>
+											{#if org.id === data.selectedOrgId}
+												<svg
+													class="ml-auto h-3.5 w-3.5 shrink-0 text-blue-600"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke="currentColor"
+													stroke-width="3"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="M5 13l4 4L19 7"
+													/>
+												</svg>
+							{/if}
+										</button>
+									{/each}
+								</div>
+							{/if}
+						</div>
+					{/if}
+
 					<!-- Help Link -->
 					<a
 						href="#help"

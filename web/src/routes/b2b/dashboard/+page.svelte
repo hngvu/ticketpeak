@@ -3,9 +3,6 @@
 
 	let { data } = $props();
 
-	// Svelte 5 states
-	let selectedOrgId = $state(data.selectedOrgId);
-
 	// Event stats summaries
 	const totalEvents = $derived(data.events?.length || 0);
 	const activeEvents = $derived(
@@ -13,12 +10,6 @@
 			(e: { status: string }) => e.status === 'SALES_ACTIVE' || e.status === 'PUBLISHED'
 		).length || 0
 	);
-
-	function handleOrgChange(e: Event) {
-		const target = e.target as HTMLSelectElement;
-		selectedOrgId = target.value;
-		window.location.href = `?organizationId=${selectedOrgId}`;
-	}
 </script>
 
 <svelte:head>
@@ -27,35 +18,11 @@
 
 <div class="mx-auto flex w-full max-w-7xl flex-1 flex-col space-y-8 p-6">
 	<!-- Top Bar / Organization Switcher -->
-	<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-		<div>
-			<h1 class="text-2xl font-bold text-slate-900 md:text-3xl">Promoter Dashboard</h1>
-			<p class="text-sm font-medium text-slate-500">
-				High-level business overview, sales intelligence, and system gateway.
-			</p>
-		</div>
-
-		<!-- Organization Switcher -->
-		{#if data.organizations && data.organizations.length > 0}
-			<div class="flex items-center gap-2">
-				<label
-					for="org-select"
-					class="text-xs font-semibold tracking-wider text-slate-500 uppercase"
-				>
-					Organization:
-				</label>
-				<select
-					id="org-select"
-					value={selectedOrgId}
-					onchange={handleOrgChange}
-					class="rounded-lg border border-hairline bg-canvas px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm focus:border-primary focus:outline-none"
-				>
-					{#each data.organizations as org (org.id)}
-						<option value={org.id}>{org.name}</option>
-					{/each}
-				</select>
-			</div>
-		{/if}
+	<div>
+		<h1 class="text-2xl font-bold text-slate-900 md:text-3xl">Promoter Dashboard</h1>
+		<p class="text-sm font-medium text-slate-500">
+			High-level business overview, sales intelligence, and system gateway.
+		</p>
 	</div>
 
 	<!-- KPI Analytics Overview -->

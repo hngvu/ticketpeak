@@ -3,18 +3,13 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { apiFetch, type PageResponse } from '$lib/server/api';
 
-export const load: PageServerLoad = async ({ fetch, url, cookies }) => {
+export const load: PageServerLoad = async ({ fetch, url, cookies, parent }) => {
 	const accessToken = cookies.get('b2b_access_token');
 	if (!accessToken) throw redirect(303, '/b2b/login');
 
-	// 1. Fetch organization ID
-	let selectedOrgId = url.searchParams.get('organizationId');
-	if (!selectedOrgId) {
-		const orgs = await apiFetch<any[]>(fetch, '/api/partner/organizations', {
-			headers: { Authorization: `Bearer ${accessToken}` }
-		}).catch(() => []);
-		if (orgs && orgs.length > 0) selectedOrgId = orgs[0].id;
-	}
+	// Get selectedOrgId from parent layout
+	const parentData = await parent();
+	const selectedOrgId = parentData.selectedOrgId;
 
 	if (!selectedOrgId) {
 		return {
@@ -25,7 +20,7 @@ export const load: PageServerLoad = async ({ fetch, url, cookies }) => {
 		};
 	}
 
-	// 2. Fetch all events for the organization
+	// Fetch all events for the organization
 	const eventsRes = await apiFetch<PageResponse<any>>(
 		fetch,
 		`/api/partner/events?organizationId=${selectedOrgId}&size=50&sort=startAt,asc`,
@@ -36,7 +31,7 @@ export const load: PageServerLoad = async ({ fetch, url, cookies }) => {
 
 	const events = eventsRes?.content || [];
 
-	// 3. Resolve active/selected event
+	// Resolve active/selected event
 	let selectedEventId = url.searchParams.get('eventId');
 	if (!selectedEventId && events.length > 0) {
 		selectedEventId = events[0].id;

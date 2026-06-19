@@ -2,7 +2,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { apiFetch } from '$lib/server/api';
-import { MOCK_VENUE_MANIFEST_EDITOR_DATA } from '$lib/server/mockData';
 
 export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 	const accessToken = cookies.get('ops_access_token');
@@ -39,49 +38,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 		}
 	}
 
-	// ── Mock venue path: serve data without hitting the API ───────────────────
-	const mockData = MOCK_VENUE_MANIFEST_EDITOR_DATA[venueId];
-	if (mockData && mockData.manifest.id === manifestId) {
-		const rsSections = mockData.sections
-			.filter((sec: any) => mockData.rsAreas.some((a: any) => a.sectionId === sec.id))
-			.map((sec: any) => {
-				const areasForSec = mockData.rsAreas.filter((a: any) => a.sectionId === sec.id);
-				const secRows = areasForSec.flatMap((a: any) => a.rows || []);
-				return {
-					id: sec.id,
-					name: sec.name ?? null,
-					color: sec.color ?? null,
-					levelId: sec.levelId ?? null,
-					polygon: (sec.uiData?.polygon as [number, number][] | undefined) ?? [],
-					rows: secRows
-				};
-			});
 
-		const gaSections = mockData.gaAreas.map((ga: any) => ({
-			id: ga.id,
-			name: ga.name ?? null,
-			levelId: ga.levelId ?? null,
-			priceLevelId: ga.priceLevelId ?? null,
-			capacity: ga.capacity ?? 0,
-			color: ga.color ?? null,
-			polygon: (ga.uiData?.polygon as [number, number][] | undefined) ?? [],
-			x: ga.x ?? 0,
-			y: ga.y ?? 0,
-			width: ga.width ?? 200,
-			height: ga.height ?? 100
-		}));
-
-		return {
-			isNew: false,
-			venue: mockData.venue,
-			manifest: mockData.manifest,
-			levels: mockData.levels,
-			sections: mockData.sections,
-			priceLevels: mockData.priceLevels,
-			gaSections,
-			rsSections
-		};
-	}
 
 	// ── Real API path ──────────────────────────────────────────────────────────
 	try {
@@ -109,7 +66,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 			rsSectionList.map(async (sec: any) => {
 				const rows = await apiFetch<any[]>(
 					fetch,
-					`/api/ops/venues/manifests/${manifestId}/sections/${sec.id}/rows`,
+					`/api/ops/venues/sections/${sec.id}/rows`,
 					{ headers: { Authorization: `Bearer ${accessToken}` } }
 				).catch(() => [] as any[]);
 

@@ -2,60 +2,24 @@
 	/* eslint-disable svelte/no-navigation-without-resolve */
 	/* eslint-disable @typescript-eslint/no-explicit-any */
 	/* eslint-disable svelte/prefer-svelte-reactivity */
+	import { page } from '$app/state';
 	import { enhance } from '$app/forms';
 	import EmptyState from '$lib/components/common/EmptyState.svelte';
 	import DateTimePicker from '$lib/components/common/DateTimePicker.svelte';
-	import { IconChevronDown, IconTicket, IconFolderPlus } from '@tabler/icons-svelte';
+	import { IconChevronDown } from '@tabler/icons-svelte';
 
 	let { data, form } = $props();
 
 	// Svelte 5 States
-	let selectedOrgId = $state(data.selectedOrgId);
 	let isCloneModalOpen = $state(false);
 	let cloneEventId = $state('');
 	let cloneEventTitle = $state('');
 	let loading = $state(false);
 
-	// Page-level sub-navigation tabs ("individual" | "groups")
-	let eventsTab = $state('individual');
 
-	// Prominent [+ Create] dropdown state
-	let showCreateDropdown = $state(false);
-
-	// Event Group Modal States
-	let isCreateGroupModalOpen = $state(false);
-	let newGroupName = $state('');
-	let newGroupDescription = $state('');
-	let newGroupCategory = $state('Music');
-
-	// Active list of mock event groups
-	let eventGroups = $state([
-		{
-			id: 'group-1',
-			name: 'Summer Stadium Tour 2026',
-			count: 3,
-			status: 'ACTIVE',
-			category: 'Music'
-		},
-		{
-			id: 'group-2',
-			name: 'Unplugged Acoustic Live Sessions',
-			count: 5,
-			status: 'ACTIVE',
-			category: 'Music'
-		},
-		{
-			id: 'group-3',
-			name: 'Asia Grand Arena Championship',
-			count: 2,
-			status: 'DRAFT',
-			category: 'Sports'
-		}
-	]);
 
 	// Create Event Modal States
 	let isCreateModalOpen = $state(false);
-	let selectedTemplateId = $state('');
 	let title = $state('');
 	let slug = $state('');
 	let isSlugManuallyEdited = $state(false);
@@ -96,9 +60,8 @@
 							.includes(query)
 					: false;
 				const idMatch = event.id.toLowerCase().includes(query);
-				const attractionMatch = event.attractionIds ? event.attractionIds.some((attId: string) => {
-					const attraction = data.attractions?.find((a: any) => a.id === attId);
-					return attraction ? cleanVietnamese(attraction.name || '').toLowerCase().includes(query) : false;
+				const attractionMatch = event.attractions ? event.attractions.some((attraction: any) => {
+					return cleanVietnamese(attraction.name || '').toLowerCase().includes(query);
 				}) : false;
 
 				if (!titleMatch && !venueMatch && !idMatch && !attractionMatch) {
@@ -225,17 +188,7 @@
 		}
 	});
 
-	$effect(() => {
-		if (selectedTemplateId === 'concert') {
-			title = 'Rock / Pop Concert Experience';
-		} else if (selectedTemplateId === 'theater') {
-			title = 'Classic Theater Production';
-		} else if (selectedTemplateId === 'sports') {
-			title = 'Championship Match Event';
-		} else if (selectedTemplateId === 'festival') {
-			title = 'Summer Music Festival';
-		}
-	});
+
 
 	const filteredAttractions = $derived(
 		data.attractions?.filter((a: any) => {
@@ -254,18 +207,7 @@
 		}) || []
 	);
 
-	const templates = [
-		{ id: 'temp-1', name: '1 - Chart FLO EDCEPL40 With MPE' },
-		{ id: 'temp-2', name: '2 - Chart FLO EIRVPLAT With MPE' },
-		{ id: 'temp-3', name: 'abcdefgh' },
-		{ id: 'temp-4', name: 'ACL Template 2' },
-		{ id: 'temp-5', name: 'All-in pricing in chart' },
-		{ id: 'temp-6', name: 'Amanda new template' },
-		{ id: 'temp-7', name: 'Anastaciya' },
-		{ id: 'temp-8', name: 'Baseline NJO' },
-		{ id: 'temp-9', name: 'BONJOUR' },
-		{ id: 'temp-10', name: 'Brazil Bruno Mars' }
-	];
+
 
 	function formatDateHeader(startIso: string, endIso?: string) {
 		if (!startIso) return 'APR 1';
@@ -294,25 +236,7 @@
 		isCloneModalOpen = true;
 	}
 
-	function handleCreateGroup(e: Event) {
-		e.preventDefault();
-		if (!newGroupName.trim()) return;
-		eventGroups = [
-			...eventGroups,
-			{
-				id: `group-${Date.now()}`,
-				name: newGroupName,
-				count: 0,
-				status: 'DRAFT',
-				category: newGroupCategory
-			}
-		];
-		// reset
-		newGroupName = '';
-		newGroupDescription = '';
-		newGroupCategory = 'Music';
-		isCreateGroupModalOpen = false;
-	}
+
 </script>
 
 <svelte:head>
@@ -363,93 +287,22 @@
 		</div>
 	{/if}
 
-	<!-- Top Header Menu with Horizontal Navigation Tabs (Left) & Dropdown Button (Right) -->
-	<div class="flex items-center justify-between border-b border-slate-200">
-		<!-- Horizontal Tabs (Top Left) -->
-		<nav class="-mb-px flex space-x-6" aria-label="Events sub-navigation">
-			<button
-				type="button"
-				onclick={() => (eventsTab = 'individual')}
-				class="border-b-2 px-1 py-3 text-sm font-semibold transition-all duration-150 focus:outline-none {eventsTab ===
-				'individual'
-					? 'border-[#026CDF] font-extrabold text-[#026CDF]'
-					: 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'}"
-			>
-				Individual
-			</button>
-			<button
-				type="button"
-				onclick={() => (eventsTab = 'groups')}
-				class="border-b-2 px-1 py-3 text-sm font-semibold transition-all duration-150 focus:outline-none {eventsTab ===
-				'groups'
-					? 'border-[#026CDF] font-extrabold text-[#026CDF]'
-					: 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'}"
-			>
-				Groups
-			</button>
-		</nav>
-
-		<!-- prominent [+ Create] dropdown button (Top Right) -->
-		<div class="relative">
-			<button
-				type="button"
-				onclick={() => (showCreateDropdown = !showCreateDropdown)}
-				class="flex cursor-pointer items-center justify-center gap-1.5 rounded-none bg-[#026CDF] px-5 py-2.5 text-xs font-bold text-white shadow-none transition hover:bg-blue-700 focus:outline-none"
-			>
-				<span>Create</span>
-				<IconChevronDown
-					size={12}
-					class="transition-transform duration-150 {showCreateDropdown ? 'rotate-180' : ''}"
-				/>
-			</button>
-
-			<!-- Floating Create Dropdown -->
-			{#if showCreateDropdown}
-				<button
-					type="button"
-					class="fixed inset-0 z-40 cursor-default bg-transparent"
-					onclick={() => (showCreateDropdown = false)}
-					aria-label="Close creation dropdown"
-				></button>
-				<div
-					class="absolute right-0 z-50 mt-1.5 w-44 rounded-none border border-slate-200 bg-white p-1.5 shadow-xl"
-				>
-					<button
-						type="button"
-						onclick={() => {
-							isCreateModalOpen = true;
-							showCreateDropdown = false;
-						}}
-						class="flex w-full cursor-pointer items-center gap-2 rounded-none px-3 py-2 text-left text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-					>
-						<IconTicket size={14} class="text-slate-400" />
-						<span>Event</span>
-					</button>
-					<button
-						type="button"
-						onclick={() => {
-							isCreateGroupModalOpen = true;
-							showCreateDropdown = false;
-						}}
-						class="flex w-full cursor-pointer items-center gap-2 rounded-none px-3 py-2 text-left text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-					>
-						<IconFolderPlus size={14} class="text-slate-400" />
-						<span>Event Group</span>
-					</button>
-				</div>
-			{/if}
-		</div>
+	<!-- Top Header with Create Button -->
+	<div class="flex items-center justify-end border-b border-slate-200 pb-4">
+		<button
+			type="button"
+			onclick={() => (isCreateModalOpen = true)}
+			class="flex cursor-pointer items-center justify-center gap-1.5 rounded-none bg-[#026CDF] px-5 py-2.5 text-xs font-bold text-white shadow-none transition hover:bg-blue-700 focus:outline-none"
+		>
+			<span>+ Create Event</span>
+		</button>
 	</div>
 
-	<!-- TWO-COLUMN GRID VIEW -->
-	<div
-		class="grid grid-cols-1 items-start gap-8 border-t border-slate-100 pt-6 lg:grid-cols-4 xl:grid-cols-5"
-	>
-		<!-- Left area: takes 3 columns (75% width) or 4 columns (80% width) on xl+ screens -->
-		<div class="space-y-6 lg:col-span-3 lg:border-r lg:border-slate-200 lg:pr-8 xl:col-span-4">
+	<!-- EVENTS LIST -->
+	<div>
+		<div class="space-y-6">
 			<!-- TAB PANEL: INDIVIDUAL EVENTS -->
-			{#if eventsTab === 'individual'}
-				<div class="animate-fade-in space-y-6">
+			<div class="space-y-6">
 					<!-- Search & Filters Row -->
 					<div
 						class="grid grid-cols-1 gap-4 border-b border-slate-100 pb-4 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end xl:flex-nowrap"
@@ -790,98 +643,6 @@
 						/>
 					{/if}
 				</div>
-			{/if}
-
-			<!-- TAB PANEL: EVENT GROUPS -->
-			{#if eventsTab === 'groups'}
-				<div class="animate-fade-in space-y-6">
-					<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-						{#each eventGroups as group (group.id)}
-							<div
-								class="relative flex flex-col justify-between rounded-sm border border-slate-200 bg-white p-5 shadow-xs transition hover:border-slate-300"
-							>
-								<div class="space-y-2">
-									<span
-										class="inline-flex items-center rounded bg-slate-100 px-2 py-0.5 text-[9px] font-bold tracking-wider text-slate-600 uppercase"
-									>
-										{group.category}
-									</span>
-									<h3 class="text-sm font-bold text-slate-900">{group.name}</h3>
-									<p class="text-xs text-slate-400">
-										{group.count} events connected inside this group
-									</p>
-								</div>
-
-								<div class="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
-									<span
-										class="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase {group.status ===
-										'ACTIVE'
-											? 'bg-emerald-50 text-emerald-700'
-											: 'bg-slate-50 text-slate-500'}"
-									>
-										{group.status}
-									</span>
-									<button
-										type="button"
-										class="cursor-pointer border-0 bg-transparent text-xs font-bold text-slate-500 transition outline-none hover:text-slate-700"
-									>
-										Manage Group
-									</button>
-								</div>
-							</div>
-						{:else}
-							<div
-								class="col-span-3 rounded-sm border border-dashed border-slate-200 p-12 text-center text-sm text-slate-400"
-							>
-								No event groups created. Choose "Event Group" from the Create dropdown above to
-								start a tour package.
-							</div>
-						{/each}
-					</div>
-				</div>
-			{/if}
-		</div>
-
-		<!-- Right: Templates Sidebar (1/4 width on lg, 1/5 width on xl+) -->
-		<div class="pl-2 lg:col-span-1 xl:col-span-1">
-			<div class="space-y-4 bg-white">
-				<div class="mb-4 flex items-center justify-between border-b border-slate-100 pb-2">
-					<h2 class="text-sm font-bold tracking-wide text-slate-800 uppercase select-none">
-						Templates
-					</h2>
-					<button
-						type="button"
-						onclick={() => (isCreateModalOpen = true)}
-						class="cursor-pointer rounded-none border border-blue-600 bg-white px-3 py-1 text-[11px] font-bold text-blue-600 transition outline-none hover:bg-blue-50"
-					>
-						Add New
-					</button>
-				</div>
-
-				<div class="mb-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
-					AMERICANAIRLINES ARENA
-				</div>
-
-				<div class="divide-y divide-slate-100 border-t border-slate-100">
-					{#each templates as t (t.id)}
-						<div
-							class="flex w-full items-center justify-between py-3 text-left text-xs font-semibold text-slate-700 transition-colors"
-						>
-							<span class="truncate pr-2 font-medium">{t.name}</span>
-							<button
-								type="button"
-								onclick={() => {
-									selectedTemplateId = t.id;
-									isCreateModalOpen = true;
-								}}
-								class="cursor-pointer border-0 bg-transparent px-1 font-bold text-slate-400 transition outline-none hover:text-slate-700"
-							>
-								⋮
-							</button>
-						</div>
-					{/each}
-				</div>
-			</div>
 		</div>
 	</div>
 </div>
@@ -1000,90 +761,7 @@
 	</div>
 {/if}
 
-<!-- ======================== CREATE EVENT GROUP MODAL ======================== -->
-{#if isCreateGroupModalOpen}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs">
-		<div class="w-full max-w-md rounded-xl bg-canvas p-6 shadow-2xl" role="dialog">
-			<div class="mb-4 flex items-center justify-between border-b border-hairline pb-3">
-				<h3 class="text-base font-bold text-slate-900">Create Event Group (Tour / Festival)</h3>
-				<button
-					onclick={() => (isCreateGroupModalOpen = false)}
-					class="cursor-pointer rounded-full border-0 bg-transparent p-1 text-slate-400 outline-none hover:bg-slate-100 hover:text-slate-600"
-				>
-					<svg
-						class="h-4.5 w-4.5"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-						stroke-width="2.5"
-					>
-						<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-					</svg>
-				</button>
-			</div>
 
-			<form onsubmit={handleCreateGroup} class="space-y-4">
-				<div class="space-y-1">
-					<label for="group-name" class="block text-xs font-semibold text-slate-700"
-						>Group Name *</label
-					>
-					<input
-						type="text"
-						id="group-name"
-						bind:value={newGroupName}
-						required
-						placeholder="e.g. Summer Music Festival Tour"
-						class="w-full rounded-lg border border-slate-200 px-3.5 py-2 text-xs text-slate-900 focus:border-blue-500 focus:outline-none"
-					/>
-				</div>
-
-				<div class="space-y-1">
-					<label for="group-category" class="block text-xs font-semibold text-slate-700"
-						>Category *</label
-					>
-					<select
-						id="group-category"
-						bind:value={newGroupCategory}
-						class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-900 focus:border-blue-500 focus:outline-none"
-					>
-						<option value="Music">Music & Concerts</option>
-						<option value="Theater">Theater & Stage</option>
-						<option value="Sports">Sports & Matches</option>
-					</select>
-				</div>
-
-				<div class="space-y-1">
-					<label for="group-desc" class="block text-xs font-semibold text-slate-700"
-						>Description</label
-					>
-					<textarea
-						id="group-desc"
-						bind:value={newGroupDescription}
-						rows="3"
-						placeholder="Brief tour packages or festival context description..."
-						class="w-full rounded-lg border border-slate-200 px-3.5 py-2 text-xs text-slate-900 focus:border-blue-500 focus:outline-none"
-					></textarea>
-				</div>
-
-				<div class="flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
-					<button
-						type="button"
-						onclick={() => (isCreateGroupModalOpen = false)}
-						class="rounded-full border border-0 border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 outline-none hover:bg-slate-50"
-					>
-						Cancel
-					</button>
-					<button
-						type="submit"
-						class="rounded-full border-0 bg-slate-900 px-5 py-2 text-xs font-bold text-white transition outline-none hover:bg-slate-800"
-					>
-						Create Group
-					</button>
-				</div>
-			</form>
-		</div>
-	</div>
-{/if}
 
 <!-- ======================== CREATE EVENT MODAL (Ticketmaster Inspired Minimalist) ======================== -->
 {#if isCreateModalOpen}
@@ -1129,7 +807,7 @@
 				class="space-y-6"
 			>
 				<!-- Hidden organization input for B2B API compliance -->
-				<input type="hidden" name="organizationId" value={selectedOrgId} />
+				<input type="hidden" name="organizationId" value={page.data.selectedOrgId} />
 				<input type="hidden" name="safeTixEnabled" value="off" />
 				<input type="hidden" name="restrictSingleSeat" value="off" />
 				<input type="hidden" name="transferEnabled" value="on" />
@@ -1140,22 +818,6 @@
 					<input type="hidden" name="classificationIds" value={id} />
 				{/each}
 
-				<!-- Field 1: Select Template -->
-				<div class="space-y-1.5">
-					<label for="modal-template" class="block text-xs font-semibold text-slate-700">
-						Select Template
-					</label>
-					<select
-						id="modal-template"
-						bind:value={selectedTemplateId}
-						class="text-slate-750 w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium shadow-xs focus:border-blue-500 focus:outline-none"
-					>
-						<option value="">No Template</option>
-						{#each templates as t (t.id)}
-							<option value={t.id}>{t.name}</option>
-						{/each}
-					</select>
-				</div>
 
 				<!-- Field 2: Event Title -->
 				<div class="space-y-1.5">

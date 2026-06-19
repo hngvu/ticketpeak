@@ -2,7 +2,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { apiFetch } from '$lib/server/api';
-import { MOCK_VENUE_BY_ID, MOCK_VENUE_MANIFESTS } from '$lib/server/mockData';
 
 export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 	const accessToken = cookies.get('ops_access_token');
@@ -11,13 +10,6 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 	}
 
 	const venueId = params.id;
-
-	// Check mock venues first – serve mock manifests without hitting the API
-	const mockVenue = MOCK_VENUE_BY_ID[venueId];
-	const mockManifests = MOCK_VENUE_MANIFESTS[venueId];
-	if (mockVenue && mockManifests) {
-		return { venue: mockVenue, manifests: mockManifests };
-	}
 
 	try {
 		// 1. Fetch Venue details
@@ -32,7 +24,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 			headers: {
 				Authorization: `Bearer ${accessToken}`
 			}
-		}).catch(() => [] as any[]);
+		});
 
 		return {
 			venue,

@@ -1,6 +1,5 @@
 <script lang="ts">
 	/* eslint-disable @typescript-eslint/no-explicit-any */
-	import { enhance } from '$app/forms';
 	import { IconPlus, IconChevronDown, IconTicket, IconFolderPlus } from '@tabler/icons-svelte';
 	import Combobox from '$lib/components/ui/combobox.svelte';
 	import DateTimePicker from '$lib/components/common/DateTimePicker.svelte';
@@ -13,9 +12,12 @@
 			.replace(/Đ/g, 'D');
 	}
 
-	let { data, form } = $props();
+	let { data } = $props();
 
-	let loading = $state(false);
+	let saving = $state(false);
+	let saveSuccess = $state(false);
+	let saveError = $state('');
+	let editTitle = $state(data.event?.title || '');
 	let isAddOfferModalOpen = $state(false);
 
 	// Canvas Tools
@@ -59,7 +61,7 @@
 
 	let activeTab = $state('general');
 
-	const event = $derived(form?.event || data.event);
+	const event = $derived(data.event);
 	const offers = $derived(data.offers || []);
 	const venueName = $derived(data.venues?.find((v: any) => v.id === event.venueId)?.name || '');
 	const attractions = $derived(data.attractions || []);
@@ -76,7 +78,7 @@
 			?.id || ''
 	);
 	let venueId = $state(event.venueId || '');
-	let selectedAttractionIds = $state<string[]>(event.attractionIds || []);
+	let selectedAttractionIds = $state<string[]>(event.attractions?.map((a: any) => a.id) || []);
 	let startAt = $state(event.startAt || '');
 
 	const sortedClassifications = $derived.by(() => {
@@ -452,18 +454,151 @@
 		newHoldType = 'LOCKED';
 		isAddHoldModalOpen = false;
 	}
+
+	async function handleSaveAll() {
+		saving = true;
+		saveSuccess = false;
+		saveError = '';
+
+		try {
+			// 1. Save General tab - event info
+			const eventPayload = {
+				venueId,
+				title: editTitle,
+				slug: event.slug || '',
+				startAt: new Date(startAt).toISOString(),
+				timezone: event.timezone || 'Asia/Ho_Chi_Minh',
+				restrictSingleSeat: false,
+				safeTixEnabled: false,
+				transferEnabled: true,
+				maxTransferCount: 5,
+				serviceFeePercent: 0,
+				classificationIds: classificationId ? [classificationId] : [],
+				attractionIds: selectedAttractionIds
+			};
+			const eventRes = await fetch(`/api/partner/events/${event.id}`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(eventPayload)
+			});
+			if (!eventRes.ok) {
+				const err = await eventRes.json().catch(() => ({}));
+				throw new Error(err.message || 'Failed to update event');
+			}
+
+			// 2. Sync offers (pricing tiers)
+			const originalOffers: any[] = data.offers || [];
+			const currentOfferIds = new Set(localOffers.map((o) => o.id));
+			const originalOfferIds = new Set(originalOffers.map((o) => o.id));
+
+			// Delete removed offers
+			for (const offer of originalOffers) {
+				if (!currentOfferIds.has(offer.id)) {
+					const delRes = await fetch(`/api/partner/events/${event.id}/offers/${offer.id}`, {
+						method: 'DELETE'
+					});
+					if (!delRes.ok && delRes.status !== 404) {
+						const err = await delRes.json().catch(() => ({}));
+						throw new Error(err.message || `Failed to delete offer "${offer.name}"`);
+					}
+				}
+			}
+
+			// Create new or update existing offers
+			for (const offer of localOffers) {
+				const isNew = !originalOfferIds.has(offer.id);
+				const sellableQuantities = offer.sellableQuantitiesStr
+					? String(offer.sellableQuantitiesStr)
+							.split(',')
+							.map((s: string) => parseInt(s.trim()))
+							.filter((n: number) => !isNaN(n))
+					: offer.sellableQuantities || [1];
+				const seatingMode =
+					offer.seatingMode === 'RESERVED' ? 'RESERVED_SEATING' : 'GENERAL_ADMISSION';
+
+				const payload: any = {
+					code:
+						offer.code ||
+						offer.name
+							?.toUpperCase()
+							.replace(/[^A-Z0-9_]/g, '_')
+							.slice(0, 20) ||
+						'OFFER',
+					name: offer.name,
+					description: offer.description || '',
+					currency: offer.currency || 'VND',
+					faceValue: offer.faceValue ?? offer.price ?? 0,
+					restrictedPayment: offer.restrictedPayment || false,
+					eventTicketMinimum: offer.eventTicketMinimum || 1,
+					capacityCap: offer.capacityCap ?? 9999,
+					sellableQuantities: sellableQuantities.length > 0 ? sellableQuantities : [1],
+					seatingMode
+				};
+				if (offer.saleWindows && offer.saleWindows.length > 0) {
+					payload.saleWindows = offer.saleWindows.map((sw: any) => ({
+						type: sw.type || 'GENERAL_SALE',
+						startAt: sw.startAt,
+						endAt: sw.endAt,
+						accessCode: sw.accessCode || null
+					}));
+				}
+				if (seatingMode === 'RESERVED_SEATING') {
+					payload.sectionId = offer.sectionId || null;
+					payload.priceLevelId = offer.priceLevelId || null;
+				}
+				if (offer.charges) payload.charges = offer.charges;
+
+				let res: Response;
+				if (isNew) {
+					const ticketTypeId =
+						offer.ticketTypeId || (ticketTypes.length > 0 ? ticketTypes[0].id : null);
+					if (!ticketTypeId)
+						throw new Error(
+							`Offer "${offer.name}" requires a ticket type. Create one first, then save again.`
+						);
+					payload.ticketTypeId = ticketTypeId;
+					res = await fetch(`/api/partner/events/${event.id}/offers`, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(payload)
+					});
+				} else {
+					res = await fetch(`/api/partner/events/${event.id}/offers/${offer.id}`, {
+						method: 'PUT',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(payload)
+					});
+				}
+				if (!res.ok) {
+					const err = await res.json().catch(() => ({}));
+					throw new Error(err.message || `Failed to save offer "${offer.name}"`);
+				}
+				// Update localOffers with real ID if new
+				if (isNew) {
+					const saved = await res.json();
+					const newOffer = saved.data || saved;
+					localOffers = localOffers.map((o) => (o.id === offer.id ? { ...o, id: newOffer.id } : o));
+				}
+			}
+
+			saveSuccess = true;
+			// Reset local offers so next $effect reloads from server
+			localOffers = [];
+		} catch (err: any) {
+			saveError = err.message || 'Failed to save changes';
+		} finally {
+			saving = false;
+			setTimeout(() => {
+				saveSuccess = false;
+				saveError = '';
+			}, 5000);
+		}
+	}
 </script>
 
 <svelte:head>
 	<title>{event.title} — Event Workspace</title>
 </svelte:head>
-
-{#if form?.error}
-	<div class="alert alert-error">{form.error}</div>
-{/if}
-{#if form?.success}
-	<div class="alert alert-success">Changes saved successfully.</div>
-{/if}
 
 <div class="page">
 	<div class="mb-6 flex items-center justify-between border-b border-slate-200">
@@ -509,41 +644,36 @@
 				Holds & Kills
 			</button>
 		</nav>
+		<div class="flex items-center gap-3">
+			{#if saveSuccess}
+				<span class="text-sm font-semibold text-emerald-600">All changes saved!</span>
+			{/if}
+			{#if saveError}
+				<span class="text-sm font-semibold text-red-600">{saveError}</span>
+			{/if}
+			<button type="button" onclick={handleSaveAll} disabled={saving} class="btn-primary">
+				{#if saving}
+					<span class="spinner"></span>
+				{/if}
+				<span>{saving ? 'Saving...' : 'Save All'}</span>
+			</button>
+		</div>
 	</div>
 
 	<div class="content">
 		{#if activeTab === 'general'}
 			<div class="card">
-				<form
-					method="POST"
-					action="?/updateEvent"
-					use:enhance={() => {
-						loading = true;
-						return async ({ update }) => {
-							await update();
-							loading = false;
-						};
-					}}
-					class="form"
-				>
+				<div class="form">
 					<div class="field">
 						<label for="edit-title" class="label">Event Title <span class="required">*</span></label
 						>
-						<input
-							type="text"
-							id="edit-title"
-							name="title"
-							required
-							value={event.title}
-							class="input"
-						/>
+						<input type="text" id="edit-title" required bind:value={editTitle} class="input" />
 					</div>
 					<div class="field">
 						<label for="edit-category" class="label">Classification</label>
 						<Combobox
 							items={sortedClassifications}
 							bind:value={classificationId}
-							name="classificationId"
 							placeholder="Select a Category"
 							searchPlaceholder="Search classification..."
 							displayFn={(c) => {
@@ -577,7 +707,6 @@
 							items={attractions}
 							bind:values={selectedAttractionIds}
 							multiple={true}
-							name="attractionIds"
 							placeholder="Select an Attraction"
 							searchPlaceholder="Search attraction..."
 						>
@@ -600,7 +729,6 @@
 						<Combobox
 							items={data.venues || []}
 							bind:value={venueId}
-							name="venueId"
 							placeholder="Select a Venue"
 							searchPlaceholder="Search venue..."
 							displayFn={(v) => v?.name || ''}
@@ -643,22 +771,13 @@
 							<input
 								type="text"
 								id="edit-tz"
-								name="timezone"
 								value={event.timezone || 'Asia/Ho_Chi_Minh'}
 								readonly
 								class="input input-readonly"
 							/>
 						</div>
 					</div>
-					<div class="form-actions">
-						<button type="submit" disabled={loading} class="btn-primary">
-							{#if loading}
-								<span class="spinner"></span>
-							{/if}
-							<span>Save Changes</span>
-						</button>
-					</div>
-				</form>
+				</div>
 			</div>
 		{:else if activeTab === 'seats' || activeTab === 'holds'}
 			<div class="venue-bar">

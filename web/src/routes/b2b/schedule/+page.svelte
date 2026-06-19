@@ -1,10 +1,11 @@
 <script lang="ts">
 	/* eslint-disable svelte/no-navigation-without-resolve */
 
+	import { page } from '$app/state';
+
 	let { data } = $props();
 
 	// Svelte 5 states
-	let selectedOrgId = $state(data.selectedOrgId);
 	let currentMonth = $state(4); // May (0-indexed)
 	let currentYear = $state(2026);
 
@@ -15,12 +16,6 @@
 		venueId: string;
 		startAt: string;
 		endAt?: string;
-	}
-
-	function handleOrgChange(e: Event) {
-		const target = e.target as HTMLSelectElement;
-		selectedOrgId = target.value;
-		window.location.href = `?organizationId=${selectedOrgId}`;
 	}
 
 	// Helper to format date/time
@@ -124,32 +119,11 @@
 
 <div class="mx-auto flex w-full max-w-7xl flex-1 flex-col space-y-8 p-6">
 	<!-- Header block with Organizer selector -->
-	<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-		<div>
-			<h1 class="text-2xl font-extrabold text-slate-900 md:text-3xl">Showtimes Schedule</h1>
-			<p class="text-sm font-medium text-slate-500">
-				Monitor door times, coordinate gate check-in shifts, and track show calendars.
-			</p>
-		</div>
-
-		<!-- Organization Switcher -->
-		{#if data.organizations && data.organizations.length > 0}
-			<div class="flex items-center gap-2">
-				<label for="org-select" class="text-xs font-bold tracking-wider text-slate-500 uppercase">
-					Organization:
-				</label>
-				<select
-					id="org-select"
-					value={selectedOrgId}
-					onchange={handleOrgChange}
-					class="rounded-lg border border-hairline bg-canvas px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm focus:border-primary focus:outline-none"
-				>
-					{#each data.organizations as org (org.id)}
-						<option value={org.id}>{org.name}</option>
-					{/each}
-				</select>
-			</div>
-		{/if}
+	<div>
+		<h1 class="text-2xl font-extrabold text-slate-900 md:text-3xl">Showtimes Schedule</h1>
+		<p class="text-sm font-medium text-slate-500">
+			Monitor door times, coordinate gate check-in shifts, and track show calendars.
+		</p>
 	</div>
 
 	<!-- Main layout splits: Left Calendar, Right chronologically showtimes timeline -->
@@ -290,7 +264,7 @@
 
 			<div class="mt-4 border-t border-slate-100 pt-3">
 				<a
-					href="/b2b/events/create?organizationId={selectedOrgId || ''}"
+					href="/b2b/events/create?organizationId={page.data.selectedOrgId || ''}"
 					class="text-xs font-bold text-blue-600 transition hover:text-blue-700"
 				>
 					+ Schedule New Event

@@ -1,6 +1,7 @@
 <script lang="ts">
 	/* eslint-disable svelte/no-navigation-without-resolve */
 	/* eslint-disable @typescript-eslint/no-explicit-any */
+	import { page } from '$app/state';
 	import { enhance } from '$app/forms';
 	import DateTimePicker from '$lib/components/common/DateTimePicker.svelte';
 	import { IconInfoCircle, IconChevronDown } from '@tabler/icons-svelte';
@@ -8,7 +9,6 @@
 	let { data, form } = $props();
 
 	// Svelte 5 states
-	let selectedOrgId = $state(data.selectedOrgId);
 	let loading = $state(false);
 
 	let title = $state('');
@@ -138,7 +138,7 @@
 		class="space-y-8"
 	>
 		<!-- Hidden organization input for form submission -->
-		<input type="hidden" name="organizationId" value={selectedOrgId} />
+		<input type="hidden" name="organizationId" value={page.data.selectedOrgId} />
 		<input type="hidden" name="safeTixEnabled" value="off" />
 		<input type="hidden" name="restrictSingleSeat" value="off" />
 		<input type="hidden" name="transferEnabled" value="on" />
@@ -427,7 +427,7 @@
 		<!-- Action bar -->
 		<div class="mt-4 flex items-center justify-end gap-3 border-t border-slate-200 pt-6">
 			<a
-				href="/b2b/events?organizationId={selectedOrgId}"
+				href="/b2b/events?organizationId={page.data.selectedOrgId}"
 				class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
 			>
 				Cancel

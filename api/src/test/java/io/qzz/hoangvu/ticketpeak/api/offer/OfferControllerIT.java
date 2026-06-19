@@ -170,11 +170,11 @@ class OfferControllerIT {
     }
 
     private CreateSaleWindowRequest createSaleWindowRequest(SaleWindowType type, int startOffsetSeconds, int endOffsetSeconds) {
-        return new CreateSaleWindowRequest(type, Instant.now().plusSeconds(startOffsetSeconds), Instant.now().plusSeconds(endOffsetSeconds));
+        return new CreateSaleWindowRequest(type, Instant.now().plusSeconds(startOffsetSeconds), Instant.now().plusSeconds(endOffsetSeconds), null);
     }
 
     private UpdateSaleWindowRequest updateSaleWindowRequest(SaleWindowType type, int startOffsetSeconds, int endOffsetSeconds) {
-        return new UpdateSaleWindowRequest(type, Instant.now().plusSeconds(startOffsetSeconds), Instant.now().plusSeconds(endOffsetSeconds));
+        return new UpdateSaleWindowRequest(type, Instant.now().plusSeconds(startOffsetSeconds), Instant.now().plusSeconds(endOffsetSeconds), null);
     }
 
     

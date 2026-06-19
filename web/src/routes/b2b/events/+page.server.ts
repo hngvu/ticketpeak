@@ -3,35 +3,18 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { apiFetch, type PageResponse } from '$lib/server/api';
 
-export const load: PageServerLoad = async ({ fetch, url, cookies }) => {
+export const load: PageServerLoad = async ({ fetch, url, cookies, parent }) => {
 	const accessToken = cookies.get('b2b_access_token');
 	if (!accessToken) {
 		throw redirect(303, '/b2b/login');
 	}
 
 	try {
-		// 1. Fetch organizer's organizations
-		let orgs = await apiFetch<any[]>(fetch, '/api/partner/organizations', {
-			headers: {
-				Authorization: `Bearer ${accessToken}`
-			}
-		}).catch(() => [] as any[]);
+		// Get selectedOrgId from parent layout
+		const parentData = await parent();
+		const selectedOrgId = parentData.selectedOrgId;
 
-		// Fallback: If DB is empty/offline, inject high-fidelity mock organizations to ensure B2B dashboard renders successfully
-		if (!orgs || orgs.length === 0) {
-			orgs = [
-				{ id: 'org-default-tp', name: 'Ticketpeak Organizer Org' },
-				{ id: 'org-secondary-tp', name: 'Elite Live Entertainment' }
-			];
-		}
-
-		// Resolve selected organization ID
-		let selectedOrgId = url.searchParams.get('organizationId');
-		if (!selectedOrgId || !orgs.some((o: any) => o.id === selectedOrgId)) {
-			selectedOrgId = orgs[0].id;
-		}
-
-		// 2. Fetch events, venues, classifications, attractions concurrently
+		// Fetch events, venues, classifications, attractions concurrently
 		const [eventsRes, venuesRes, classifications, attractions] = await Promise.all([
 			apiFetch<PageResponse<any>>(
 				fetch,
@@ -50,8 +33,6 @@ export const load: PageServerLoad = async ({ fetch, url, cookies }) => {
 		]);
 
 		return {
-			organizations: orgs,
-			selectedOrgId,
 			events: eventsRes?.content || [],
 			venues: venuesRes?.content || [],
 			classifications,
@@ -60,8 +41,6 @@ export const load: PageServerLoad = async ({ fetch, url, cookies }) => {
 	} catch (err: any) {
 		console.error('[B2B DASHBOARD LOAD ERROR]:', err);
 		return {
-			organizations: [],
-			selectedOrgId: null,
 			events: [],
 			venues: [],
 			classifications: [],
