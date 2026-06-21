@@ -360,13 +360,30 @@
 		countries.find((country) => country.value === data.preferredCountry) || countries[0]
 	);
 
+	function formatFriendlyDate(iso: string) {
+		const d = new Date(iso + 'T00:00:00');
+		return { month: monthNames[d.getMonth()], day: d.getDate(), year: d.getFullYear() };
+	}
+
 	const activeDateRangeLabel = $derived(
 		layoutStartDate && layoutEndDate
-			? `${layoutStartDate} to ${layoutEndDate}`
+			? (() => {
+					const s = formatFriendlyDate(layoutStartDate);
+					const e = formatFriendlyDate(layoutEndDate);
+					if (s.month === e.month && s.year === e.year) return `${s.month} ${s.day} - ${e.day}, ${s.year}`;
+					if (s.year === e.year) return `${s.month} ${s.day} - ${e.month} ${e.day}, ${s.year}`;
+					return `${s.month} ${s.day}, ${s.year} - ${e.month} ${e.day}, ${e.year}`;
+			  })()
 			: layoutStartDate
-				? `From ${layoutStartDate}`
+				? (() => {
+						const d = formatFriendlyDate(layoutStartDate);
+						return `From ${d.month} ${d.day}, ${d.year}`;
+				  })()
 				: layoutEndDate
-					? `Until ${layoutEndDate}`
+					? (() => {
+							const d = formatFriendlyDate(layoutEndDate);
+							return `Until ${d.month} ${d.day}, ${d.year}`;
+					  })()
 					: 'All Dates'
 	);
 
@@ -420,6 +437,10 @@
 			page.url.pathname.startsWith('/b2b') ||
 			page.url.pathname.startsWith('/ops')
 	);
+
+	const isEventDetail = $derived(
+		/\/[^/]+\/event\/[^/]+/.test(page.url.pathname)
+	);
 </script>
 
 <svelte:head>
@@ -427,7 +448,7 @@
 	<title>Ticketpeak</title>
 </svelte:head>
 
-{#if isAuthOrPortal}
+{#if isAuthOrPortal || isEventDetail}
 	{@render children()}
 {:else}
 	<div class="flex min-h-screen flex-col bg-canvas-soft text-body">

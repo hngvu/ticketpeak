@@ -20,8 +20,9 @@ public class AttractionController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<AttractionResponse>>> listAttractions() {
-        List<AttractionResponse> response = attractionService.listAttractions();
+    public ResponseEntity<ApiResponse<List<AttractionResponse>>> listAttractions(
+            @RequestParam(required = false) String query) {
+        List<AttractionResponse> response = attractionService.searchOrListAttractions(query);
         return ResponseEntity.ok(ApiResponse.success(response, "OK"));
     }
 

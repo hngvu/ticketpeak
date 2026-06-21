@@ -57,6 +57,16 @@ public class AttractionService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<AttractionResponse> searchOrListAttractions(String query) {
+        if (query == null || query.isBlank()) {
+            return listAttractions();
+        }
+        return attractionRepository.searchByNameOrDescription(query.trim()).stream()
+                .map(AttractionResponse::from)
+                .toList();
+    }
+
     private String slugify(String name) {
         return name.toLowerCase()
                 .replaceAll("[^a-z0-9\\s]", "")

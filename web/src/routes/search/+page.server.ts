@@ -77,6 +77,18 @@ export const load: PageServerLoad = async ({ fetch, url }) => {
 		console.error('[Search Load Error]:', err);
 	}
 
+	let suggestions: any[] = [];
+	if (query.trim()) {
+		try {
+			const sugParams = new URLSearchParams();
+			sugParams.set('query', query.trim());
+			const sugRes = await apiFetch<any[]>(fetch, `/api/attractions?${sugParams.toString()}`);
+			suggestions = sugRes || [];
+		} catch {
+			suggestions = [];
+		}
+	}
+
 	return {
 		query,
 		location: city,
@@ -85,6 +97,7 @@ export const load: PageServerLoad = async ({ fetch, url }) => {
 		results: searchResults.content || [],
 		totalResults: searchResults.totalElements || 0,
 		currentPage: searchResults.number || 0,
-		totalPages: searchResults.totalPages || 0
+		totalPages: searchResults.totalPages || 0,
+		suggestions
 	};
 };

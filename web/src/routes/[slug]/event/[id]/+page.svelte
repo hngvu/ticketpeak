@@ -4,32 +4,23 @@
 	import { goto } from '$app/navigation';
 	import { SvelteMap } from 'svelte/reactivity';
 	import { encodeUuidToBase62 } from '$lib/base62';
-	import EventHero from '$lib/components/event/EventHero.svelte';
-	import EventInfoBand from '$lib/components/event/EventInfoBand.svelte';
+	import EventHeader from '$lib/components/event/EventHeader.svelte';
 	import EventStatusBanner from '$lib/components/event/EventStatusBanner.svelte';
 	import OfferRow from '$lib/components/event/OfferRow.svelte';
-	import EventLineup from '$lib/components/event/EventLineup.svelte';
-	import OrderSummaryCard from '$lib/components/event/OrderSummaryCard.svelte';
 	import MobileOrderBar from '$lib/components/event/MobileOrderBar.svelte';
 
 	let { data } = $props<{ data: any }>();
 
-	// Reactive selection map: offerId -> qty
 	const selection = new SvelteMap<string, number>();
 
-	// UI States
-	let bioExpanded = $state(false);
-	let expandedOfferId = $state<string | null>(null);
 	let activeTab = $state<'all' | 'standard' | 'vip'>('all');
 	let reserving = $state(false);
 	let reservationError = $state<string | null>(null);
 
-	// Seat Picker States
-	let showSeatPickerModal = $state(false);
-	let selectedSeats = $state<any[]>([]); // Array of { id, sectionId, seatNum, rowLetter, price, offerId }
+	// Seating states (inline, not modal)
+	let selectedSeats = $state<any[]>([]);
 	let activeOfferForSeating = $state<any>(null);
 
-	// Zoom and Pan states for the SVG map
 	let canvasZoom = $state(1);
 	let panX = $state(0);
 	let panY = $state(0);
@@ -39,7 +30,6 @@
 
 	const seatR = 5;
 
-	// Derived lists and pricing
 	const selectedItems = $derived(
 		[...selection.entries()]
 			.filter(([, qty]) => qty > 0)
@@ -70,7 +60,6 @@
 		})
 	);
 
-	// Date formatted for SEO
 	const eventDate = $derived(new Date(data.event.startAt));
 	const formattedDate = $derived(
 		eventDate.toLocaleDateString('en-US', {
@@ -81,7 +70,13 @@
 		})
 	);
 
-	// Helper to update selection quantity
+	const hasManifest = $derived(
+		data.manifestDetail && (
+			(data.manifestDetail.gaAreas && data.manifestDetail.gaAreas.length > 0) ||
+			(data.manifestDetail.rsAreas && data.manifestDetail.rsAreas.length > 0)
+		)
+	);
+
 	function handleQtyChange(offerId: string, qty: number) {
 		if (qty === 0) {
 			selection.delete(offerId);
@@ -90,17 +85,9 @@
 		}
 	}
 
-	function handleToggleOffer(offerId: string) {
-		if (expandedOfferId === offerId) {
-			expandedOfferId = null;
-		} else {
-			expandedOfferId = offerId;
-		}
-	}
-
 	function handleChooseSeats(offer: any) {
 		activeOfferForSeating = offer;
-		showSeatPickerModal = true;
+		selectedSeats = [];
 		canvasZoom = 1;
 		panX = 0;
 		panY = 0;
@@ -135,12 +122,11 @@
 
 	function getSeatColor(seat: any) {
 		if (seat.status !== 'AVAILABLE') return '#94A3B8';
-		if (selectedSeats.some((s) => s.id === seat.id)) return '#2563EB'; // primary selection color
+		if (selectedSeats.some((s) => s.id === seat.id)) return '#2563EB';
 		const pl = data.manifestDetail?.priceLevels?.find((p: any) => p.id === seat.priceLevelId);
 		return pl ? pl.color : '#e2e8f0';
 	}
 
-	// Pan handlers
 	function handleMouseDown(e: MouseEvent) {
 		isPanning = true;
 		startPanX = e.clientX - panX;
@@ -165,7 +151,14 @@
 		canvasZoom = Math.max(0.5, canvasZoom - 0.25);
 	}
 
-	// Create reservation flow
+	function resetSeating() {
+		selectedSeats = [];
+		activeOfferForSeating = null;
+		if (activeOfferForSeating) {
+			selection.delete(activeOfferForSeating.id);
+		}
+	}
+
 	async function handleGetTickets() {
 		if (totalQty === 0) return;
 		reserving = true;
@@ -192,27 +185,20 @@
 
 			const res = await fetch('/api/reservations', {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					eventId: data.event.id,
-					items
-				})
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ eventId: data.event.id, items })
 			});
 
 			const json = await res.json();
 
 			if (!res.ok) {
 				if (res.status === 401) {
-					// Client is unauthorized, redirect to authentication route
 					goto(`/auth?redirect=${encodeURIComponent(window.location.pathname)}`);
 					return;
 				}
 				throw new Error(json.message || 'Failed to complete ticket reservation.');
 			}
 
-			// Successfully created reservation, forward to checkout screen (Plan 023)
 			goto(`/checkout/${json.data.id}`);
 		} catch (err: any) {
 			console.error('[CLIENT GET TICKETS FAILURE]:', err);
@@ -224,377 +210,164 @@
 
 <svelte:head>
 	<title>{data.event.title} | {formattedDate} | Ticketpeak</title>
-	<meta
-		name="description"
-		content="Get tickets for {data.event.title} at {data.event
-			.venueName} on {formattedDate}. Buy now on Ticketpeak."
-	/>
+	<meta name="description" content="Get tickets for {data.event.title} at {data.event.venueName} on {formattedDate}. Buy now on Ticketpeak." />
 	<link rel="canonical" href="/{data.event.slug}/event/{encodeUuidToBase62(data.event.id)}" />
-
-	<!-- Open Graph metadata -->
 	<meta property="og:title" content="{data.event.title} | Ticketpeak" />
-	<meta
-		property="og:description"
-		content="Get tickets for {data.event.title} at {data.event
-			.venueName} on {formattedDate}. Buy now on Ticketpeak."
-	/>
+	<meta property="og:description" content="Get tickets for {data.event.title} at {data.event.venueName} on {formattedDate}. Buy now on Ticketpeak." />
 	<meta property="og:image" content={data.event.imageUrl} />
 	<meta property="og:type" content="website" />
 </svelte:head>
 
-<div class="min-h-screen bg-canvas-soft pb-24 select-none lg:pb-16">
-	<!-- 1. Full-width Hero Banner -->
-	<EventHero event={data.event} />
+<div class="flex h-screen flex-col bg-white select-none overflow-hidden">
+	<EventHeader event={data.event} />
+	<EventStatusBanner status={data.event.status} />
 
-	<!-- 2. Event Info Band (Dates + Venue Locations) -->
-	<EventInfoBand event={data.event} currentUser={data.currentUser} />
-
-	<!-- 3. Page Columns Frame -->
-	<div class="mx-auto max-w-[1400px] px-4 py-8 md:px-6">
-		<div class="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px]">
-			<!-- Left Column: Details & Ticket selections -->
-			<div class="space-y-8">
-				<!-- Alerts / Warning status banners -->
-				<EventStatusBanner status={data.event.status} />
-
-				<!-- Ticket Selection options list -->
-				<section class="space-y-5 rounded-2xl border border-hairline bg-canvas p-6 shadow-2xs">
-					<div
-						class="flex flex-col gap-4 border-b border-hairline pb-4 sm:flex-row sm:items-center sm:justify-between"
-					>
-						<h2 class="font-sans text-lg font-extrabold text-ink sm:text-xl">Ticket Options</h2>
-
-						<!-- Elegant filter tabs -->
-						{#if data.offers.length > 1}
-							<div
-								class="flex items-center gap-1.5 rounded-lg border border-hairline/60 bg-canvas-soft p-1"
-							>
-								<button
-									type="button"
-									onclick={() => (activeTab = 'all')}
-									class="cursor-pointer rounded-md px-3 py-1 font-sans text-xs font-bold transition-all
-										{activeTab === 'all' ? 'shadow-3xs bg-canvas text-ink' : 'text-mute hover:text-ink'}"
-								>
-									All
-								</button>
-								<button
-									type="button"
-									onclick={() => (activeTab = 'standard')}
-									class="cursor-pointer rounded-md px-3 py-1 font-sans text-xs font-bold transition-all
-										{activeTab === 'standard' ? 'shadow-3xs bg-canvas text-ink' : 'text-mute hover:text-ink'}"
-								>
-									Standard
-								</button>
-								<button
-									type="button"
-									onclick={() => (activeTab = 'vip')}
-									class="cursor-pointer rounded-md px-3 py-1 font-sans text-xs font-bold transition-all
-										{activeTab === 'vip' ? 'shadow-3xs bg-canvas text-ink' : 'text-mute hover:text-ink'}"
-								>
-									VIP
-								</button>
-							</div>
-						{/if}
-					</div>
-
-					<!-- Offers accordion list -->
-					{#if filteredOffers.length > 0}
-						<div class="space-y-1">
-							{#each filteredOffers as offer (offer.id)}
-								<OfferRow
-									{offer}
-									inventory={data.inventory}
-									selectedQty={selection.get(offer.id) || 0}
-									isExpanded={expandedOfferId === offer.id}
-									onToggle={() => handleToggleOffer(offer.id)}
-									onQtyChange={(qty) => handleQtyChange(offer.id, qty)}
-									onChooseSeats={() => handleChooseSeats(offer)}
-								/>
-							{/each}
-						</div>
+	<div class="flex flex-1 min-h-0 w-full max-w-[1600px] gap-4 px-4 py-4 md:px-6 mx-auto">
+		<!-- Left: Manifest / Seating Map -->
+		<div class="flex flex-1 flex-col rounded-md border border-hairline bg-white p-4 min-h-0">
+			{#if hasManifest}
+				<div class="mb-3 flex shrink-0 items-center gap-2">
+					{#if activeOfferForSeating}
+						<button type="button" onclick={resetSeating} class="cursor-pointer rounded-md border border-hairline bg-canvas-soft px-3 py-1.5 text-xs font-bold text-ink transition-colors hover:bg-canvas">← Back to Offers</button>
+						<span class="text-xs text-mute">Selecting: <strong class="text-ink">{activeOfferForSeating.name}</strong></span>
 					{:else}
-						<p class="py-10 text-center font-sans text-sm font-medium text-mute">
-							No ticket offers available matching this category.
-						</p>
+						<button type="button" class="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-hairline bg-canvas-soft px-3 py-1.5 text-xs font-bold text-ink transition-colors hover:bg-canvas">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="h-3.5 w-3.5"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+							Filters
+						</button>
+						<button type="button" class="cursor-pointer rounded-md bg-ink px-3 py-1.5 text-xs font-bold text-white">{selectedItems.reduce((s, i) => s + i.qty, 0) || 0} Tickets</button>
+						<button type="button" class="cursor-pointer rounded-md border border-hairline bg-canvas-soft px-3 py-1.5 text-xs font-bold text-ink transition-colors hover:bg-canvas">Ticket Types</button>
 					{/if}
-				</section>
+				</div>
 
-				<!-- About details section -->
-				{#if data.event.description}
-					<section class="space-y-4 rounded-2xl border border-hairline bg-canvas p-6 shadow-2xs">
-						<h3 class="font-sans text-base font-extrabold text-ink sm:text-lg">About this event</h3>
-						<div class="border-t border-hairline pt-4">
-							<p
-								class="font-sans text-sm leading-relaxed whitespace-pre-line text-body
-									{bioExpanded ? '' : 'line-clamp-4'}"
-							>
-								{data.event.description}
-							</p>
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div
+					class="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-lg border border-hairline/60 bg-canvas-soft cursor-grab active:cursor-grabbing"
+					onmousedown={handleMouseDown}
+					onmousemove={handleMouseMove}
+					onmouseup={handleMouseUp}
+					onmouseleave={handleMouseUp}
+				>
+					<svg
+						viewBox="0 0 420 300"
+						class="h-full w-full select-none"
+						style="transform: translate({panX}px, {panY}px) scale({canvasZoom}); transform-origin: center; pointer-events: {isPanning ? 'none' : 'auto'};"
+					>
+						{#if data.manifestDetail?.manifest?.objects}
+							{#each data.manifestDetail.manifest.objects.filter((o: any) => o.type === 'stage') as obj}
+								<rect x={obj.x || 135} y={obj.y || 12} width={obj.width || 150} height={obj.height || 36} rx="4" fill="#e2e8f0" stroke="#cbd5e1" />
+								<text x={(obj.x || 135) + (obj.width || 150) / 2} y={(obj.y || 12) + (obj.height || 36) / 2 + 4} text-anchor="middle" fill="#64748b" font-size="11" font-weight="700" letter-spacing="2">{obj.text || 'STAGE'}</text>
+							{/each}
+						{:else}
+							<rect x="135" y="12" width="150" height="36" rx="4" fill="#e2e8f0" stroke="#cbd5e1" />
+							<text x="210" y="35" text-anchor="middle" fill="#64748b" font-size="11" font-weight="700" letter-spacing="2">STAGE</text>
+						{/if}
 
-							<button
-								type="button"
-								onclick={() => (bioExpanded = !bioExpanded)}
-								class="hover:text-link-deep mt-3 cursor-pointer font-sans text-xs font-bold text-primary outline-none"
-							>
-								{bioExpanded ? 'Read less ▴' : 'Read more ▾'}
-							</button>
-						</div>
-					</section>
+						{#each data.manifestDetail?.gaAreas || [] as ga}
+							<rect x={ga.x || 55} y={ga.y || 60} width={ga.width || 310} height={ga.height || 180} rx="8" fill={data.manifestDetail?.sections?.find((s: any) => s.id === ga.sectionId)?.color || '#EF4444'} opacity="0.15" />
+							<rect x={ga.x || 55} y={ga.y || 60} width={ga.width || 310} height={ga.height || 180} rx="8" fill="none" stroke={data.manifestDetail?.sections?.find((s: any) => s.id === ga.sectionId)?.color || '#EF4444'} stroke-width="2" stroke-dasharray="6 3" />
+							<text x={(ga.x || 55) + (ga.width || 310) / 2} y={(ga.y || 60) + (ga.height || 180) / 2} text-anchor="middle" fill={data.manifestDetail?.sections?.find((s: any) => s.id === ga.sectionId)?.color || '#EF4444'} font-size="12" font-weight="800">{data.manifestDetail?.sections?.find((s: any) => s.id === ga.sectionId)?.name || 'GA'}</text>
+						{/each}
+
+						{#each data.manifestDetail?.rsAreas || [] as rs}
+							<rect x={rs.x || 55} y={rs.y || 60} width={rs.width || 310} height={rs.height || 90} rx="6" fill={data.manifestDetail?.sections?.find((s: any) => s.id === rs.sectionId)?.color ? data.manifestDetail.sections.find((s: any) => s.id === rs.sectionId).color + '05' : '#f5f3ff'} stroke={data.manifestDetail?.sections?.find((s: any) => s.id === rs.sectionId)?.color || '#e9d5ff'} stroke-width="0.5" />
+							{#each rs.rows || [] as row}
+								{#each row.seats || [] as seat}
+									<!-- svelte-ignore a11y_click_events_have_key_events -->
+									<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+									<circle cx={seat.positionX || 0} cy={seat.positionY || 0} r={seatR} fill={getSeatColor(seat)} stroke={selectedSeats.some((s) => s.id === seat.id) ? '#ffffff' : 'none'} stroke-width="1.5" class="transition-all hover:opacity-85 {seat.status === 'AVAILABLE' ? 'cursor-pointer' : 'cursor-not-allowed'}" onclick={() => seat.status === 'AVAILABLE' && toggleSeatSelection(seat, rs.sectionId)} />
+								{/each}
+							{/each}
+						{/each}
+					</svg>
+
+					<div class="absolute bottom-3 right-3 flex items-center gap-1 rounded-lg border border-hairline bg-canvas/90 p-1 shadow-sm backdrop-blur-xs">
+						<button type="button" onclick={zoomOut} class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-hairline bg-canvas font-bold font-mono text-sm text-ink select-none hover:bg-canvas-soft">−</button>
+						<span class="px-2 font-mono text-[10px] font-bold text-mute">{Math.round(canvasZoom * 100)}%</span>
+						<button type="button" onclick={zoomIn} class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-hairline bg-canvas font-bold font-mono text-sm text-ink select-none hover:bg-canvas-soft">+</button>
+					</div>
+				</div>
+
+				{#if data.manifestDetail?.priceLevels?.length > 0}
+					<div class="mt-3 flex shrink-0 flex-wrap items-center gap-3">
+						{#each data.manifestDetail.priceLevels as pl}
+							<div class="flex items-center gap-1.5">
+								<span class="inline-block h-3 w-3 rounded-sm" style="background:{pl.color}"></span>
+								<span class="text-[11px] font-semibold text-mute">{pl.name} — {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(pl.price)}</span>
+							</div>
+						{/each}
+					</div>
 				{/if}
 
-				<!-- Attraction Lineup section -->
-				<EventLineup attractions={data.event.attractions} />
+				{#if selectedSeats.length > 0}
+					<div class="mt-3 shrink-0 rounded-lg border border-hairline bg-canvas-soft p-3">
+						<div class="mb-2 text-xs font-bold uppercase tracking-wider text-mute">Selected Seats ({selectedSeats.length})</div>
+						<div class="flex flex-wrap gap-1.5">
+							{#each selectedSeats as s}
+								<span class="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/5 px-2 py-0.5 text-xs font-semibold text-primary">
+									Row {s.rowLetter}·{s.seatNum}
+									<button type="button" onclick={() => toggleSeatSelection({ id: s.id }, s.sectionId)} class="ml-0.5 cursor-pointer text-primary/60 hover:text-primary">✕</button>
+								</span>
+							{/each}
+						</div>
+					</div>
+				{/if}
+			{:else}
+				<div class="flex flex-1 items-center justify-center text-sm text-mute">No seating map available for this event.</div>
+			{/if}
+		</div>
+
+		<!-- Right: Offers Panel -->
+		<div class="flex w-[360px] shrink-0 flex-col min-h-0">
+			<div class="flex-1 flex flex-col rounded-md border border-hairline bg-white p-4 min-h-0">
+				<div class="mb-3 flex shrink-0 items-center justify-between">
+					<span class="text-sm font-bold text-ink">{filteredOffers.length} Result{filteredOffers.length !== 1 ? 's' : ''}</span>
+					{#if data.offers.length > 1}
+						<div class="flex items-center gap-1 rounded-md border border-hairline/60 bg-canvas-soft p-0.5">
+							<button type="button" onclick={() => (activeTab = 'all')} class="cursor-pointer rounded px-2 py-0.5 text-[11px] font-bold transition-all {activeTab === 'all' ? 'bg-canvas text-ink shadow-xs' : 'text-mute hover:text-ink'}">All</button>
+							<button type="button" onclick={() => (activeTab = 'standard')} class="cursor-pointer rounded px-2 py-0.5 text-[11px] font-bold transition-all {activeTab === 'standard' ? 'bg-canvas text-ink shadow-xs' : 'text-mute hover:text-ink'}">Standard</button>
+							<button type="button" onclick={() => (activeTab = 'vip')} class="cursor-pointer rounded px-2 py-0.5 text-[11px] font-bold transition-all {activeTab === 'vip' ? 'bg-canvas text-ink shadow-xs' : 'text-mute hover:text-ink'}">VIP</button>
+						</div>
+					{/if}
+				</div>
+
+				<p class="mb-3 shrink-0 text-xs text-mute">Prices include fees (before taxes).</p>
+
+				<div class="flex-1 min-h-0 overflow-y-auto space-y-1">
+					{#if filteredOffers.length > 0}
+						{#each filteredOffers as offer (offer.id)}
+							<OfferRow {offer} inventory={data.inventory} selectedQty={selection.get(offer.id) || 0} onQtyChange={(qty) => handleQtyChange(offer.id, qty)} onChooseSeats={() => handleChooseSeats(offer)} />
+						{/each}
+					{:else}
+						<p class="py-8 text-center text-sm text-mute">No offers available.</p>
+					{/if}
+				</div>
 			</div>
 
-			<!-- Right Column: Desktop order card sidebar -->
-			<div class="hidden self-start lg:sticky lg:top-20 lg:block">
-				<OrderSummaryCard
-					event={data.event}
-					{selectedItems}
-					{orderTotal}
-					{totalQty}
-					{reserving}
-					{reservationError}
-					onGetTickets={handleGetTickets}
-				/>
-			</div>
+			{#if totalQty > 0}
+				<div class="mt-4 shrink-0 rounded-md border border-hairline bg-white p-4">
+					<div class="mb-3 space-y-1">
+						{#each selectedItems as item}
+							<div class="flex items-center justify-between text-xs">
+								<span class="text-mute">{item.qty}× {item.offer.name}</span>
+								<span class="font-semibold text-ink">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.offer.faceValue * item.qty)}</span>
+							</div>
+						{/each}
+					</div>
+					<div class="flex items-center justify-between border-t border-hairline pt-3">
+						<span class="text-sm font-bold text-ink">Total</span>
+						<span class="text-base font-bold text-primary">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(orderTotal)}</span>
+					</div>
+					{#if reservationError}
+						<p class="mt-2 text-xs text-error">{reservationError}</p>
+					{/if}
+					<button type="button" onclick={handleGetTickets} disabled={reserving || totalQty === 0} class="mt-3 w-full cursor-pointer rounded-full bg-primary py-3 text-sm font-bold text-white transition-colors hover:bg-primary/95 disabled:cursor-not-allowed disabled:opacity-60">
+						{reserving ? 'Reserving...' : 'Get Tickets'}
+					</button>
+				</div>
+			{/if}
 		</div>
 	</div>
 
-	<!-- 4. Mobile Sticky Bottom checkout drawer -->
-	<MobileOrderBar
-		{orderTotal}
-		{totalQty}
-		{reserving}
-		currency={selectedItems[0]?.offer?.currency || 'VND'}
-		onGetTickets={handleGetTickets}
-	/>
+	<MobileOrderBar {orderTotal} {totalQty} {reserving} currency={selectedItems[0]?.offer?.currency || 'VND'} onGetTickets={handleGetTickets} />
 </div>
-
-<!-- Interactive SVG Seat Picker Modal -->
-{#if showSeatPickerModal}
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs select-none">
-		<div class="flex h-[80vh] w-full max-w-5xl flex-col rounded-2xl border border-hairline bg-canvas shadow-2xl overflow-hidden">
-			<!-- Header -->
-			<div class="flex items-center justify-between border-b border-hairline px-6 py-4 bg-canvas">
-				<div>
-					<h3 class="font-sans text-base font-extrabold text-ink">Choose Seats — {activeOfferForSeating?.name}</h3>
-					<p class="font-sans text-xs text-mute mt-0.5">Click on available seats to add them to your selection.</p>
-				</div>
-				<button
-					type="button"
-					onclick={() => {
-						showSeatPickerModal = false;
-						selectedSeats = [];
-						selection.delete(activeOfferForSeating.id);
-					}}
-					class="cursor-pointer text-mute hover:text-ink font-mono text-base font-semibold"
-				>
-					✕
-				</button>
-			</div>
-
-			<!-- Main Workspace (SVG Map left, Selected Seats sidebar right) -->
-			<div class="flex flex-1 min-h-0">
-				<!-- Seating Map Canvas -->
-				<div class="relative flex-1 bg-canvas-soft overflow-hidden flex items-center justify-center p-4">
-					<!-- SVG Canvas wrapper with mouse drag-pan -->
-					<!-- svelte-ignore a11y_no_static_element_interactions -->
-					<div
-						class="relative h-[400px] w-[500px] border border-hairline/60 bg-canvas rounded-lg shadow-inner overflow-hidden cursor-grab active:cursor-grabbing"
-						onmousedown={handleMouseDown}
-						onmousemove={handleMouseMove}
-						onmouseup={handleMouseUp}
-						onmouseleave={handleMouseUp}
-					>
-						<svg
-							viewBox="0 0 420 300"
-							class="h-full w-full select-none"
-							style="transform: translate({panX}px, {panY}px) scale({canvasZoom}); transform-origin: center; pointer-events: {isPanning ? 'none' : 'auto'};"
-						>
-							<!-- Stage object -->
-							{#if data.manifestDetail?.manifest?.objects}
-								{#each data.manifestDetail.manifest.objects.filter((o: any) => o.type === 'stage') as obj}
-									<rect
-										x={obj.x || 135}
-										y={obj.y || 12}
-										width={obj.width || 150}
-										height={obj.height || 36}
-										rx="4"
-										fill="#e2e8f0"
-										stroke="#cbd5e1"
-									/>
-									<text
-										x={(obj.x || 135) + (obj.width || 150) / 2}
-										y={(obj.y || 12) + (obj.height || 36) / 2 + 4}
-										text-anchor="middle"
-										fill="#64748b"
-										font-size="11"
-										font-weight="700"
-										letter-spacing="2"
-									>{obj.text || 'STAGE'}</text>
-								{/each}
-							{:else}
-								<rect
-									x="135"
-									y="12"
-									width="150"
-									height="36"
-									rx="4"
-									fill="#e2e8f0"
-									stroke="#cbd5e1"
-								/>
-								<text
-									x="210"
-									y="35"
-									text-anchor="middle"
-									fill="#64748b"
-									font-size="11"
-									font-weight="700"
-									letter-spacing="2"
-								>STAGE</text>
-							{/if}
-
-							<!-- GA Areas -->
-							{#each data.manifestDetail?.gaAreas || [] as ga}
-								<rect
-									x={ga.x || 55}
-									y={ga.y || 60}
-									width={ga.width || 310}
-									height={ga.height || 180}
-									rx="8"
-									fill={data.manifestDetail?.sections?.find((s: any) => s.id === ga.sectionId)?.color || '#EF4444'}
-									opacity="0.15"
-								/>
-								<rect
-									x={ga.x || 55}
-									y={ga.y || 60}
-									width={ga.width || 310}
-									height={ga.height || 180}
-									rx="8"
-									fill="none"
-									stroke={data.manifestDetail?.sections?.find((s: any) => s.id === ga.sectionId)?.color || '#EF4444'}
-									stroke-width="2"
-									stroke-dasharray="6 3"
-								/>
-								<text
-									x={(ga.x || 55) + (ga.width || 310) / 2}
-									y={(ga.y || 60) + (ga.height || 180) / 2}
-									text-anchor="middle"
-									fill={data.manifestDetail?.sections?.find((s: any) => s.id === ga.sectionId)?.color || '#EF4444'}
-									font-size="12"
-									font-weight="800"
-								>
-									{data.manifestDetail?.sections?.find((s: any) => s.id === ga.sectionId)?.name || 'GA'}
-								</text>
-							{/each}
-
-							<!-- RS Areas with Seats -->
-							{#each data.manifestDetail?.rsAreas || [] as rs}
-								<rect
-									x={rs.x || 55}
-									y={rs.y || 60}
-									width={rs.width || 310}
-									height={rs.height || 90}
-									rx="6"
-									fill={data.manifestDetail?.sections?.find((s: any) => s.id === rs.sectionId)?.color ? data.manifestDetail.sections.find((s: any) => s.id === rs.sectionId).color + '05' : '#f5f3ff'}
-									stroke={data.manifestDetail?.sections?.find((s: any) => s.id === rs.sectionId)?.color || '#e9d5ff'}
-									stroke-width="0.5"
-								/>
-								{#each rs.rows || [] as row}
-									{#each row.seats || [] as seat}
-										<!-- svelte-ignore a11y_click_events_have_key_events -->
-										<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-										<circle
-											cx={seat.positionX || 0}
-											cy={seat.positionY || 0}
-											r={seatR}
-											fill={getSeatColor(seat)}
-											stroke={selectedSeats.some((s) => s.id === seat.id) ? '#ffffff' : 'none'}
-											stroke-width="1.5"
-											class="transition-all hover:opacity-85 {seat.status === 'AVAILABLE' ? 'cursor-pointer animate-pulse' : 'cursor-not-allowed'}"
-											onclick={() => seat.status === 'AVAILABLE' && toggleSeatSelection(seat, rs.sectionId)}
-										/>
-									{/each}
-								{/each}
-							{/each}
-						</svg>
-
-						<!-- Zoom controls overlay -->
-						<div class="absolute bottom-4 right-4 flex items-center gap-1 bg-canvas/90 backdrop-blur-xs border border-hairline rounded-lg p-1.5 shadow-sm">
-							<button
-								type="button"
-								onclick={zoomOut}
-								class="h-7 w-7 flex items-center justify-center rounded-md border border-hairline bg-canvas hover:bg-canvas-soft-2 font-bold font-mono text-sm cursor-pointer select-none text-ink"
-							>
-								−
-							</button>
-							<span class="px-2 font-mono text-[10px] font-bold text-mute">{Math.round(canvasZoom * 100)}%</span>
-							<button
-								type="button"
-								onclick={zoomIn}
-								class="h-7 w-7 flex items-center justify-center rounded-md border border-hairline bg-canvas hover:bg-canvas-soft-2 font-bold font-mono text-sm cursor-pointer select-none text-ink"
-							>
-								+
-							</button>
-						</div>
-					</div>
-				</div>
-
-				<!-- Sidebar Selected Seats -->
-				<div class="w-[300px] border-l border-hairline bg-canvas p-6 flex flex-col justify-between">
-					<div class="space-y-6">
-						<h4 class="font-sans text-xs font-bold uppercase tracking-wider text-mute">Selected Seats ({selectedSeats.length})</h4>
-						
-						{#if selectedSeats.length > 0}
-							<div class="space-y-2 max-h-[250px] overflow-y-auto pr-1">
-								{#each selectedSeats as s (s.id)}
-									<div class="flex items-center justify-between p-3 rounded-lg border border-hairline bg-canvas-soft-2 animate-in slide-in-from-right-5 duration-200">
-										<div>
-											<div class="font-sans text-xs font-semibold text-ink">
-												Row {s.rowLetter} — Seat {s.seatNum}
-											</div>
-											<p class="font-mono text-[9px] text-mute uppercase mt-0.5">
-												Section: {data.manifestDetail?.sections?.find((sec: any) => sec.id === s.sectionId)?.name || 'Reserved'}
-											</p>
-										</div>
-										<button
-											type="button"
-											onclick={() => toggleSeatSelection({ id: s.id }, s.sectionId)}
-											class="text-error font-mono text-xs font-bold cursor-pointer"
-										>
-											Remove
-										</button>
-									</div>
-								{/each}
-							</div>
-						{:else}
-							<div class="h-40 flex flex-col items-center justify-center border border-dashed border-hairline rounded-lg text-center p-4">
-								<span class="text-xs text-mute font-semibold">No seats selected yet.</span>
-							</div>
-						{/if}
-					</div>
-
-					<div class="border-t border-hairline pt-4 space-y-4">
-						<div class="flex justify-between items-baseline">
-							<span class="font-sans text-xs font-bold text-mute uppercase">Total Price</span>
-							<span class="font-mono text-base font-bold text-primary">
-								{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedSeats.reduce((acc, s) => acc + s.price, 0))}
-							</span>
-						</div>
-
-						<button
-							type="button"
-							onclick={() => (showSeatPickerModal = false)}
-							disabled={selectedSeats.length === 0}
-							class="w-full cursor-pointer rounded-full bg-primary py-2.5 font-sans text-xs font-bold text-on-primary hover:bg-primary/95 transition text-center disabled:opacity-60 disabled:cursor-not-allowed"
-						>
-							CONFIRM SEATING SELECTION
-						</button>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
-{/if}
