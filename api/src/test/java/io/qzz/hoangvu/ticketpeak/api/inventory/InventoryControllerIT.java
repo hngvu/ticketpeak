@@ -177,14 +177,14 @@ class InventoryControllerIT {
         manifest = manifestRepository.saveAndFlush(Manifest.builder()
                 .id("M-INVENTORY-1")
                 .venue(venue)
-                
+                .description("Inventory Test Manifest")
                 .totalCapacity(100)
                 .status(ManifestStatus.PUBLISHED)
                 .build());
 
-        levelRepository.saveAndFlush(Level.builder().id("LV-1").manifest(manifest).build());
-        sectionRepository.saveAndFlush(Section.builder().id("SEC-A").manifest(manifest).build());
-        priceLevelRepository.saveAndFlush(PriceLevel.builder().id("PL-1").manifest(manifest).build());
+        levelRepository.saveAndFlush(Level.builder().id("LV-1").manifest(manifest).description("Level 1").build());
+        sectionRepository.saveAndFlush(Section.builder().id("SEC-A").manifest(manifest).type(SectionType.RS).build());
+        priceLevelRepository.saveAndFlush(PriceLevel.builder().id("PL-1").manifest(manifest).description("Price Level 1").build());
     }
 
     private Event saveEvent(String slug, String title, EventStatus status) {
@@ -219,16 +219,15 @@ class InventoryControllerIT {
         // 1. Add GA Area to layout
         sectionRepository.saveAndFlush(Section.builder().type(SectionType.GA)
                 .id("GA-A")
-                .id(manifest.getId())
+                .manifest(manifest)
                 .levelId("LV-1")
-                
                 .capacity(50)
                 .build());
 
         // 2. Setup Reserved Seating layout
         Section rsArea = sectionRepository.saveAndFlush(Section.builder().type(SectionType.RS)
                 .id("RS-A")
-                .id(manifest.getId())
+                .manifest(manifest)
                 .levelId("LV-1")
                 .build());
 
@@ -244,9 +243,8 @@ class InventoryControllerIT {
                 .seatRow(seatRow)
                 .name("A-01")
                 .positionX(1)
-                
+                .positionY(1)
                 .sectionId("SEC-A")
-                
                 .status(SeatStatus.AVAILABLE)
                 .build());
 
@@ -266,7 +264,7 @@ class InventoryControllerIT {
                 .sellableQuantities(List.of(1, 2, 4))
                 .seatingMode(SeatingMode.GENERAL_ADMISSION)
                 .sectionId(null)
-                
+                .code("GA-1")
                 .charges(List.of())
                 .build());
 
@@ -282,7 +280,7 @@ class InventoryControllerIT {
                 .sellableQuantities(List.of(1))
                 .seatingMode(SeatingMode.RESERVED_SEATING)
                 .sectionId("SEC-A")
-                
+                .code("RS-1")
                 .charges(List.of())
                 .build());
         
@@ -292,12 +290,11 @@ class InventoryControllerIT {
                 .andExpect(status().isOk());
 
         EventManifest eventManifest = eventManifestRepository.findById(event.getId()).orElseThrow();
-        String snapshotManifestId = eventManifest.getManifestId();
-        String gaAreaId = snapshotManifestId + "-GA-A";
+        String linkedManifestId = eventManifest.getManifestId();
+        assertThat(linkedManifestId).isEqualTo(manifest.getId());
 
-        List<Seat> clonedSeats = seatRepository.findByManifestId(snapshotManifestId);
-        assertThat(clonedSeats).isNotEmpty();
-        String clonedSeatId = clonedSeats.get(0).getId();
+        String gaAreaId = "GA-A";
+        String originalSeatId = "SEAT-1";
 
         // 6. Transition event to ONSALE
         mockMvc.perform(post("/api/partner/events/" + event.getId() + "/onsale")
@@ -314,7 +311,7 @@ class InventoryControllerIT {
 
         // Verify Seat Status (using composite PK!)
         assertThat(inventorySeatRepository.existsByEventId(event.getId())).isTrue();
-        InventorySeat inventorySeat = inventorySeatRepository.findByEventIdAndSeatId(event.getId(), clonedSeatId).orElseThrow();
+        InventorySeat inventorySeat = inventorySeatRepository.findByEventIdAndSeatId(event.getId(), originalSeatId).orElseThrow();
         assertThat(inventorySeat.getStatus()).isEqualTo(SeatInventoryStatus.AVAILABLE);
         assertThat(inventorySeat.getOfferId()).isEqualTo(rsOffer.getId());
 
@@ -322,19 +319,19 @@ class InventoryControllerIT {
         mockMvc.perform(get("/api/events/" + event.getId() + "/availability"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.gaInventory.length()").value(1))
-                .andExpect(jsonPath("$.data.gaInventory[0].areaId").value(gaAreaId))
+                .andExpect(jsonPath("$.data.gaInventory[0].sectionId").value(gaAreaId))
                 .andExpect(jsonPath("$.data.gaInventory[0].total").value(50))
                 .andExpect(jsonPath("$.data.gaInventory[0].sold").value(0))
                 .andExpect(jsonPath("$.data.gaInventory[0].available").value(50))
                 .andExpect(jsonPath("$.data.reservedSeats.length()").value(1))
-                .andExpect(jsonPath("$.data.reservedSeats[0].seatId").value(clonedSeatId))
+                .andExpect(jsonPath("$.data.reservedSeats[0].seatId").value(originalSeatId))
                 .andExpect(jsonPath("$.data.reservedSeats[0].status").value("AVAILABLE"));
 
         // 9. Test Service-layer Holds and Sales Updates
         // GA Hold
         inventoryService.holdGAInventory(event.getId(), gaAreaId, gaOffer.getId(), 5);
         // Reserved Seat Hold
-        inventoryService.holdSeat(event.getId(), clonedSeatId);
+        inventoryService.holdSeat(event.getId(), originalSeatId);
 
         // Query Availability -> verify HELD statuses
         mockMvc.perform(get("/api/events/" + event.getId() + "/availability"))
@@ -345,7 +342,7 @@ class InventoryControllerIT {
 
         // Sell
         inventoryService.releaseGAInventory(event.getId(), gaAreaId, gaOffer.getId(), 5); // release holds
-        inventoryService.releaseSeat(event.getId(), clonedSeatId);
+        inventoryService.releaseSeat(event.getId(), originalSeatId);
         
         // 1. Direct Sell GA (without hold)
         inventoryService.directSellGAInventory(event.getId(), gaAreaId, gaOffer.getId(), 10);
@@ -355,7 +352,7 @@ class InventoryControllerIT {
         inventoryService.confirmGAInventory(event.getId(), gaAreaId, gaOffer.getId(), 5);
         
         // Sell seat
-        inventoryService.sellSeat(event.getId(), clonedSeatId);
+        inventoryService.sellSeat(event.getId(), originalSeatId);
  
         // Query Availability -> verify SOLD statuses
         mockMvc.perform(get("/api/events/" + event.getId() + "/availability"))
@@ -394,15 +391,14 @@ class InventoryControllerIT {
     void onsale_transition_rolls_back_when_reserved_seat_has_no_matching_offer() throws Exception {
         sectionRepository.saveAndFlush(Section.builder().type(SectionType.GA)
                 .id("GA-B")
-                .id(manifest.getId())
+                .manifest(manifest)
                 .levelId("LV-1")
-                
                 .capacity(10)
                 .build());
 
         Section rsArea = sectionRepository.saveAndFlush(Section.builder().type(SectionType.RS)
                 .id("RS-B")
-                .id(manifest.getId())
+                .manifest(manifest)
                 .levelId("LV-1")
                 .build());
 
@@ -418,9 +414,8 @@ class InventoryControllerIT {
                 .seatRow(seatRow)
                 .name("B-01")
                 .positionX(1)
-                
+                .positionY(1)
                 .sectionId("SEC-A")
-                
                 .status(SeatStatus.AVAILABLE)
                 .build());
 
@@ -435,6 +430,7 @@ class InventoryControllerIT {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("INVALID_OFFER_MAPPING"));
 
+        entityManager.flush();
         entityManager.clear();
         assertThat(eventRepository.findById(event.getId()).orElseThrow().getStatus()).isEqualTo(EventStatus.PUBLISHED);
         assertThat(inventorySeatRepository.existsByEventId(event.getId())).isFalse();

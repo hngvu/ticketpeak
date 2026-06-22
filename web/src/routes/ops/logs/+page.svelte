@@ -36,7 +36,8 @@
 	<div class="flex flex-col gap-1 border-b border-hairline pb-5">
 		<h1 class="font-sans text-2xl font-semibold tracking-tight text-ink">System Audit Trail</h1>
 		<p class="font-sans text-xs text-body">
-			A permanent chronological ledger tracking administrator activities, security events, and configuration overrides.
+			A permanent chronological ledger tracking administrator activities, security events, and
+			configuration overrides.
 		</p>
 	</div>
 
@@ -72,28 +73,30 @@
 				<table class="w-full text-left text-xs text-body">
 					<tbody class="divide-y divide-hairline">
 						{#each filteredLogs as log (log.id)}
-							<tr class="hover:bg-canvas-soft/40 transition">
+							<tr class="transition hover:bg-canvas-soft/40">
 								<!-- Column 1: Time and Category -->
-								<td class="py-4 pl-6 pr-4 w-48 shrink-0">
+								<td class="w-48 shrink-0 py-4 pr-4 pl-6">
 									<div class="flex items-center gap-2">
-										<span class="rounded bg-canvas-soft-2 px-2 py-0.5 font-mono text-[9px] font-bold text-body uppercase border border-hairline">
+										<span
+											class="rounded border border-hairline bg-canvas-soft-2 px-2 py-0.5 font-mono text-[9px] font-bold text-body uppercase"
+										>
 											{log.category}
 										</span>
 									</div>
-									<p class="font-mono mt-1 text-[10px] text-mute">
+									<p class="mt-1 font-mono text-[10px] text-mute">
 										{formatDateTime(log.timestamp)}
 									</p>
 								</td>
 
 								<!-- Column 2: Admin Email -->
-								<td class="px-4 py-4 w-64">
+								<td class="w-64 px-4 py-4">
 									<p class="font-sans text-xs font-semibold text-ink">{log.adminEmail}</p>
-									<p class="font-mono mt-0.5 text-[9px] text-mute">Action: {log.action}</p>
+									<p class="mt-0.5 font-mono text-[9px] text-mute">Action: {log.action}</p>
 								</td>
 
 								<!-- Column 3: Log Details -->
 								<td class="py-4 pr-6 pl-4">
-									<p class="font-sans text-xs text-ink leading-relaxed">
+									<p class="font-sans text-xs leading-relaxed text-ink">
 										{log.details}
 									</p>
 								</td>
@@ -104,8 +107,11 @@
 			</div>
 		</div>
 	{:else}
-		<div class="flex h-40 flex-col items-center justify-center rounded-lg border border-dashed border-hairline bg-canvas text-center">
-			<span class="text-xs font-semibold text-mute">No system logs match the current criteria.</span>
+		<div
+			class="flex h-40 flex-col items-center justify-center rounded-lg border border-dashed border-hairline bg-canvas text-center"
+		>
+			<span class="text-xs font-semibold text-mute">No system logs match the current criteria.</span
+			>
 		</div>
 	{/if}
 </div>

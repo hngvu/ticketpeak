@@ -1,10 +1,13 @@
 <script lang="ts">
 	/* eslint-disable @typescript-eslint/no-explicit-any */
+	import OfferQtySelector from './OfferQtySelector.svelte';
 	let {
 		offer,
 		inventory,
 		selectedQty = 0,
 		isExpanded = false,
+		hasManifest = true,
+		globalQty = 2,
 		onToggle,
 		onQtyChange,
 		onChooseSeats
@@ -12,8 +15,10 @@
 		offer: any;
 		inventory: any;
 		selectedQty: number;
-		isExpanded: boolean;
-		onToggle: () => void;
+		isExpanded?: boolean;
+		hasManifest?: boolean;
+		globalQty?: number;
+		onToggle?: () => void;
 		onQtyChange: (qty: number) => void;
 		onChooseSeats?: () => void;
 	}>();
@@ -35,13 +40,17 @@
 		});
 	}
 
+	// Dynamic state derivations
 	const isSelected = $derived(selectedQty > 0);
 
 	const availState = $derived.by(() => {
 		const now = new Date();
+
+		// 1. Check inventory availability
 		const inv = inventory.gaInventory.find((g: any) => g.offerId === offer.id);
 		if (inv && inv.available === 0) return 'soldout';
 
+		// 2. Check active sale windows
 		const activeWindow = offer.saleWindows.find((w: any) => {
 			const start = new Date(w.startAt);
 			const end = new Date(w.endAt);
@@ -50,7 +59,9 @@
 
 		if (!activeWindow) {
 			const upcoming = offer.saleWindows.find((w: any) => new Date(w.startAt) > now);
-			if (upcoming) return { status: 'not-on-sale', upcoming };
+			if (upcoming) {
+				return { status: 'not-on-sale', upcoming };
+			}
 			return 'closed';
 		}
 
@@ -67,40 +78,59 @@
 
 	function handleClick() {
 		if (stateLabel === 'soldout') return;
+		if (typeof availState === 'object' && availState.status === 'not-on-sale') return;
+
 		if (offer.seatingMode === 'RESERVED_SEATING') {
 			onChooseSeats?.();
 		} else {
-			onQtyChange(isSelected ? 0 : offer.sellableQuantities?.[0] || 1);
+			onQtyChange(isSelected ? 0 : globalQty);
 		}
 	}
 </script>
 
-<button
-	type="button"
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div
 	onclick={handleClick}
-	disabled={stateLabel === 'soldout'}
-	class="flex w-full items-center justify-between gap-3 border border-hairline px-4 py-3.5 text-left transition-all
-		{stateLabel === 'soldout'
-			? 'cursor-not-allowed opacity-50'
-			: isSelected
-				? 'border-primary/50 bg-primary/5'
-				: 'cursor-pointer hover:bg-canvas-soft hover:border-hairline-strong'}"
+	class="flex w-full cursor-pointer items-center gap-3 border-b border-hairline bg-white px-4 py-3.5 text-left transition-colors hover:bg-[#f5f7fa] {stateLabel ===
+	'soldout'
+		? 'cursor-not-allowed opacity-50'
+		: ''}"
 >
-	<div class="min-w-0 flex-1">
-		<span class="block text-sm font-semibold text-ink truncate">{offer.name}</span>
-		{#if offer.description}
-			<span class="mt-0.5 block text-[11px] text-mute truncate">{offer.description}</span>
+	<!-- Thumbnail Image -->
+	<div
+		class="h-10 w-14 shrink-0 overflow-hidden rounded-[4px] border border-hairline/50 bg-canvas-soft shadow-xs"
+	>
+		{#if offer.imageUrl}
+			<img src={offer.imageUrl} alt={offer.name} class="h-full w-full object-cover" />
+		{:else}
+			<div class="flex h-full w-full items-center justify-center bg-[#1a1a24]">
+				<span class="text-[8px] font-bold text-white opacity-50">TICKET</span>
+			</div>
 		{/if}
 	</div>
 
+	<!-- Info -->
+	<div class="min-w-0 flex-1">
+		<span class="block truncate text-[13px] font-bold text-ink">{offer.name}</span>
+		<span class="mt-0.5 block truncate text-[12px] text-mute"
+			>{offer.description || 'Standard Ticket'}</span
+		>
+	</div>
+
+	<!-- Price & Action -->
 	<div class="shrink-0 text-right">
 		{#if stateLabel === 'soldout'}
-			<span class="text-[11px] font-bold text-error">Sold Out</span>
+			<span class="text-[12px] font-bold text-error">Sold Out</span>
 		{:else if stateLabel === 'not-on-sale'}
-			<span class="text-[10px] font-bold text-amber-600">On sale: {formatDateShort((availState as any).upcoming.startAt)}</span>
+			<span class="text-[11px] font-bold text-amber-600"
+				>On sale: {formatDateShort((availState as any).upcoming.startAt)}</span
+			>
 		{:else}
-			<span class="block text-sm font-bold text-ink">{formatCurrency(offer.faceValue, offer.currency)}</span>
-			<span class="block text-[10px] text-mute">per ticket</span>
+			<span class="block text-[14px] font-bold text-[#026cdf]"
+				>{formatCurrency(offer.faceValue, offer.currency)}</span
+			>
 		{/if}
 	</div>
-</button>
+</div>

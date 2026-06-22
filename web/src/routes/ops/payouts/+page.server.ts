@@ -17,52 +17,53 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 		}).catch(() => null);
 
 		// If DB has payouts, return them. Otherwise, seed realistic mock payouts.
-		const payouts = payoutsRes?.content && payoutsRes.content.length > 0
-			? payoutsRes.content
-			: [
-					{
-						id: '8f92b7c4-1111-2222-3333-444455556666',
-						resaleListingId: 'listing-1',
-						sellerId: 'seller-abc',
-						grossAmount: 1200000,
-						platformFeePercent: 5.0,
-						platformFeeAmount: 60000,
-						netAmount: 1140000,
-						currency: 'VND',
-						status: 'PENDING',
-						scheduledAfter: '2026-06-20T09:00:00Z',
-						processedAt: null,
-						payoutMethodSnapshot: {
-							type: 'BANK',
-							holderName: 'NGUYEN VAN A',
-							bankCode: 'BIDV',
-							maskedAccountNumber: '*******1234'
+		const payouts =
+			payoutsRes?.content && payoutsRes.content.length > 0
+				? payoutsRes.content
+				: [
+						{
+							id: '8f92b7c4-1111-2222-3333-444455556666',
+							resaleListingId: 'listing-1',
+							sellerId: 'seller-abc',
+							grossAmount: 1200000,
+							platformFeePercent: 5.0,
+							platformFeeAmount: 60000,
+							netAmount: 1140000,
+							currency: 'VND',
+							status: 'PENDING',
+							scheduledAfter: '2026-06-20T09:00:00Z',
+							processedAt: null,
+							payoutMethodSnapshot: {
+								type: 'BANK',
+								holderName: 'NGUYEN VAN A',
+								bankCode: 'BIDV',
+								maskedAccountNumber: '*******1234'
+							},
+							note: 'Secondary ticket sale resale payout',
+							createdAt: '2026-06-19T02:00:00Z'
 						},
-						note: 'Secondary ticket sale resale payout',
-						createdAt: '2026-06-19T02:00:00Z'
-					},
-					{
-						id: '3c41a9e5-2222-3333-4444-555566667777',
-						resaleListingId: 'listing-2',
-						sellerId: 'seller-xyz',
-						grossAmount: 2500000,
-						platformFeePercent: 5.0,
-						platformFeeAmount: 125000,
-						netAmount: 2375000,
-						currency: 'VND',
-						status: 'PAID',
-						scheduledAfter: '2026-06-18T09:00:00Z',
-						processedAt: '2026-06-18T10:15:30Z',
-						payoutMethodSnapshot: {
-							type: 'BANK',
-							holderName: 'TRAN THI B',
-							bankCode: 'VIETCOMBANK',
-							maskedAccountNumber: '*******5678'
-						},
-						note: 'Resale listing #249 payout complete',
-						createdAt: '2026-06-17T14:30:00Z'
-					}
-				];
+						{
+							id: '3c41a9e5-2222-3333-4444-555566667777',
+							resaleListingId: 'listing-2',
+							sellerId: 'seller-xyz',
+							grossAmount: 2500000,
+							platformFeePercent: 5.0,
+							platformFeeAmount: 125000,
+							netAmount: 2375000,
+							currency: 'VND',
+							status: 'PAID',
+							scheduledAfter: '2026-06-18T09:00:00Z',
+							processedAt: '2026-06-18T10:15:30Z',
+							payoutMethodSnapshot: {
+								type: 'BANK',
+								holderName: 'TRAN THI B',
+								bankCode: 'VIETCOMBANK',
+								maskedAccountNumber: '*******5678'
+							},
+							note: 'Resale listing #249 payout complete',
+							createdAt: '2026-06-17T14:30:00Z'
+						}
+					];
 
 		return {
 			payouts

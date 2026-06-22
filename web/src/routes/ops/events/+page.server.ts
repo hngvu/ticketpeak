@@ -10,11 +10,15 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	}
 
 	try {
-		const eventsRes = await apiFetch<PageResponse<any>>(fetch, '/api/ops/events?size=100&sort=startAt,asc', {
-			headers: {
-				Authorization: `Bearer ${accessToken}`
+		const eventsRes = await apiFetch<PageResponse<any>>(
+			fetch,
+			'/api/ops/events?size=100&sort=startAt,asc',
+			{
+				headers: {
+					Authorization: `Bearer ${accessToken}`
+				}
 			}
-		}).catch(() => ({ content: [] }) as any);
+		).catch(() => ({ content: [] }) as any);
 
 		return {
 			events: eventsRes?.content || []

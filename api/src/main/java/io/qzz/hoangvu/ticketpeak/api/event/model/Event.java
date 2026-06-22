@@ -77,8 +77,9 @@ public class Event {
      * Snapshot vào payout.platform_fee_percent tại thời điểm resale sold.
      * Default 0 — admin/organizer set per event.
      */
+    @Builder.Default
     @Column(name = "service_fee_percent", nullable = false, precision = 5, scale = 2)
-    BigDecimal serviceFeePercent;
+    BigDecimal serviceFeePercent = BigDecimal.ZERO;
 
     @Column(name = "resale_enabled", nullable = false)
     boolean resaleEnabled;

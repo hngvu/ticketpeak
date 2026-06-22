@@ -14,7 +14,9 @@
 			<p class="mt-1 text-2xl font-bold text-ink">{(data.events || []).length}</p>
 		</div>
 		<div class="rounded-lg border border-hairline bg-canvas p-4">
-			<p class="text-sidebar-tiny font-semibold tracking-wider text-mute uppercase">Organizations</p>
+			<p class="text-sidebar-tiny font-semibold tracking-wider text-mute uppercase">
+				Organizations
+			</p>
 			<p class="mt-1 text-2xl font-bold text-ink">{(data.organizations || []).length}</p>
 		</div>
 		<div class="rounded-lg border border-hairline bg-canvas p-4">

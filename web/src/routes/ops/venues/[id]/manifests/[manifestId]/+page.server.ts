@@ -38,8 +38,6 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 		}
 	}
 
-
-
 	// ── Real API path ──────────────────────────────────────────────────────────
 	try {
 		const [venue, manifest, levels, sections, priceLevels] = await Promise.all([
@@ -64,11 +62,9 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 		const rsSectionList: any[] = (sections ?? []).filter((s: any) => s.type === 'RS');
 		const rsSections = await Promise.all(
 			rsSectionList.map(async (sec: any) => {
-				const rows = await apiFetch<any[]>(
-					fetch,
-					`/api/ops/venues/sections/${sec.id}/rows`,
-					{ headers: { Authorization: `Bearer ${accessToken}` } }
-				).catch(() => [] as any[]);
+				const rows = await apiFetch<any[]>(fetch, `/api/ops/venues/sections/${sec.id}/rows`, {
+					headers: { Authorization: `Bearer ${accessToken}` }
+				}).catch(() => [] as any[]);
 
 				const rowsWithSeats = await Promise.all(
 					rows.map(async (row: any) => {
@@ -85,6 +81,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 					color: sec.color ?? null,
 					levelId: sec.levelId ?? null,
 					polygon: (sec.uiData?.polygon as [number, number][] | undefined) ?? [],
+					uiData: sec.uiData ?? null,
 					rows: rowsWithSeats
 				};
 			})

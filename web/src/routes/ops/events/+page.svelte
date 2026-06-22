@@ -44,7 +44,9 @@
 		</div>
 	{/if}
 	{#if form?.success}
-		<div class="rounded-md border border-success bg-success/10 p-3.5 text-xs font-semibold text-success">
+		<div
+			class="rounded-md border border-success bg-success/10 p-3.5 text-xs font-semibold text-success"
+		>
 			✨ Success: {form.message}
 		</div>
 	{/if}
@@ -55,18 +57,20 @@
 				<table class="w-full text-left text-xs text-body">
 					<tbody class="divide-y divide-hairline">
 						{#each data.events as event (event.id)}
-							<tr class="hover:bg-canvas-soft/40 transition">
+							<tr class="transition hover:bg-canvas-soft/40">
 								<!-- Column 1: Event Details & Inline Badge -->
-								<td class="py-4 pl-6 pr-4">
+								<td class="py-4 pr-4 pl-6">
 									<div class="flex items-center gap-2">
 										<h4 class="text-sm font-semibold text-ink">{event.title}</h4>
 										{#if event.status !== 'ON_SALE'}
-											<span class="rounded bg-canvas-soft-2 px-2 py-0.5 font-mono text-[9px] font-bold text-body uppercase border border-hairline">
+											<span
+												class="rounded border border-hairline bg-canvas-soft-2 px-2 py-0.5 font-mono text-[9px] font-bold text-body uppercase"
+											>
 												{event.status}
 											</span>
 										{/if}
 									</div>
-									<p class="font-mono mt-1 text-[10px] text-mute">
+									<p class="mt-1 font-mono text-[10px] text-mute">
 										📅 {formatDateTime(event.startAt)} • ID: {event.id}
 									</p>
 								</td>
@@ -74,7 +78,9 @@
 								<!-- Column 2: Venue & Organization Info -->
 								<td class="px-4 py-4">
 									<p class="font-sans text-xs font-medium text-ink">Venue Manager / Partner ID</p>
-									<p class="font-mono mt-0.5 text-[10px] text-mute">Org ID: {event.organizationId}</p>
+									<p class="mt-0.5 font-mono text-[10px] text-mute">
+										Org ID: {event.organizationId}
+									</p>
 								</td>
 
 								<!-- Column 3: Quick Moderation Action buttons -->
@@ -85,7 +91,7 @@
 												<input type="hidden" name="id" value={event.id} />
 												<button
 													type="submit"
-													class="cursor-pointer rounded-full bg-primary px-3 py-1 font-mono text-[10px] font-bold text-on-primary hover:bg-primary/95 transition"
+													class="cursor-pointer rounded-full bg-primary px-3 py-1 font-mono text-[10px] font-bold text-on-primary transition hover:bg-primary/95"
 												>
 													PUBLISH
 												</button>
@@ -97,7 +103,7 @@
 												<input type="hidden" name="id" value={event.id} />
 												<button
 													type="submit"
-													class="cursor-pointer rounded-full bg-primary px-3 py-1 font-mono text-[10px] font-bold text-on-primary hover:bg-primary/95 transition"
+													class="cursor-pointer rounded-full bg-primary px-3 py-1 font-mono text-[10px] font-bold text-on-primary transition hover:bg-primary/95"
 												>
 													OPEN SALES
 												</button>
@@ -107,7 +113,7 @@
 										{#if event.status === 'ON_SALE' || event.status === 'POSTPONED'}
 											<button
 												onclick={() => triggerPostpone(event.id)}
-												class="cursor-pointer rounded-full border border-hairline bg-canvas px-3 py-1 font-mono text-[10px] font-bold text-ink hover:bg-canvas-soft-2 transition"
+												class="cursor-pointer rounded-full border border-hairline bg-canvas px-3 py-1 font-mono text-[10px] font-bold text-ink transition hover:bg-canvas-soft-2"
 											>
 												POSTPONE
 											</button>
@@ -116,7 +122,7 @@
 												<input type="hidden" name="id" value={event.id} />
 												<button
 													type="submit"
-													class="cursor-pointer rounded-full border border-error/25 bg-error/5 px-3 py-1 font-mono text-[10px] font-bold text-error hover:bg-error/10 transition"
+													class="cursor-pointer rounded-full border border-error/25 bg-error/5 px-3 py-1 font-mono text-[10px] font-bold text-error transition hover:bg-error/10"
 												>
 													CANCEL
 												</button>
@@ -131,25 +137,43 @@
 			</div>
 		</div>
 	{:else}
-		<div class="flex h-40 flex-col items-center justify-center rounded-lg border border-dashed border-hairline bg-canvas text-center">
-			<span class="text-xs font-semibold text-mute">No events currently submitted for moderation.</span>
+		<div
+			class="flex h-40 flex-col items-center justify-center rounded-lg border border-dashed border-hairline bg-canvas text-center"
+		>
+			<span class="text-xs font-semibold text-mute"
+				>No events currently submitted for moderation.</span
+			>
 		</div>
 	{/if}
 </div>
 
 <!-- Postpone Modal Overlay -->
 {#if showPostponeModal}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 backdrop-blur-xs" role="dialog">
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 backdrop-blur-xs"
+		role="dialog"
+	>
 		<div class="w-full max-w-sm rounded-lg border border-hairline bg-canvas p-6 shadow-xl">
 			<h3 class="font-sans text-sm font-semibold text-ink">Postpone Event</h3>
-			<p class="mt-1 text-xs text-mute">State a reschedule notice reason for active ticket buyers.</p>
+			<p class="mt-1 text-xs text-mute">
+				State a reschedule notice reason for active ticket buyers.
+			</p>
 
-			<form method="POST" action="?/postponeEvent" use:enhance={() => {
-				showPostponeModal = false;
-			}} class="mt-4 space-y-4">
+			<form
+				method="POST"
+				action="?/postponeEvent"
+				use:enhance={() => {
+					showPostponeModal = false;
+				}}
+				class="mt-4 space-y-4"
+			>
 				<input type="hidden" name="id" value={selectedEventId} />
 				<div>
-					<label for="postpone-reason" class="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wider text-mute">Reason *</label>
+					<label
+						for="postpone-reason"
+						class="mb-1 block font-mono text-[10px] font-bold tracking-wider text-mute uppercase"
+						>Reason *</label
+					>
 					<input
 						type="text"
 						id="postpone-reason"
@@ -165,13 +189,13 @@
 					<button
 						type="button"
 						onclick={() => (showPostponeModal = false)}
-						class="cursor-pointer rounded-full border border-hairline bg-canvas px-4 py-1.5 text-xs font-semibold text-ink hover:bg-canvas-soft-2 transition"
+						class="cursor-pointer rounded-full border border-hairline bg-canvas px-4 py-1.5 text-xs font-semibold text-ink transition hover:bg-canvas-soft-2"
 					>
 						Cancel
 					</button>
 					<button
 						type="submit"
-						class="cursor-pointer rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-on-primary hover:bg-primary/95 transition"
+						class="cursor-pointer rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-on-primary transition hover:bg-primary/95"
 					>
 						Postpone
 					</button>

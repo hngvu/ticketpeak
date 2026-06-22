@@ -305,16 +305,25 @@
 									{/if}
 									<div class="flex min-w-0 flex-col">
 										<div class="flex items-center gap-2">
-											<a href="/ops/venues/{ven.id}" class="text-sm font-bold text-[#111111] hover:text-blue-600 hover:underline">{ven.name}</a>
+											<a
+												href="/ops/venues/{ven.id}"
+												class="text-sm font-bold text-[#111111] hover:text-blue-600 hover:underline"
+												>{ven.name}</a
+											>
 											{#if ven.status !== 'ACTIVE'}
-												<span class="rounded-md bg-rose-50 px-2 py-0.5 text-[9px] font-bold uppercase text-rose-600 select-none">{ven.status}</span>
+												<span
+													class="rounded-md bg-rose-50 px-2 py-0.5 text-[9px] font-bold text-rose-600 uppercase select-none"
+													>{ven.status}</span
+												>
 											{/if}
 										</div>
 									</div>
 								</div>
 							</td>
 							<td class="px-6 py-4 font-medium text-[#71717A]">
-								{ven.address || ''}{ven.address && (ven.city || ven.country) ? ', ' : ''}{ven.city || ''}{ven.city && ven.country ? ', ' : ''}{ven.country || ''}
+								{ven.address || ''}{ven.address && (ven.city || ven.country)
+									? ', '
+									: ''}{ven.city || ''}{ven.city && ven.country ? ', ' : ''}{ven.country || ''}
 							</td>
 						</tr>
 					{:else}

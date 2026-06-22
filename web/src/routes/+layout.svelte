@@ -370,20 +370,21 @@
 			? (() => {
 					const s = formatFriendlyDate(layoutStartDate);
 					const e = formatFriendlyDate(layoutEndDate);
-					if (s.month === e.month && s.year === e.year) return `${s.month} ${s.day} - ${e.day}, ${s.year}`;
+					if (s.month === e.month && s.year === e.year)
+						return `${s.month} ${s.day} - ${e.day}, ${s.year}`;
 					if (s.year === e.year) return `${s.month} ${s.day} - ${e.month} ${e.day}, ${s.year}`;
 					return `${s.month} ${s.day}, ${s.year} - ${e.month} ${e.day}, ${e.year}`;
-			  })()
+				})()
 			: layoutStartDate
 				? (() => {
 						const d = formatFriendlyDate(layoutStartDate);
 						return `From ${d.month} ${d.day}, ${d.year}`;
-				  })()
+					})()
 				: layoutEndDate
 					? (() => {
 							const d = formatFriendlyDate(layoutEndDate);
 							return `Until ${d.month} ${d.day}, ${d.year}`;
-					  })()
+						})()
 					: 'All Dates'
 	);
 
@@ -438,9 +439,7 @@
 			page.url.pathname.startsWith('/ops')
 	);
 
-	const isEventDetail = $derived(
-		/\/[^/]+\/event\/[^/]+/.test(page.url.pathname)
-	);
+	const isEventDetail = $derived(/\/[^/]+\/event\/[^/]+/.test(page.url.pathname));
 </script>
 
 <svelte:head>

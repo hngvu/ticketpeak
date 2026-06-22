@@ -51,6 +51,8 @@
 
 	const totalQty = $derived(selectedItems.reduce((sum, { qty }) => sum + qty, 0));
 
+	let globalQty = $state(2);
+
 	const filteredOffers = $derived(
 		data.offers.filter((o: any) => {
 			if (activeTab === 'all') return true;
@@ -71,10 +73,9 @@
 	);
 
 	const hasManifest = $derived(
-		data.manifestDetail && (
-			(data.manifestDetail.gaAreas && data.manifestDetail.gaAreas.length > 0) ||
-			(data.manifestDetail.rsAreas && data.manifestDetail.rsAreas.length > 0)
-		)
+		data.manifestDetail &&
+			((data.manifestDetail.gaAreas && data.manifestDetail.gaAreas.length > 0) ||
+				(data.manifestDetail.rsAreas && data.manifestDetail.rsAreas.length > 0))
 	);
 
 	function handleQtyChange(offerId: string, qty: number) {
@@ -165,23 +166,24 @@
 		reservationError = null;
 
 		try {
-			const items = selectedSeats.length > 0
-				? selectedSeats.map((s) => ({
-						offerId: s.offerId,
-						seatingMode: 'SEATED' as any,
-						sectionId: s.sectionId,
-						seatId: s.id,
-						qty: 1
-					}))
-				: selectedItems.map(({ offer, qty }) => {
-						const invItem = data.inventory.gaInventory.find((g: any) => g.offerId === offer.id);
-						return {
-							offerId: offer.id,
-							seatingMode: offer.seatingMode || 'GA',
-							areaId: invItem ? invItem.areaId : 'area-ga',
-							qty
-						};
-					});
+			const items =
+				selectedSeats.length > 0
+					? selectedSeats.map((s) => ({
+							offerId: s.offerId,
+							seatingMode: 'SEATED' as any,
+							sectionId: s.sectionId,
+							seatId: s.id,
+							qty: 1
+						}))
+					: selectedItems.map(({ offer, qty }) => {
+							const invItem = data.inventory.gaInventory.find((g: any) => g.offerId === offer.id);
+							return {
+								offerId: offer.id,
+								seatingMode: offer.seatingMode || 'GA',
+								areaId: invItem ? invItem.areaId : 'area-ga',
+								qty
+							};
+						});
 
 			const res = await fetch('/api/reservations', {
 				method: 'POST',
@@ -210,39 +212,71 @@
 
 <svelte:head>
 	<title>{data.event.title} | {formattedDate} | Ticketpeak</title>
-	<meta name="description" content="Get tickets for {data.event.title} at {data.event.venueName} on {formattedDate}. Buy now on Ticketpeak." />
+	<meta
+		name="description"
+		content="Get tickets for {data.event.title} at {data.event
+			.venueName} on {formattedDate}. Buy now on Ticketpeak."
+	/>
 	<link rel="canonical" href="/{data.event.slug}/event/{encodeUuidToBase62(data.event.id)}" />
 	<meta property="og:title" content="{data.event.title} | Ticketpeak" />
-	<meta property="og:description" content="Get tickets for {data.event.title} at {data.event.venueName} on {formattedDate}. Buy now on Ticketpeak." />
+	<meta
+		property="og:description"
+		content="Get tickets for {data.event.title} at {data.event
+			.venueName} on {formattedDate}. Buy now on Ticketpeak."
+	/>
 	<meta property="og:image" content={data.event.imageUrl} />
 	<meta property="og:type" content="website" />
 </svelte:head>
 
-<div class="flex h-screen flex-col bg-white select-none overflow-hidden">
+<div class="flex h-screen flex-col overflow-hidden bg-white select-none">
 	<EventHeader event={data.event} />
 	<EventStatusBanner status={data.event.status} />
 
-	<div class="flex flex-1 min-h-0 w-full max-w-[1600px] gap-4 px-4 py-4 md:px-6 mx-auto">
+	<div class="flex min-h-0 w-full flex-1 gap-0">
 		<!-- Left: Manifest / Seating Map -->
-		<div class="flex flex-1 flex-col rounded-md border border-hairline bg-white p-4 min-h-0">
+		<div class="flex min-h-0 flex-1 flex-col bg-white">
 			{#if hasManifest}
 				<div class="mb-3 flex shrink-0 items-center gap-2">
 					{#if activeOfferForSeating}
-						<button type="button" onclick={resetSeating} class="cursor-pointer rounded-md border border-hairline bg-canvas-soft px-3 py-1.5 text-xs font-bold text-ink transition-colors hover:bg-canvas">← Back to Offers</button>
-						<span class="text-xs text-mute">Selecting: <strong class="text-ink">{activeOfferForSeating.name}</strong></span>
+						<button
+							type="button"
+							onclick={resetSeating}
+							class="cursor-pointer rounded-md border border-hairline bg-canvas-soft px-3 py-1.5 text-xs font-bold text-ink transition-colors hover:bg-canvas"
+							>← Back to Offers</button
+						>
+						<span class="text-xs text-mute"
+							>Selecting: <strong class="text-ink">{activeOfferForSeating.name}</strong></span
+						>
 					{:else}
-						<button type="button" class="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-hairline bg-canvas-soft px-3 py-1.5 text-xs font-bold text-ink transition-colors hover:bg-canvas">
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="h-3.5 w-3.5"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+						<button
+							type="button"
+							class="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-hairline bg-canvas-soft px-3 py-1.5 text-xs font-bold text-ink transition-colors hover:bg-canvas"
+						>
+							<svg
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2.5"
+								class="h-3.5 w-3.5"><path d="M3 6h18M3 12h18M3 18h18" /></svg
+							>
 							Filters
 						</button>
-						<button type="button" class="cursor-pointer rounded-md bg-ink px-3 py-1.5 text-xs font-bold text-white">{selectedItems.reduce((s, i) => s + i.qty, 0) || 0} Tickets</button>
-						<button type="button" class="cursor-pointer rounded-md border border-hairline bg-canvas-soft px-3 py-1.5 text-xs font-bold text-ink transition-colors hover:bg-canvas">Ticket Types</button>
+						<button
+							type="button"
+							class="cursor-pointer rounded-md bg-ink px-3 py-1.5 text-xs font-bold text-white"
+							>{selectedItems.reduce((s, i) => s + i.qty, 0) || 0} Tickets</button
+						>
+						<button
+							type="button"
+							class="cursor-pointer rounded-md border border-hairline bg-canvas-soft px-3 py-1.5 text-xs font-bold text-ink transition-colors hover:bg-canvas"
+							>Ticket Types</button
+						>
 					{/if}
 				</div>
 
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div
-					class="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-lg border border-hairline/60 bg-canvas-soft cursor-grab active:cursor-grabbing"
+					class="relative flex min-h-0 flex-1 cursor-grab items-center justify-center overflow-hidden rounded-lg border border-hairline/60 bg-canvas-soft active:cursor-grabbing"
 					onmousedown={handleMouseDown}
 					onmousemove={handleMouseMove}
 					onmouseup={handleMouseUp}
@@ -251,40 +285,135 @@
 					<svg
 						viewBox="0 0 420 300"
 						class="h-full w-full select-none"
-						style="transform: translate({panX}px, {panY}px) scale({canvasZoom}); transform-origin: center; pointer-events: {isPanning ? 'none' : 'auto'};"
+						style="transform: translate({panX}px, {panY}px) scale({canvasZoom}); transform-origin: center; pointer-events: {isPanning
+							? 'none'
+							: 'auto'};"
 					>
 						{#if data.manifestDetail?.manifest?.objects}
 							{#each data.manifestDetail.manifest.objects.filter((o: any) => o.type === 'stage') as obj}
-								<rect x={obj.x || 135} y={obj.y || 12} width={obj.width || 150} height={obj.height || 36} rx="4" fill="#e2e8f0" stroke="#cbd5e1" />
-								<text x={(obj.x || 135) + (obj.width || 150) / 2} y={(obj.y || 12) + (obj.height || 36) / 2 + 4} text-anchor="middle" fill="#64748b" font-size="11" font-weight="700" letter-spacing="2">{obj.text || 'STAGE'}</text>
+								<rect
+									x={obj.x || 135}
+									y={obj.y || 12}
+									width={obj.width || 150}
+									height={obj.height || 36}
+									rx="4"
+									fill="#e2e8f0"
+									stroke="#cbd5e1"
+								/>
+								<text
+									x={(obj.x || 135) + (obj.width || 150) / 2}
+									y={(obj.y || 12) + (obj.height || 36) / 2 + 4}
+									text-anchor="middle"
+									fill="#64748b"
+									font-size="11"
+									font-weight="700"
+									letter-spacing="2">{obj.text || 'STAGE'}</text
+								>
 							{/each}
 						{:else}
 							<rect x="135" y="12" width="150" height="36" rx="4" fill="#e2e8f0" stroke="#cbd5e1" />
-							<text x="210" y="35" text-anchor="middle" fill="#64748b" font-size="11" font-weight="700" letter-spacing="2">STAGE</text>
+							<text
+								x="210"
+								y="35"
+								text-anchor="middle"
+								fill="#64748b"
+								font-size="11"
+								font-weight="700"
+								letter-spacing="2">STAGE</text
+							>
 						{/if}
 
 						{#each data.manifestDetail?.gaAreas || [] as ga}
-							<rect x={ga.x || 55} y={ga.y || 60} width={ga.width || 310} height={ga.height || 180} rx="8" fill={data.manifestDetail?.sections?.find((s: any) => s.id === ga.sectionId)?.color || '#EF4444'} opacity="0.15" />
-							<rect x={ga.x || 55} y={ga.y || 60} width={ga.width || 310} height={ga.height || 180} rx="8" fill="none" stroke={data.manifestDetail?.sections?.find((s: any) => s.id === ga.sectionId)?.color || '#EF4444'} stroke-width="2" stroke-dasharray="6 3" />
-							<text x={(ga.x || 55) + (ga.width || 310) / 2} y={(ga.y || 60) + (ga.height || 180) / 2} text-anchor="middle" fill={data.manifestDetail?.sections?.find((s: any) => s.id === ga.sectionId)?.color || '#EF4444'} font-size="12" font-weight="800">{data.manifestDetail?.sections?.find((s: any) => s.id === ga.sectionId)?.name || 'GA'}</text>
+							<rect
+								x={ga.x || 55}
+								y={ga.y || 60}
+								width={ga.width || 310}
+								height={ga.height || 180}
+								rx="8"
+								fill={data.manifestDetail?.sections?.find((s: any) => s.id === ga.sectionId)
+									?.color || '#EF4444'}
+								opacity="0.15"
+							/>
+							<rect
+								x={ga.x || 55}
+								y={ga.y || 60}
+								width={ga.width || 310}
+								height={ga.height || 180}
+								rx="8"
+								fill="none"
+								stroke={data.manifestDetail?.sections?.find((s: any) => s.id === ga.sectionId)
+									?.color || '#EF4444'}
+								stroke-width="2"
+								stroke-dasharray="6 3"
+							/>
+							<text
+								x={(ga.x || 55) + (ga.width || 310) / 2}
+								y={(ga.y || 60) + (ga.height || 180) / 2}
+								text-anchor="middle"
+								fill={data.manifestDetail?.sections?.find((s: any) => s.id === ga.sectionId)
+									?.color || '#EF4444'}
+								font-size="12"
+								font-weight="800"
+								>{data.manifestDetail?.sections?.find((s: any) => s.id === ga.sectionId)?.name ||
+									'GA'}</text
+							>
 						{/each}
 
 						{#each data.manifestDetail?.rsAreas || [] as rs}
-							<rect x={rs.x || 55} y={rs.y || 60} width={rs.width || 310} height={rs.height || 90} rx="6" fill={data.manifestDetail?.sections?.find((s: any) => s.id === rs.sectionId)?.color ? data.manifestDetail.sections.find((s: any) => s.id === rs.sectionId).color + '05' : '#f5f3ff'} stroke={data.manifestDetail?.sections?.find((s: any) => s.id === rs.sectionId)?.color || '#e9d5ff'} stroke-width="0.5" />
+							<rect
+								x={rs.x || 55}
+								y={rs.y || 60}
+								width={rs.width || 310}
+								height={rs.height || 90}
+								rx="6"
+								fill={data.manifestDetail?.sections?.find((s: any) => s.id === rs.sectionId)?.color
+									? data.manifestDetail.sections.find((s: any) => s.id === rs.sectionId).color +
+										'05'
+									: '#f5f3ff'}
+								stroke={data.manifestDetail?.sections?.find((s: any) => s.id === rs.sectionId)
+									?.color || '#e9d5ff'}
+								stroke-width="0.5"
+							/>
 							{#each rs.rows || [] as row}
 								{#each row.seats || [] as seat}
 									<!-- svelte-ignore a11y_click_events_have_key_events -->
 									<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-									<circle cx={seat.positionX || 0} cy={seat.positionY || 0} r={seatR} fill={getSeatColor(seat)} stroke={selectedSeats.some((s) => s.id === seat.id) ? '#ffffff' : 'none'} stroke-width="1.5" class="transition-all hover:opacity-85 {seat.status === 'AVAILABLE' ? 'cursor-pointer' : 'cursor-not-allowed'}" onclick={() => seat.status === 'AVAILABLE' && toggleSeatSelection(seat, rs.sectionId)} />
+									<circle
+										cx={seat.positionX || 0}
+										cy={seat.positionY || 0}
+										r={seatR}
+										fill={getSeatColor(seat)}
+										stroke={selectedSeats.some((s) => s.id === seat.id) ? '#ffffff' : 'none'}
+										stroke-width="1.5"
+										class="transition-all hover:opacity-85 {seat.status === 'AVAILABLE'
+											? 'cursor-pointer'
+											: 'cursor-not-allowed'}"
+										onclick={() =>
+											seat.status === 'AVAILABLE' && toggleSeatSelection(seat, rs.sectionId)}
+									/>
 								{/each}
 							{/each}
 						{/each}
 					</svg>
 
-					<div class="absolute bottom-3 right-3 flex items-center gap-1 rounded-lg border border-hairline bg-canvas/90 p-1 shadow-sm backdrop-blur-xs">
-						<button type="button" onclick={zoomOut} class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-hairline bg-canvas font-bold font-mono text-sm text-ink select-none hover:bg-canvas-soft">−</button>
-						<span class="px-2 font-mono text-[10px] font-bold text-mute">{Math.round(canvasZoom * 100)}%</span>
-						<button type="button" onclick={zoomIn} class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-hairline bg-canvas font-bold font-mono text-sm text-ink select-none hover:bg-canvas-soft">+</button>
+					<div
+						class="absolute right-3 bottom-3 flex items-center gap-1 rounded-lg border border-hairline bg-canvas/90 p-1 shadow-sm backdrop-blur-xs"
+					>
+						<button
+							type="button"
+							onclick={zoomOut}
+							class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-hairline bg-canvas font-mono text-sm font-bold text-ink select-none hover:bg-canvas-soft"
+							>−</button
+						>
+						<span class="px-2 font-mono text-[10px] font-bold text-mute"
+							>{Math.round(canvasZoom * 100)}%</span
+						>
+						<button
+							type="button"
+							onclick={zoomIn}
+							class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-hairline bg-canvas font-mono text-sm font-bold text-ink select-none hover:bg-canvas-soft"
+							>+</button
+						>
 					</div>
 				</div>
 
@@ -293,7 +422,12 @@
 						{#each data.manifestDetail.priceLevels as pl}
 							<div class="flex items-center gap-1.5">
 								<span class="inline-block h-3 w-3 rounded-sm" style="background:{pl.color}"></span>
-								<span class="text-[11px] font-semibold text-mute">{pl.name} — {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(pl.price)}</span>
+								<span class="text-[11px] font-semibold text-mute"
+									>{pl.name} — {new Intl.NumberFormat('vi-VN', {
+										style: 'currency',
+										currency: 'VND'
+									}).format(pl.price)}</span
+								>
 							</div>
 						{/each}
 					</div>
@@ -301,42 +435,154 @@
 
 				{#if selectedSeats.length > 0}
 					<div class="mt-3 shrink-0 rounded-lg border border-hairline bg-canvas-soft p-3">
-						<div class="mb-2 text-xs font-bold uppercase tracking-wider text-mute">Selected Seats ({selectedSeats.length})</div>
+						<div class="mb-2 text-xs font-bold tracking-wider text-mute uppercase">
+							Selected Seats ({selectedSeats.length})
+						</div>
 						<div class="flex flex-wrap gap-1.5">
 							{#each selectedSeats as s}
-								<span class="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/5 px-2 py-0.5 text-xs font-semibold text-primary">
+								<span
+									class="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/5 px-2 py-0.5 text-xs font-semibold text-primary"
+								>
 									Row {s.rowLetter}·{s.seatNum}
-									<button type="button" onclick={() => toggleSeatSelection({ id: s.id }, s.sectionId)} class="ml-0.5 cursor-pointer text-primary/60 hover:text-primary">✕</button>
+									<button
+										type="button"
+										onclick={() => toggleSeatSelection({ id: s.id }, s.sectionId)}
+										class="ml-0.5 cursor-pointer text-primary/60 hover:text-primary">✕</button
+									>
 								</span>
 							{/each}
 						</div>
 					</div>
 				{/if}
 			{:else}
-				<div class="flex flex-1 items-center justify-center text-sm text-mute">No seating map available for this event.</div>
+				<div class="hidden min-h-0 flex-1 items-center justify-center bg-canvas p-8 md:flex">
+					{#if data.event.imageUrl}
+						<img
+							src={data.event.imageUrl}
+							alt={data.event.title}
+							class="max-h-[80vh] max-w-full rounded-xl object-contain shadow-sm"
+						/>
+					{:else}
+						<div class="flex h-64 w-64 items-center justify-center rounded-full bg-white shadow-sm">
+							<span class="text-4xl font-bold text-mute opacity-30"
+								>{data.event.title.charAt(0)}</span
+							>
+						</div>
+					{/if}
+				</div>
 			{/if}
 		</div>
 
 		<!-- Right: Offers Panel -->
-		<div class="flex w-[360px] shrink-0 flex-col min-h-0">
-			<div class="flex-1 flex flex-col rounded-md border border-hairline bg-white p-4 min-h-0">
-				<div class="mb-3 flex shrink-0 items-center justify-between">
-					<span class="text-sm font-bold text-ink">{filteredOffers.length} Result{filteredOffers.length !== 1 ? 's' : ''}</span>
-					{#if data.offers.length > 1}
-						<div class="flex items-center gap-1 rounded-md border border-hairline/60 bg-canvas-soft p-0.5">
-							<button type="button" onclick={() => (activeTab = 'all')} class="cursor-pointer rounded px-2 py-0.5 text-[11px] font-bold transition-all {activeTab === 'all' ? 'bg-canvas text-ink shadow-xs' : 'text-mute hover:text-ink'}">All</button>
-							<button type="button" onclick={() => (activeTab = 'standard')} class="cursor-pointer rounded px-2 py-0.5 text-[11px] font-bold transition-all {activeTab === 'standard' ? 'bg-canvas text-ink shadow-xs' : 'text-mute hover:text-ink'}">Standard</button>
-							<button type="button" onclick={() => (activeTab = 'vip')} class="cursor-pointer rounded px-2 py-0.5 text-[11px] font-bold transition-all {activeTab === 'vip' ? 'bg-canvas text-ink shadow-xs' : 'text-mute hover:text-ink'}">VIP</button>
-						</div>
-					{/if}
+		<div class="flex min-h-0 w-full shrink-0 flex-col md:w-[420px] md:border-l md:border-hairline">
+			<div class="relative flex min-h-0 flex-1 flex-col bg-white">
+				<!-- Top Bar: Qty, Unlock, Filters -->
+				<div class="flex items-center justify-between px-4 pt-4">
+					<select
+						bind:value={globalQty}
+						class="cursor-pointer rounded-full border border-hairline bg-white px-4 py-2 text-sm font-bold text-ink shadow-sm hover:border-hairline-strong focus:outline-none"
+					>
+						<option value={1}>1 Ticket</option>
+						<option value={2}>2 Tickets</option>
+						<option value={3}>3 Tickets</option>
+						<option value={4}>4 Tickets</option>
+						<option value={5}>5 Tickets</option>
+						<option value={6}>6 Tickets</option>
+					</select>
+					<div class="flex gap-2">
+						<button
+							class="flex cursor-pointer items-center gap-1.5 rounded-full border border-hairline bg-white px-4 py-2 text-sm font-bold text-ink shadow-sm transition hover:bg-canvas-soft"
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="14"
+								height="14"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path
+									d="M7 11V7a5 5 0 0 1 10 0v4"
+								></path></svg
+							>
+							Unlock
+						</button>
+						<button
+							class="flex cursor-pointer items-center gap-1.5 rounded-full border border-hairline bg-white px-4 py-2 text-sm font-bold text-ink shadow-sm transition hover:bg-canvas-soft"
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="14"
+								height="14"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg
+							>
+							Filters
+						</button>
+					</div>
 				</div>
 
-				<p class="mb-3 shrink-0 text-xs text-mute">Prices include fees (before taxes).</p>
+				<!-- Price Slider -->
+				<div class="px-4 py-5">
+					<div class="flex items-center gap-4">
+						<div
+							class="min-w-[50px] rounded-md border border-hairline bg-white px-3 py-1.5 text-center text-[13px] font-bold text-ink shadow-sm"
+						>
+							<span class="text-xs font-normal opacity-70">₫</span>100K
+						</div>
+						<div class="relative h-1 flex-1 rounded-full bg-ink">
+							<div
+								class="absolute top-1/2 left-[10%] h-5 w-5 -translate-y-1/2 cursor-pointer rounded-full border-2 border-ink bg-white shadow-sm transition-transform hover:scale-110"
+							></div>
+							<div
+								class="absolute top-1/2 right-[20%] h-5 w-5 -translate-y-1/2 cursor-pointer rounded-full border-2 border-ink bg-white shadow-sm transition-transform hover:scale-110"
+							></div>
+						</div>
+						<div
+							class="min-w-[50px] rounded-md border border-hairline bg-white px-3 py-1.5 text-center text-[13px] font-bold text-ink shadow-sm"
+						>
+							<span class="text-xs font-normal opacity-70">₫</span>9M+
+						</div>
+					</div>
+				</div>
 
-				<div class="flex-1 min-h-0 overflow-y-auto space-y-1">
+				<!-- Tabs -->
+				<div class="mt-1 flex border-b border-hairline px-4">
+					<button
+						onclick={() => (activeTab = 'all')}
+						class="flex-1 pb-3 text-[13px] font-bold tracking-wider uppercase transition-colors {activeTab ===
+						'all'
+							? 'border-b-4 border-[#026cdf] text-ink'
+							: 'border-b-4 border-transparent text-mute hover:text-ink'}">Lowest Price</button
+					>
+					<button
+						onclick={() => (activeTab = 'standard')}
+						class="flex-1 pb-3 text-[13px] font-bold tracking-wider uppercase transition-colors {activeTab ===
+						'standard'
+							? 'border-b-4 border-[#026cdf] text-ink'
+							: 'border-b-4 border-transparent text-mute hover:text-ink'}">Best Seats</button
+					>
+				</div>
+
+				<div class="min-h-0 flex-1 space-y-0 overflow-y-auto">
 					{#if filteredOffers.length > 0}
 						{#each filteredOffers as offer (offer.id)}
-							<OfferRow {offer} inventory={data.inventory} selectedQty={selection.get(offer.id) || 0} onQtyChange={(qty) => handleQtyChange(offer.id, qty)} onChooseSeats={() => handleChooseSeats(offer)} />
+							<OfferRow
+								{offer}
+								inventory={data.inventory}
+								{hasManifest}
+								{globalQty}
+								selectedQty={selection.get(offer.id) || 0}
+								onQtyChange={(qty) => handleQtyChange(offer.id, qty)}
+								onChooseSeats={() => handleChooseSeats(offer)}
+							/>
 						{/each}
 					{:else}
 						<p class="py-8 text-center text-sm text-mute">No offers available.</p>
@@ -350,18 +596,31 @@
 						{#each selectedItems as item}
 							<div class="flex items-center justify-between text-xs">
 								<span class="text-mute">{item.qty}× {item.offer.name}</span>
-								<span class="font-semibold text-ink">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.offer.faceValue * item.qty)}</span>
+								<span class="font-semibold text-ink"
+									>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(
+										item.offer.faceValue * item.qty
+									)}</span
+								>
 							</div>
 						{/each}
 					</div>
 					<div class="flex items-center justify-between border-t border-hairline pt-3">
 						<span class="text-sm font-bold text-ink">Total</span>
-						<span class="text-base font-bold text-primary">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(orderTotal)}</span>
+						<span class="text-base font-bold text-primary"
+							>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(
+								orderTotal
+							)}</span
+						>
 					</div>
 					{#if reservationError}
 						<p class="mt-2 text-xs text-error">{reservationError}</p>
 					{/if}
-					<button type="button" onclick={handleGetTickets} disabled={reserving || totalQty === 0} class="mt-3 w-full cursor-pointer rounded-full bg-primary py-3 text-sm font-bold text-white transition-colors hover:bg-primary/95 disabled:cursor-not-allowed disabled:opacity-60">
+					<button
+						type="button"
+						onclick={handleGetTickets}
+						disabled={reserving || totalQty === 0}
+						class="mt-3 w-full cursor-pointer rounded-full bg-primary py-3 text-sm font-bold text-white transition-colors hover:bg-primary/95 disabled:cursor-not-allowed disabled:opacity-60"
+					>
 						{reserving ? 'Reserving...' : 'Get Tickets'}
 					</button>
 				</div>
@@ -369,5 +628,11 @@
 		</div>
 	</div>
 
-	<MobileOrderBar {orderTotal} {totalQty} {reserving} currency={selectedItems[0]?.offer?.currency || 'VND'} onGetTickets={handleGetTickets} />
+	<MobileOrderBar
+		{orderTotal}
+		{totalQty}
+		{reserving}
+		currency={selectedItems[0]?.offer?.currency || 'VND'}
+		onGetTickets={handleGetTickets}
+	/>
 </div>

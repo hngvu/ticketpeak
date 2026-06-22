@@ -53,6 +53,9 @@ export const actions: Actions = {
 
 		cookies.set('ops_mock_settings', JSON.stringify(settings), { path: '/', maxAge: 60 * 60 * 24 });
 
-		return { success: true, message: 'Platform security and scaling regulations successfully updated.' };
+		return {
+			success: true,
+			message: 'Platform security and scaling regulations successfully updated.'
+		};
 	}
 };

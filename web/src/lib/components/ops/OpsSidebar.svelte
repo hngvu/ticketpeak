@@ -12,7 +12,7 @@
 		IconUsers,
 		IconReceipt,
 		IconSettings,
-		IconFileText,
+		IconFileText
 	} from '@tabler/icons-svelte';
 
 	let showAccountMenu = $state(false);
@@ -136,10 +136,11 @@
 			]
 		}
 	]);
-
 </script>
 
-<aside class="flex h-full w-56 shrink-0 flex-col justify-between border-r border-hairline bg-canvas">
+<aside
+	class="flex h-full w-56 shrink-0 flex-col justify-between border-r border-hairline bg-canvas"
+>
 	<div class="flex shrink-0 items-center justify-between border-b border-hairline p-3">
 		<a href="/ops/dashboard" class="flex min-w-0 items-center gap-2">
 			<div
@@ -252,7 +253,9 @@
 					</div>
 					<div class="flex min-w-0 flex-col">
 						<span class="truncate text-sidebar-label font-bold text-ink"> Admin </span>
-						<span class="mt-1 truncate font-mono text-sidebar-tiny leading-none text-body uppercase">
+						<span
+							class="mt-1 truncate font-mono text-sidebar-tiny leading-none text-body uppercase"
+						>
 							Platform Ops
 						</span>
 					</div>

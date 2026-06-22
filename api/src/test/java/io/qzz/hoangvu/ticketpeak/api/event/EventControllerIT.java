@@ -159,7 +159,7 @@ class EventControllerIT {
         manifest = manifestRepository.saveAndFlush(Manifest.builder()
                 .id("M-001")
                 .venue(venue)
-                
+                .description("M-001 Manifest")
                 .totalCapacity(40000)
                 .status(io.qzz.hoangvu.ticketpeak.api.venue.model.ManifestStatus.PUBLISHED)
                 .build());
@@ -349,12 +349,11 @@ class EventControllerIT {
         eventAttractionRepository.saveAndFlush(new EventAttraction(event.getId(), artist.getId()));
         eventClassificationRepository.saveAndFlush(new EventClassification(event.getId(), genre.getId()));
 
-        // 1. Publish (snapshot is created)
         mockMvc.perform(post("/api/partner/events/" + event.getId() + "/publish")
                         .header("Authorization", "Bearer " + ownerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("PUBLISHED"))
-                .andExpect(jsonPath("$.data.manifestId").value(io.qzz.hoangvu.ticketpeak.api.event.service.EventService.getSnapshotManifestId(event.getId())));
+                .andExpect(jsonPath("$.data.manifestId").value(manifest.getId()));
 
         assertThat(eventManifestRepository.existsById(event.getId())).isTrue();
 
@@ -604,6 +603,29 @@ class EventControllerIT {
         mockMvc.perform(get("/api/partner/events/" + draftEvent.getId())
                         .header("Authorization", "Bearer " + otherToken))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void test_get_event_manifest() throws Exception {
+        Event event = eventRepository.saveAndFlush(Event.builder()
+                .organizationId(org.getId())
+                .venueId(venue.getId())
+                .title("Public Show")
+                .slug("public-show")
+                .status(EventStatus.PUBLISHED)
+                .startAt(Instant.now().plusSeconds(250000))
+                .timezone("Asia/Ho_Chi_Minh")
+                .build());
+
+        eventManifestRepository.saveAndFlush(new EventManifest(event.getId(), "M-001"));
+
+        mockMvc.perform(get("/api/events/" + event.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.manifestId").value("M-001"));
+
+        mockMvc.perform(get("/api/events/" + event.getId() + "/manifest"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.manifest.id").value("M-001"));
     }
 
     private String login(String email, String password) throws Exception {

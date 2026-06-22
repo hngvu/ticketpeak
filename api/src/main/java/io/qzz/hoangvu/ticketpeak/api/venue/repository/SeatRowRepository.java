@@ -8,4 +8,5 @@ import java.util.List;
 public interface SeatRowRepository extends JpaRepository<SeatRow, String> {
     List<SeatRow> findBySectionId(String sectionId);
     boolean existsBySectionIdAndName(String sectionId, String name);
+    List<SeatRow> findBySectionManifestId(String manifestId);
 }

@@ -119,6 +119,19 @@ public class VenueService {
         return ManifestResponse.from(requireManifest(manifestId));
     }
 
+    @Transactional(readOnly = true)
+    public ManifestFullDetailResponse getManifestFullDetail(String manifestId) {
+        Manifest manifest = requireManifest(manifestId);
+        return new ManifestFullDetailResponse(
+                ManifestResponse.from(manifest),
+                listLevels(manifestId),
+                listSections(manifestId),
+                listPriceLevels(manifestId),
+                seatRowRepository.findBySectionManifestId(manifestId).stream().map(SeatRowResponse::from).toList(),
+                seatRepository.findByManifestId(manifestId).stream().map(SeatResponse::from).toList()
+        );
+    }
+
     @Transactional
     public ManifestResponse publishManifest(String manifestId) {
         Manifest manifest = requireManifest(manifestId);
@@ -154,95 +167,6 @@ public class VenueService {
         return ManifestResponse.from(manifestRepository.save(manifest));
     }
 
-    @Transactional
-    public ManifestResponse cloneManifest(String sourceManifestId, CloneManifestRequest req) {
-        Manifest source = requireManifest(sourceManifestId);
-        String newId = req.newId() != null ? req.newId() : sourceManifestId + "-clone";
-        String newDescription = req.description() != null ? req.description() : source.getDescription() + " (clone)";
-
-        if (manifestRepository.existsById(newId)) {
-            throw VenueException.manifestIdExists(newId);
-        }
-        Manifest clone = Manifest.builder()
-                .id(newId).venue(source.getVenue()).description(newDescription)
-                .totalCapacity(source.getTotalCapacity()).status(ManifestStatus.DRAFT)
-                .objects(source.getObjects() != null ? new java.util.ArrayList<>(source.getObjects()) : null)
-                .build();
-        manifestRepository.save(clone);
-
-        // Clone lookup tables in batch
-        List<Level> levels = levelRepository.findByManifestId(sourceManifestId).stream()
-                .map(l -> Level.builder().id(l.getId()).manifest(clone).description(l.getDescription()).color(l.getColor()).build())
-                .toList();
-        levelRepository.saveAll(levels);
-
-        List<Section> sections = sectionRepository.findByManifestId(sourceManifestId).stream()
-                .map(s -> Section.builder()
-                        .id(newId + "-" + s.getId())
-                        .manifest(clone)
-                        .type(s.getType())
-                        .color(s.getColor())
-                        .levelId(s.getLevelId())
-                        .capacity(s.getCapacity())
-                        .uiData(s.getUiData())
-                        .build())
-                .toList();
-        sections = sectionRepository.saveAll(sections);
-
-        List<PriceLevel> priceLevels = priceLevelRepository.findByManifestId(sourceManifestId).stream()
-                .map(p -> PriceLevel.builder().id(p.getId()).manifest(clone).description(p.getDescription()).color(p.getColor()).build())
-                .toList();
-        priceLevelRepository.saveAll(priceLevels);
-
-        java.util.Map<String, Section> sectionMap = sections.stream()
-                .collect(java.util.stream.Collectors.toMap(Section::getId, java.util.function.Function.identity()));
-
-        List<SeatRow> seatRows = new java.util.ArrayList<>();
-        List<Seat> seats = new java.util.ArrayList<>();
-
-        List<Section> sourceSections = sectionRepository.findByManifestId(sourceManifestId);
-        for (Section s : sourceSections) {
-            if (s.getType() != SectionType.RS) continue;
-
-            String newSectionId = newId + "-" + s.getId();
-            Section newSection = sectionMap.get(newSectionId);
-            if (newSection == null) {
-                continue;
-            }
-
-            List<SeatRow> rowsInSection = seatRowRepository.findBySectionId(s.getId());
-            for (SeatRow row : rowsInSection) {
-                String newRowId = newId + "-" + row.getId();
-                SeatRow newRow = SeatRow.builder()
-                        .id(newRowId)
-                        .section(newSection)
-                        .name(row.getName())
-                        
-                        .build();
-                seatRows.add(newRow);
-
-                List<Seat> seatsInRow = seatRepository.findBySeatRowId(row.getId());
-                for (Seat seat : seatsInRow) {
-                    Seat newSeat = Seat.builder()
-                            .id(newId + "-" + seat.getId())
-                            .seatRow(newRow)
-                            .name(seat.getName())
-                            .positionX(seat.getPositionX())
-                            .positionY(seat.getPositionY())
-                            .status(SeatStatus.AVAILABLE)
-                            .priceLevelId(seat.getPriceLevelId())
-                            .sectionId(seat.getSectionId() != null ? newId + "-" + seat.getSectionId() : null)
-                            .build();
-                    seats.add(newSeat);
-                }
-            }
-        }
-
-        seatRowRepository.saveAll(seatRows);
-        seatRepository.saveAll(seats);
-
-        return ManifestResponse.from(clone);
-    }
 
     private static final List<String> PRESET_COLORS = List.of(
             "#3b82f6", // Blue

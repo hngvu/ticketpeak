@@ -66,4 +66,9 @@ public class EventController {
         EventResponse response = eventService.getEvent(id);
         return ResponseEntity.ok(ApiResponse.success(response, "OK"));
     }
+
+    @GetMapping("/{id}/manifest")
+    public ResponseEntity<ApiResponse<io.qzz.hoangvu.ticketpeak.api.event.dto.EventManifestDetailResponse>> getEventManifest(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.success(eventService.getEventManifestDetail(id), "OK"));
+    }
 }

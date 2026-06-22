@@ -20,10 +20,17 @@
 			: [{ id: 'STANDARD', description: 'Standard Tier', color: '#3B82F6' }]
 	);
 	const PRESET_COLORS = [
-		'#3b82f6', '#10b981', '#a855f7', '#ec4899', '#14b8a6', '#6366f1', '#84cc16', '#06b6d4'
+		'#3b82f6',
+		'#10b981',
+		'#a855f7',
+		'#ec4899',
+		'#14b8a6',
+		'#6366f1',
+		'#84cc16',
+		'#06b6d4'
 	];
 	function getNextPriceLevelColor() {
-		const used = priceLevels.map(p => (p.color || '').toLowerCase());
+		const used = priceLevels.map((p) => (p.color || '').toLowerCase());
 		for (const color of PRESET_COLORS) {
 			if (!used.includes(color.toLowerCase())) return color;
 		}
@@ -595,8 +602,9 @@
 		// ── RS Areas ───────────────────────────────────────────────────────
 		rsSections.forEach((section) => {
 			const rows = section.rows || [];
-			const b = computeSectionBounds(rows);
-			if (!b) return;
+			const ud = section.uiData;
+			if (ud?.x == null) return;
+			const b = { boxX: ud.x, boxY: ud.y, boxW: ud.width, boxH: ud.height };
 			const { boxX, boxY, boxW, boxH } = b;
 			const isSel = selectedRsSectionId === section.id;
 			const secColor = getSectionColor(section);
@@ -696,7 +704,7 @@
 							id: seat.id,
 							draggable: activeMode === 'floor-edit'
 						});
-						
+
 						sg.add(
 							new Konva.Circle({
 								radius: SEAT_R,
@@ -1367,7 +1375,11 @@
 				</h3>
 				<button
 					onclick={() =>
-						priceLevels.push({ id: 'NEW', description: 'New Level', color: getNextPriceLevelColor() })}
+						priceLevels.push({
+							id: 'NEW',
+							description: 'New Level',
+							color: getNextPriceLevelColor()
+						})}
 					class="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
 				>
 					<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
@@ -1471,7 +1483,6 @@
 
 		<!-- ── Canvas ──────────────────────────────────────────────── -->
 		<main class="relative flex flex-1 flex-col overflow-hidden bg-[#FAFAFA]">
-
 			<div
 				id="stage-container"
 				bind:this={stageContainer}

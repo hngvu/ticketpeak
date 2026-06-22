@@ -91,17 +91,17 @@
 		const zoomSensitivity = 0.001;
 		const delta = -e.deltaY * zoomSensitivity;
 		const newZoom = Math.min(Math.max(0.1, canvasZoom * (1 + delta)), 5);
-		
+
 		if (svgRef) {
 			const rect = svgRef.getBoundingClientRect();
 			const mouseX = e.clientX - rect.left;
 			const mouseY = e.clientY - rect.top;
-			
+
 			const zoomRatio = newZoom / canvasZoom;
 			panX = mouseX - (mouseX - panX) * zoomRatio;
 			panY = mouseY - (mouseY - panY) * zoomRatio;
 		}
-		
+
 		canvasZoom = newZoom;
 	}
 
@@ -112,7 +112,7 @@
 		// Convert screen coordinates to canvas coordinates
 		const canvasX = (pt.x - rect.left - panX) / canvasZoom;
 		const canvasY = (pt.y - rect.top - panY) / canvasZoom;
-		
+
 		// Find seats near the brush
 		const brushRadius = 15; // Hit radius
 		let changed = false;
@@ -158,9 +158,17 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div 
-	class="w-full h-full relative overflow-hidden" 
-	style="cursor: {activeTool === 'pan' ? (isPanning ? 'grabbing' : 'grab') : activeTool === 'brush' ? 'copy' : activeTool === 'eraser' ? 'cell' : 'default'}"
+<div
+	class="relative h-full w-full overflow-hidden"
+	style="cursor: {activeTool === 'pan'
+		? isPanning
+			? 'grabbing'
+			: 'grab'
+		: activeTool === 'brush'
+			? 'copy'
+			: activeTool === 'eraser'
+				? 'cell'
+				: 'default'}"
 	onmousedown={handlePointerDown}
 	onmousemove={handlePointerMove}
 	onmouseup={handlePointerUp}
@@ -170,10 +178,7 @@
 	ontouchend={handlePointerUp}
 	ontouchcancel={handlePointerUp}
 >
-	<svg 
-		bind:this={svgRef}
-		class="w-full h-full absolute inset-0" 
-	>
+	<svg bind:this={svgRef} class="absolute inset-0 h-full w-full">
 		<g transform="translate({panX}, {panY}) scale({canvasZoom})">
 			<slot />
 		</g>

@@ -18,14 +18,18 @@
 
 <div class="flex flex-1 flex-col space-y-6 p-6">
 	<div class="flex flex-col gap-1 border-b border-hairline pb-5">
-		<h1 class="font-sans text-2xl font-semibold tracking-tight text-ink">Secondary Ticket Marketplace</h1>
+		<h1 class="font-sans text-2xl font-semibold tracking-tight text-ink">
+			Secondary Ticket Marketplace
+		</h1>
 		<p class="font-sans text-xs text-body">
 			Audit resale listings, verify platform price caps, and moderate scalping activities.
 		</p>
 	</div>
 
 	{#if form?.success}
-		<div class="rounded-md border border-success bg-success/10 p-3.5 text-xs font-semibold text-success">
+		<div
+			class="rounded-md border border-success bg-success/10 p-3.5 text-xs font-semibold text-success"
+		>
 			✨ Success: {form.message}
 		</div>
 	{/if}
@@ -37,23 +41,27 @@
 					<tbody class="divide-y divide-hairline">
 						{#each data.resales as resale (resale.id)}
 							{@const violated = isCapViolated(resale.originalPrice, resale.resalePrice)}
-							<tr class="hover:bg-canvas-soft/40 transition">
+							<tr class="transition hover:bg-canvas-soft/40">
 								<!-- Column 1: Event Name & Ticket Code -->
-								<td class="py-4 pl-6 pr-4">
+								<td class="py-4 pr-4 pl-6">
 									<div class="flex items-center gap-2">
 										<h4 class="text-sm font-semibold text-ink">{resale.eventName}</h4>
 										{#if resale.status !== 'COMPLETED'}
-											<span class="rounded bg-canvas-soft-2 px-2 py-0.5 font-mono text-[9px] font-bold text-body uppercase border border-hairline">
+											<span
+												class="rounded border border-hairline bg-canvas-soft-2 px-2 py-0.5 font-mono text-[9px] font-bold text-body uppercase"
+											>
 												{resale.status}
 											</span>
 										{/if}
 										{#if violated}
-											<span class="rounded bg-error/10 px-2 py-0.5 font-mono text-[9px] font-bold text-error uppercase border border-error/20">
+											<span
+												class="rounded border border-error/20 bg-error/10 px-2 py-0.5 font-mono text-[9px] font-bold text-error uppercase"
+											>
 												CAP VIOLATION (>150%)
 											</span>
 										{/if}
 									</div>
-									<p class="font-mono mt-1 text-[10px] text-mute">
+									<p class="mt-1 font-mono text-[10px] text-mute">
 										🎫 Code: {resale.ticketCode} • ID: {resale.id}
 									</p>
 								</td>
@@ -63,18 +71,20 @@
 									<p class="font-sans text-xs font-medium text-ink">
 										Resale: {formatCurrency(resale.resalePrice)}
 									</p>
-									<p class="font-mono mt-0.5 text-[10px] text-mute">
+									<p class="mt-0.5 font-mono text-[10px] text-mute">
 										Face Value: {formatCurrency(resale.originalPrice)}
 									</p>
 								</td>
 
 								<!-- Column 3: Seller / Buyer details -->
 								<td class="px-4 py-4">
-									<p class="font-sans text-xs font-semibold text-ink">Seller: {resale.sellerEmail}</p>
+									<p class="font-sans text-xs font-semibold text-ink">
+										Seller: {resale.sellerEmail}
+									</p>
 									{#if resale.buyerEmail}
-										<p class="font-mono mt-0.5 text-[10px] text-mute">Buyer: {resale.buyerEmail}</p>
+										<p class="mt-0.5 font-mono text-[10px] text-mute">Buyer: {resale.buyerEmail}</p>
 									{:else}
-										<p class="font-mono mt-0.5 text-[10px] text-mute">No buyer yet</p>
+										<p class="mt-0.5 font-mono text-[10px] text-mute">No buyer yet</p>
 									{/if}
 								</td>
 
@@ -87,7 +97,7 @@
 												<input type="hidden" name="status" value="COMPLETED" />
 												<button
 													type="submit"
-													class="cursor-pointer rounded-full bg-primary px-3 py-1 font-mono text-[10px] font-bold text-on-primary hover:bg-primary/95 transition"
+													class="cursor-pointer rounded-full bg-primary px-3 py-1 font-mono text-[10px] font-bold text-on-primary transition hover:bg-primary/95"
 												>
 													APPROVE
 												</button>
@@ -98,7 +108,7 @@
 												<input type="hidden" name="status" value="SUSPENDED" />
 												<button
 													type="submit"
-													class="cursor-pointer rounded-full border border-error/25 bg-error/5 px-3 py-1 font-mono text-[10px] font-bold text-error hover:bg-error/10 transition"
+													class="cursor-pointer rounded-full border border-error/25 bg-error/5 px-3 py-1 font-mono text-[10px] font-bold text-error transition hover:bg-error/10"
 												>
 													SUSPEND
 												</button>
@@ -111,7 +121,7 @@
 												<input type="hidden" name="status" value="PENDING" />
 												<button
 													type="submit"
-													class="cursor-pointer rounded-full border border-hairline bg-canvas px-3 py-1 font-mono text-[10px] font-bold text-ink hover:bg-canvas-soft-2 transition"
+													class="cursor-pointer rounded-full border border-hairline bg-canvas px-3 py-1 font-mono text-[10px] font-bold text-ink transition hover:bg-canvas-soft-2"
 												>
 													RE-ACTIVATE
 												</button>
@@ -126,8 +136,12 @@
 			</div>
 		</div>
 	{:else}
-		<div class="flex h-40 flex-col items-center justify-center rounded-lg border border-dashed border-hairline bg-canvas text-center">
-			<span class="text-xs font-semibold text-mute">No secondary market activity currently recorded.</span>
+		<div
+			class="flex h-40 flex-col items-center justify-center rounded-lg border border-dashed border-hairline bg-canvas text-center"
+		>
+			<span class="text-xs font-semibold text-mute"
+				>No secondary market activity currently recorded.</span
+			>
 		</div>
 	{/if}
 </div>

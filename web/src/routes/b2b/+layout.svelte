@@ -375,7 +375,7 @@
 									aria-label="Close organization switcher"
 								></button>
 								<div
-									class="absolute bottom-full left-0 right-0 z-50 mb-1 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl"
+									class="absolute right-0 bottom-full left-0 z-50 mb-1 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl"
 								>
 									{#each data.organizations as org (org.id)}
 										<button
@@ -383,7 +383,7 @@
 											onclick={() => switchOrg(org.id)}
 											class="flex w-full cursor-pointer items-center gap-2 rounded-lg border-0 bg-transparent px-3 py-2 text-left text-xs font-medium transition hover:bg-slate-50 {org.id ===
 											data.selectedOrgId
-												? 'text-blue-600 font-semibold'
+												? 'font-semibold text-blue-600'
 												: 'text-slate-700'}"
 										>
 											<div
@@ -403,13 +403,9 @@
 													stroke="currentColor"
 													stroke-width="3"
 												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M5 13l4 4L19 7"
-													/>
+													<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
 												</svg>
-							{/if}
+											{/if}
 										</button>
 									{/each}
 								</div>

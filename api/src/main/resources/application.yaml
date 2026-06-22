@@ -42,7 +42,7 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: false
     validate-on-migrate: true
-    out-of-order: false
+    out-of-order: true
     ignore-migration-patterns: "*:ignored"
 
   # ── Redis ───────────────────────────────────────────────────────────────────

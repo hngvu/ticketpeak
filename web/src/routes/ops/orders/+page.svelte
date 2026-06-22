@@ -48,7 +48,9 @@
 	</div>
 
 	{#if form?.success}
-		<div class="rounded-md border border-success bg-success/10 p-3.5 text-xs font-semibold text-success">
+		<div
+			class="rounded-md border border-success bg-success/10 p-3.5 text-xs font-semibold text-success"
+		>
 			✨ Success: {form.message}
 		</div>
 	{/if}
@@ -85,18 +87,20 @@
 				<table class="w-full text-left text-xs text-body">
 					<tbody class="divide-y divide-hairline">
 						{#each filteredOrders as order (order.id)}
-							<tr class="hover:bg-canvas-soft/40 transition">
+							<tr class="transition hover:bg-canvas-soft/40">
 								<!-- Column 1: Order ID & Customer Info -->
-								<td class="py-4 pl-6 pr-4">
+								<td class="py-4 pr-4 pl-6">
 									<div class="flex items-center gap-2">
 										<h4 class="text-sm font-semibold text-ink">{order.customerName}</h4>
 										{#if order.status !== 'PAID'}
-											<span class="rounded bg-canvas-soft-2 px-2 py-0.5 font-mono text-[9px] font-bold text-body uppercase border border-hairline">
+											<span
+												class="rounded border border-hairline bg-canvas-soft-2 px-2 py-0.5 font-mono text-[9px] font-bold text-body uppercase"
+											>
 												{order.status}
 											</span>
 										{/if}
 									</div>
-									<p class="font-mono mt-1 text-[10px] text-mute">
+									<p class="mt-1 font-mono text-[10px] text-mute">
 										✉️ {order.customerEmail} • ID: {order.id}
 									</p>
 								</td>
@@ -104,7 +108,7 @@
 								<!-- Column 2: Event Name & Date -->
 								<td class="px-4 py-4">
 									<p class="font-sans text-xs font-semibold text-ink">{order.eventName}</p>
-									<p class="font-mono mt-0.5 text-[10px] text-mute">
+									<p class="mt-0.5 font-mono text-[10px] text-mute">
 										📅 {formatDateTime(order.eventDate)}
 									</p>
 								</td>
@@ -112,7 +116,7 @@
 								<!-- Column 3: Tickets Purchased & Price -->
 								<td class="px-4 py-4">
 									<p class="font-sans text-xs font-medium text-ink">{order.tickets}</p>
-									<p class="font-mono mt-0.5 text-[10px] text-mute">
+									<p class="mt-0.5 font-mono text-[10px] text-mute">
 										💰 {formatCurrency(order.totalAmount)} ({order.paymentMethod})
 									</p>
 								</td>
@@ -126,7 +130,7 @@
 												<input type="hidden" name="status" value="REFUNDED" />
 												<button
 													type="submit"
-													class="cursor-pointer rounded-full border border-hairline bg-canvas px-3 py-1 font-mono text-[10px] font-bold text-ink hover:bg-canvas-soft-2 transition"
+													class="cursor-pointer rounded-full border border-hairline bg-canvas px-3 py-1 font-mono text-[10px] font-bold text-ink transition hover:bg-canvas-soft-2"
 												>
 													REFUND
 												</button>
@@ -138,7 +142,7 @@
 												<input type="hidden" name="status" value="PAID" />
 												<button
 													type="submit"
-													class="cursor-pointer rounded-full bg-primary px-3 py-1 font-mono text-[10px] font-bold text-on-primary hover:bg-primary/95 transition"
+													class="cursor-pointer rounded-full bg-primary px-3 py-1 font-mono text-[10px] font-bold text-on-primary transition hover:bg-primary/95"
 												>
 													CONFIRM PAID
 												</button>
@@ -148,7 +152,7 @@
 												<input type="hidden" name="status" value="CANCELLED" />
 												<button
 													type="submit"
-													class="cursor-pointer rounded-full border border-error/25 bg-error/5 px-3 py-1 font-mono text-[10px] font-bold text-error hover:bg-error/10 transition"
+													class="cursor-pointer rounded-full border border-error/25 bg-error/5 px-3 py-1 font-mono text-[10px] font-bold text-error transition hover:bg-error/10"
 												>
 													VOID
 												</button>
@@ -163,7 +167,9 @@
 			</div>
 		</div>
 	{:else}
-		<div class="flex h-40 flex-col items-center justify-center rounded-lg border border-dashed border-hairline bg-canvas text-center">
+		<div
+			class="flex h-40 flex-col items-center justify-center rounded-lg border border-dashed border-hairline bg-canvas text-center"
+		>
 			<span class="text-xs font-semibold text-mute">No orders match the search criteria.</span>
 		</div>
 	{/if}

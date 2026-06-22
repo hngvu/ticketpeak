@@ -353,36 +353,6 @@ class VenueControllerIT {
                 .andExpect(jsonPath("$.data.status").value("UNAVAILABLE"));
     }
 
-    @Test
-    void manifest_clone_copies_hierarchy() throws Exception {
-        String responseStr = mockMvc.perform(post("/api/ops/venues").header("Authorization", "Bearer " + adminToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(
-                                new CreateVenueRequest("V", "A", "C", "VN", null, null, null, null, null, null, null, null))))
-                .andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString();
-        String venueId = JsonPath.read(responseStr, "$.data.id");
-
-        mockMvc.perform(post("/api/ops/venues/" + venueId + "/manifests").header("Authorization", "Bearer " + adminToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateManifestRequest("M006", "Original", 100, null))))
-                .andExpect(status().isCreated());
-        mockMvc.perform(put("/api/ops/venues/manifests/M006/levels").header("Authorization", "Bearer " + adminToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new UpsertLookupRequest("L1", "Level 1"))))
-                .andExpect(status().isOk());
-
-        mockMvc.perform(post("/api/ops/venues/manifests/M006/clone").header("Authorization", "Bearer " + adminToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CloneManifestRequest("M006-CLONE", "Clone Layout"))))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.id").value("M006-CLONE"))
-                .andExpect(jsonPath("$.data.status").value("DRAFT"));
-
-        mockMvc.perform(get("/api/ops/venues/manifests/M006-CLONE/levels").header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.length()").value(1));
-    }
 
     @Test
     void non_admin_cannot_access_internal_venues() throws Exception {
@@ -438,13 +408,6 @@ class VenueControllerIT {
                 .andExpect(jsonPath("$.data.objects[0].width").value(400))
                 .andExpect(jsonPath("$.data.objects[1].text").value("Mixer"));
 
-        // Test cloning copies objects
-        mockMvc.perform(post("/api/ops/venues/manifests/M-OBJ/clone").header("Authorization", "Bearer " + adminToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CloneManifestRequest("M-OBJ-CLONE", "Clone Layout"))))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.objects[0].type").value("stage"))
-                .andExpect(jsonPath("$.data.objects[1].text").value("Mixer"));
     }
 
     @Test

@@ -314,7 +314,7 @@ public class OfferService {
                         .orElseThrow(OfferException::noPublishedManifest);
                 manifestId = activeManifest.id();
             } else {
-                manifestId = event.manifestId() != null ? event.manifestId() : EventService.getSnapshotManifestId(event.id());
+                manifestId = event.manifestId();
             }
 
             // Validate section and price level exist in manifest lookup tables
@@ -346,7 +346,7 @@ public class OfferService {
                             .orElseThrow(OfferException::noPublishedManifest);
                     manifestId = activeManifest.id();
                 } else {
-                    manifestId = event.manifestId() != null ? event.manifestId() : EventService.getSnapshotManifestId(event.id());
+                    manifestId = event.manifestId();
                 }
 
                 // Validate section and price level exist in manifest lookup tables

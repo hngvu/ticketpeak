@@ -79,12 +79,6 @@ public class OpsVenueController {
         return ResponseEntity.ok(ApiResponse.success(venueService.archiveManifest(manifestId), "Manifest archived"));
     }
 
-    @PostMapping("/manifests/{manifestId}/clone")
-    public ResponseEntity<ApiResponse<ManifestResponse>> cloneManifest(
-            @PathVariable String manifestId, @RequestBody(required = false) CloneManifestRequest req) {
-        CloneManifestRequest safeReq = req != null ? req : new CloneManifestRequest(null, null);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(venueService.cloneManifest(manifestId, safeReq), "Manifest cloned"));
-    }
 
     // ======================== LOOKUP TABLES ========================
 

@@ -41,6 +41,7 @@ public class EventService {
     private final EventManifestRepository eventManifestRepository;
     private final VenueService venueService;
     private final VenueRepository venueRepository;
+    private final io.qzz.hoangvu.ticketpeak.api.offer.repository.OfferRepository offerRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     public EventService(
@@ -52,6 +53,7 @@ public class EventService {
             EventManifestRepository eventManifestRepository,
             VenueService venueService,
             VenueRepository venueRepository,
+            io.qzz.hoangvu.ticketpeak.api.offer.repository.OfferRepository offerRepository,
             ApplicationEventPublisher eventPublisher
     ) {
         this.eventRepository = eventRepository;
@@ -62,6 +64,7 @@ public class EventService {
         this.eventManifestRepository = eventManifestRepository;
         this.venueService = venueService;
         this.venueRepository = venueRepository;
+        this.offerRepository = offerRepository;
         this.eventPublisher = eventPublisher;
     }
 
@@ -247,6 +250,42 @@ public class EventService {
     }
 
     @Transactional(readOnly = true)
+    public EventManifestDetailResponse getEventManifestDetail(UUID id) {
+        Event event = eventRepository.findById(id).orElseThrow(() -> EventException.notFound());
+        if (event.getStatus() == EventStatus.DRAFT) {
+            throw EventException.notFound();
+        }
+        
+        EventManifest eventManifest = eventManifestRepository.findById(id)
+                .orElseThrow(() -> EventException.notFound()); // Or a specific error
+        String manifestId = eventManifest.getManifestId();
+
+        io.qzz.hoangvu.ticketpeak.api.venue.dto.ManifestFullDetailResponse detail = venueService.getManifestFullDetail(manifestId);
+        List<io.qzz.hoangvu.ticketpeak.api.offer.model.Offer> offers = offerRepository.findByEventId(id);
+
+        List<EventPriceLevelResponse> priceLevels = detail.priceLevels().stream().map(pl -> {
+            io.qzz.hoangvu.ticketpeak.api.offer.model.Offer matchingOffer = offers.stream()
+                    .filter(o -> pl.id().equals(o.getPriceLevelId()))
+                    .min((o1, o2) -> o1.getFaceValue().compareTo(o2.getFaceValue()))
+                    .orElse(null);
+                    
+            String offerName = matchingOffer != null ? matchingOffer.getName() : null;
+            BigDecimal minPrice = matchingOffer != null ? matchingOffer.getFaceValue() : null;
+            
+            return EventPriceLevelResponse.from(pl, offerName, minPrice);
+        }).toList();
+
+        return new EventManifestDetailResponse(
+                detail.manifest(),
+                detail.levels(),
+                detail.sections(),
+                priceLevels,
+                detail.rows(),
+                detail.seats()
+        );
+    }
+
+    @Transactional(readOnly = true)
     public Page<EventResponse> searchEvents(
             String query,
             List<EventStatus> statuses,
@@ -338,20 +377,7 @@ public class EventService {
                 .findFirst()
                 .orElseThrow(() -> EventException.noPublishedManifest());
 
-        String snapshotManifestId = getSnapshotManifestId(event.getId());
-        var cloneRequest = new io.qzz.hoangvu.ticketpeak.api.venue.dto.CloneManifestRequest(
-                snapshotManifestId,
-                "Snapshot for event " + event.getTitle()
-        );
-        try {
-            venueService.cloneManifest(activeManifest.id(), cloneRequest);
-        } catch (ApiException ex) {
-            if (!HttpStatus.CONFLICT.equals(ex.getStatus())) {
-                throw ex;
-            }
-        }
-
-        eventManifestRepository.save(new EventManifest(event.getId(), snapshotManifestId));
+        eventManifestRepository.save(new EventManifest(event.getId(), activeManifest.id()));
 
         event.setStatus(EventStatus.PUBLISHED);
         Event savedEvent = eventRepository.save(event);
@@ -696,9 +722,5 @@ public class EventService {
                 throw EventException.invalidDates("Sale end date must be before or equal to event start date");
             }
         }
-    }
-
-    public static String getSnapshotManifestId(UUID eventId) {
-        return "evt-" + eventId + "-snap";
     }
 }

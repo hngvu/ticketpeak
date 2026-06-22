@@ -44,6 +44,9 @@ export const actions: Actions = {
 		const fees = { flatFee, percentageFee, resaleFee, payoutFee };
 		cookies.set('ops_mock_fees', JSON.stringify(fees), { path: '/', maxAge: 60 * 60 * 24 });
 
-		return { success: true, message: 'Platform commission and transaction fees successfully updated.' };
+		return {
+			success: true,
+			message: 'Platform commission and transaction fees successfully updated.'
+		};
 	}
 };

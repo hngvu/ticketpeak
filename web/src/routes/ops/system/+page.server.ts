@@ -26,7 +26,10 @@ export const load: PageServerLoad = async ({ cookies }) => {
 			// ignore
 		}
 	} else {
-		cookies.set('ops_mock_system', JSON.stringify(systemState), { path: '/', maxAge: 60 * 60 * 24 });
+		cookies.set('ops_mock_system', JSON.stringify(systemState), {
+			path: '/',
+			maxAge: 60 * 60 * 24
+		});
 	}
 
 	return {
@@ -63,7 +66,10 @@ export const actions: Actions = {
 		systemState.garbageCollectedCount += 1;
 		systemState.cpuUsage = 45; // momentarily spike during GC
 
-		cookies.set('ops_mock_system', JSON.stringify(systemState), { path: '/', maxAge: 60 * 60 * 24 });
+		cookies.set('ops_mock_system', JSON.stringify(systemState), {
+			path: '/',
+			maxAge: 60 * 60 * 24
+		});
 
 		return { success: true, message: 'JVM Garbage Collection requested. Cleared heap memory.' };
 	},
@@ -94,7 +100,10 @@ export const actions: Actions = {
 
 		systemState.redisCacheHits = 0.0; // reset cache hits as cache is cold now
 
-		cookies.set('ops_mock_system', JSON.stringify(systemState), { path: '/', maxAge: 60 * 60 * 24 });
+		cookies.set('ops_mock_system', JSON.stringify(systemState), {
+			path: '/',
+			maxAge: 60 * 60 * 24
+		});
 
 		return { success: true, message: 'Redis Cache flushed system-wide.' };
 	}
