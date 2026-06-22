@@ -3,6 +3,12 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
+	import { IconPointer2 } from '@tabler/icons-svelte';
+
+	const pointer2Cursor = (() => {
+		const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><path d='M0 0h24v24H0z' fill='none'/><path d='M14.185 13.14l5.644 -2.202c1.625 -.634 1.538 -2.962 -.13 -3.473l-14.319 -4.382c-1.41 -.431 -2.73 .888 -2.298 2.298l4.382 14.318c.51 1.668 2.84 1.755 3.473 .13l2.202 -5.644a1.84 1.84 0 0 1 1.045 -1.045' fill='none' stroke='#000' stroke-width='2'/></svg>`
+		return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 2 2, default`
+	})()
 
 	let { data } = $props<{ data: any }>();
 
@@ -372,7 +378,7 @@
 		if (!stage?.container()) return;
 		stage.draggable(true);
 		stage.container().style.cursor =
-			activeTool === 'brush' ? 'copy' : activeTool === 'eraser' ? 'cell' : 'grab';
+			activeTool === 'brush' ? 'copy' : activeTool === 'eraser' ? 'cell' : pointer2Cursor;
 		drawSeatingMap();
 	});
 
@@ -761,10 +767,10 @@
 							drawSeatingMap();
 						});
 						circle.on('mouseenter', () => {
-							if (activeTool !== 'pan') stage.container().style.cursor = 'pointer';
+							if (activeTool !== 'pan') stage.container().style.cursor = pointer2Cursor;
 						});
 						circle.on('mouseleave', () => {
-							if (activeTool !== 'pan') stage.container().style.cursor = 'default';
+							if (activeTool !== 'pan') stage.container().style.cursor = pointer2Cursor;
 						});
 						sg.on('dragend', () => {
 							seat.positionX = boxX + Math.round(sg.x() / snapGrid) * snapGrid;
@@ -1728,14 +1734,7 @@
 					? 'bg-slate-100 text-slate-900'
 					: 'text-slate-400 hover:bg-slate-50 hover:text-slate-700'}"
 			>
-				<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-					><path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="1.5"
-						d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"
-					/></svg
-				>
+				<IconPointer2 class="h-4 w-4" />
 				Seat
 			</button>
 			<button
