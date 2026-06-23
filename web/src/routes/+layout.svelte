@@ -436,7 +436,8 @@
 	const isAuthOrPortal = $derived(
 		page.url.pathname.startsWith('/auth') ||
 			page.url.pathname.startsWith('/b2b') ||
-			page.url.pathname.startsWith('/ops')
+			page.url.pathname.startsWith('/ops') ||
+			page.url.pathname.startsWith('/test')
 	);
 
 	const isEventDetail = $derived(/\/[^/]+\/event\/[^/]+/.test(page.url.pathname));

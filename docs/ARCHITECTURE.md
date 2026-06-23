@@ -109,8 +109,8 @@ web/src/routes/
 The ops manifest editor uses **Konva.js** (not plain SVG) for the interactive canvas.
 
 Key decisions (do not reverse without a decision record):
-- **Convex hull geometry** is used for RS area borders — computed from actual seat positions, not polygon approximation. This prevents seat overflow bugs.
-- **Curvature** is applied as a post-processing pass on top of the rectangular seat grid.
+- **Section boundaries** use explicit Polygon/SVG geometries (not dynamically computed convex hulls) to allow for complex, concave, and curved architectural shapes. The UI must ensure seats are placed with padding so they do not overlap boundaries.
+- **Curvature** and complex layouts are supported by plotting seats within these explicit polygons.
 - Canvas tools: Select (V), Pan (Space), Brush (B), Eraser (E) — Figma-style shortcuts.
 - Area creation UI has been removed from the editor (Plan 033). Areas are created programmatically or via seeding; only editing of existing areas is supported.
 

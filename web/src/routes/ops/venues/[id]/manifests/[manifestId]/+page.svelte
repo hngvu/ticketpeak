@@ -6,9 +6,9 @@
 	import { IconPointer2 } from '@tabler/icons-svelte';
 
 	const pointer2Cursor = (() => {
-		const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><path d='M0 0h24v24H0z' fill='none'/><path d='M14.185 13.14l5.644 -2.202c1.625 -.634 1.538 -2.962 -.13 -3.473l-14.319 -4.382c-1.41 -.431 -2.73 .888 -2.298 2.298l4.382 14.318c.51 1.668 2.84 1.755 3.473 .13l2.202 -5.644a1.84 1.84 0 0 1 1.045 -1.045' fill='none' stroke='#000' stroke-width='2'/></svg>`
-		return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 2 2, default`
-	})()
+		const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><path d='M0 0h24v24H0z' fill='none'/><path d='M14.185 13.14l5.644 -2.202c1.625 -.634 1.538 -2.962 -.13 -3.473l-14.319 -4.382c-1.41 -.431 -2.73 .888 -2.298 2.298l4.382 14.318c.51 1.668 2.84 1.755 3.473 .13l2.202 -5.644a1.84 1.84 0 0 1 1.045 -1.045' fill='none' stroke='#000' stroke-width='2'/></svg>`;
+		return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 2 2, default`;
+	})();
 
 	let { data } = $props<{ data: any }>();
 
@@ -478,26 +478,36 @@
 			const isSel = selectedObjectId === idx;
 			const g = new Konva.Group({ x: ox, y: oy, draggable: false, id: 'obj-' + idx });
 			if (obj.type === 'stage') {
+				const curveStart = Math.max(ow * 0.6, ow - 60);
 				g.add(
-					new Konva.Rect({
-						width: ow,
-						height: oh,
+					new Konva.Shape({
+						sceneFunc: (context, shape) => {
+							context.beginPath();
+							context.moveTo(0, 0);
+							context.lineTo(curveStart, 0);
+							context.quadraticCurveTo(2 * ow - curveStart, oh / 2, curveStart, oh);
+							context.lineTo(0, oh);
+							context.closePath();
+							context.fillStrokeShape(shape);
+						},
 						fill: '#334155',
 						stroke: isSel ? '#F59E0B' : '#64748B',
-						strokeWidth: isSel ? 3 : 2,
-						cornerRadius: 8
+						strokeWidth: isSel ? 3 : 2
 					})
 				);
 				g.add(
 					new Konva.Text({
 						text: (obj.text || 'STAGE').toUpperCase(),
-						fontSize: Math.max(12, Math.min(ow, oh) * 0.2),
+						fontSize: Math.max(16, Math.min(ow, oh) * 0.15),
 						fontStyle: 'bold',
 						fill: '#F8FAFC',
 						align: 'center',
 						verticalAlign: 'middle',
-						width: ow,
-						height: oh
+						width: oh,
+						height: ow,
+						rotation: -90,
+						x: 0,
+						y: oh
 					})
 				);
 			} else if (obj.type === 'label') {
@@ -1616,15 +1626,16 @@
 							{/each}
 							{#each layoutObjects as obj}
 								{#if obj.type === 'stage'}
-									<rect
-										x={obj.x ?? 100}
-										y={obj.y ?? 100}
-										width={obj.width ?? 200}
-										height={obj.height ?? 100}
+									{@const sx = obj.x ?? 100}{@const sy = obj.y ?? 100}{@const sw =
+										obj.width ?? 200}{@const sh = obj.height ?? 100}{@const scs = Math.max(
+										sw * 0.6,
+										sw - 60
+									)}
+									<path
+										d={`M ${sx} ${sy} L ${sx + scs} ${sy} Q ${sx + 2 * sw - scs} ${sy + sh / 2} ${sx + scs} ${sy + sh} L ${sx} ${sy + sh} Z`}
 										fill="#334155"
 										stroke="#64748B"
 										stroke-width="1.5"
-										rx="4"
 									/>
 								{:else if obj.type === 'label'}
 									<rect
