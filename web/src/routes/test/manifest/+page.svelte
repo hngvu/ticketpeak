@@ -5,7 +5,7 @@
 	import { IconPointer2 } from '@tabler/icons-svelte';
 
 	const pointer2Cursor = (() => {
-		const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><path d='M0 0h24v24H0z' fill='none'/><path d='M14.185 13.14l5.644 -2.202c1.625 -.634 1.538 -2.962 -.13 -3.473l-14.319 -4.382c-1.41 -.431 -2.73 .888 -2.298 2.298l4.382 14.318c.51 1.668 2.84 1.755 3.473 .13l2.202 -5.644a1.84 1.84 0 0 1 1.045 -1.045' fill='none' stroke='#000' stroke-width='2'/></svg>`;
+		const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><path d='M0 0h24v24H0z' fill='none'/><path d='M14.185 13.14l5.644 -2.202c1.625 -.634 1.538 -2.962 -.13 -3.473l-14.319 -4.382c-1.41 -.431 -2.73 .888 -2.298 2.298l4.382 14.318c.51 1.668 2.84 1.755 3.473 .13l2.202 -5.644a1.84 1.84 0 0 1 1.045 -1.045' fill='white' stroke='#000' stroke-width='2'/></svg>`;
 		return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 2 2, default`;
 	})();
 
@@ -22,10 +22,10 @@
 				objects: [
 					{
 						type: 'stage',
-						x: 100,
-						y: 244,
+						x: 140,
+						y: 240,
 						width: 60,
-						height: 272,
+						height: 280,
 						text: 'STAGE'
 					}
 				]
@@ -207,18 +207,51 @@
 				}
 			},
 			{
-				id: 'M100001-SEC-GA',
+				id: 'M100001-SEC-GA-L',
 				type: 'GA',
-				name: 'GA Lobby',
+				name: 'GA Left',
 				color: '#10B981',
 				levelId: 'L1',
 				capacity: 50,
 				uiData: {
-					polygon: [],
-					x: 160,
-					y: 30,
-					width: 200,
-					height: 100
+					polygon: [
+						[203.4, 244.1],
+						[191.3, 239.1],
+						[166.0, 232.3],
+						[140.0, 230.0],
+						[140.0, 112.0],
+						[186.5, 116.1],
+						[231.6, 128.2],
+						[253.3, 137.1]
+					],
+					x: 140,
+					y: 112,
+					width: 113.3,
+					height: 132.1
+				}
+			},
+			{
+				id: 'M100001-SEC-GA-R',
+				type: 'GA',
+				name: 'GA Right',
+				color: '#10B981',
+				levelId: 'L1',
+				capacity: 50,
+				uiData: {
+					polygon: [
+						[203.4, 515.9],
+						[253.3, 622.9],
+						[231.6, 631.8],
+						[186.5, 643.9],
+						[140.0, 648.0],
+						[140.0, 530.0],
+						[166.0, 527.7],
+						[191.3, 520.9]
+					],
+					x: 140,
+					y: 515.9,
+					width: 113.3,
+					height: 132.1
 				}
 			}
 		],
@@ -699,8 +732,8 @@
 				id: 'M100001-SEC-ORCH-C-row-A-s001',
 				rowId: 'M100001-SEC-ORCH-C-row-A',
 				name: '001',
-				positionX: 305,
-				positionY: 320,
+				positionX: 290.82,
+				positionY: 326.59,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -709,8 +742,8 @@
 				id: 'M100001-SEC-ORCH-C-row-A-s002',
 				rowId: 'M100001-SEC-ORCH-C-row-A',
 				name: '002',
-				positionX: 305,
-				positionY: 338,
+				positionX: 295.9,
+				positionY: 344.01,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -719,8 +752,8 @@
 				id: 'M100001-SEC-ORCH-C-row-A-s003',
 				rowId: 'M100001-SEC-ORCH-C-row-A',
 				name: '003',
-				positionX: 305,
-				positionY: 357,
+				positionX: 298.97,
+				positionY: 361.89,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -729,8 +762,8 @@
 				id: 'M100001-SEC-ORCH-C-row-A-s004',
 				rowId: 'M100001-SEC-ORCH-C-row-A',
 				name: '004',
-				positionX: 305,
-				positionY: 376,
+				positionX: 300.0,
+				positionY: 380.0,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -739,8 +772,8 @@
 				id: 'M100001-SEC-ORCH-C-row-A-s005',
 				rowId: 'M100001-SEC-ORCH-C-row-A',
 				name: '005',
-				positionX: 305,
-				positionY: 395,
+				positionX: 298.97,
+				positionY: 398.11,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -749,8 +782,8 @@
 				id: 'M100001-SEC-ORCH-C-row-A-s006',
 				rowId: 'M100001-SEC-ORCH-C-row-A',
 				name: '006',
-				positionX: 305,
-				positionY: 414,
+				positionX: 295.9,
+				positionY: 415.99,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -759,8 +792,8 @@
 				id: 'M100001-SEC-ORCH-C-row-A-s007',
 				rowId: 'M100001-SEC-ORCH-C-row-A',
 				name: '007',
-				positionX: 305,
-				positionY: 433,
+				positionX: 290.82,
+				positionY: 433.41,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -769,8 +802,8 @@
 				id: 'M100001-SEC-ORCH-C-row-B-s001',
 				rowId: 'M100001-SEC-ORCH-C-row-B',
 				name: '001',
-				positionX: 320,
-				positionY: 310,
+				positionX: 307.79,
+				positionY: 320.58,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -779,8 +812,8 @@
 				id: 'M100001-SEC-ORCH-C-row-B-s002',
 				rowId: 'M100001-SEC-ORCH-C-row-B',
 				name: '002',
-				positionX: 320,
-				positionY: 333,
+				positionX: 313.44,
+				positionY: 339.96,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -789,8 +822,8 @@
 				id: 'M100001-SEC-ORCH-C-row-B-s003',
 				rowId: 'M100001-SEC-ORCH-C-row-B',
 				name: '003',
-				positionX: 320,
-				positionY: 356,
+				positionX: 316.86,
+				positionY: 359.85,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -799,8 +832,8 @@
 				id: 'M100001-SEC-ORCH-C-row-B-s004',
 				rowId: 'M100001-SEC-ORCH-C-row-B',
 				name: '004',
-				positionX: 320,
-				positionY: 379,
+				positionX: 318.0,
+				positionY: 380.0,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -809,8 +842,8 @@
 				id: 'M100001-SEC-ORCH-C-row-B-s005',
 				rowId: 'M100001-SEC-ORCH-C-row-B',
 				name: '005',
-				positionX: 320,
-				positionY: 402,
+				positionX: 316.86,
+				positionY: 400.15,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -819,8 +852,8 @@
 				id: 'M100001-SEC-ORCH-C-row-B-s006',
 				rowId: 'M100001-SEC-ORCH-C-row-B',
 				name: '006',
-				positionX: 320,
-				positionY: 425,
+				positionX: 313.44,
+				positionY: 420.04,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -829,8 +862,8 @@
 				id: 'M100001-SEC-ORCH-C-row-B-s007',
 				rowId: 'M100001-SEC-ORCH-C-row-B',
 				name: '007',
-				positionX: 320,
-				positionY: 448,
+				positionX: 307.79,
+				positionY: 439.42,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -839,8 +872,8 @@
 				id: 'M100001-SEC-ORCH-C-row-C-s001',
 				rowId: 'M100001-SEC-ORCH-C-row-C',
 				name: '001',
-				positionX: 340,
-				positionY: 300,
+				positionX: 324.76,
+				positionY: 314.57,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -849,8 +882,8 @@
 				id: 'M100001-SEC-ORCH-C-row-C-s002',
 				rowId: 'M100001-SEC-ORCH-C-row-C',
 				name: '002',
-				positionX: 340,
-				positionY: 328,
+				positionX: 330.98,
+				positionY: 335.91,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -859,8 +892,8 @@
 				id: 'M100001-SEC-ORCH-C-row-C-s003',
 				rowId: 'M100001-SEC-ORCH-C-row-C',
 				name: '003',
-				positionX: 340,
-				positionY: 356,
+				positionX: 334.74,
+				positionY: 357.81,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -869,8 +902,8 @@
 				id: 'M100001-SEC-ORCH-C-row-C-s004',
 				rowId: 'M100001-SEC-ORCH-C-row-C',
 				name: '004',
-				positionX: 340,
-				positionY: 384,
+				positionX: 336.0,
+				positionY: 380.0,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -879,8 +912,8 @@
 				id: 'M100001-SEC-ORCH-C-row-C-s005',
 				rowId: 'M100001-SEC-ORCH-C-row-C',
 				name: '005',
-				positionX: 340,
-				positionY: 412,
+				positionX: 334.74,
+				positionY: 402.19,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -889,8 +922,8 @@
 				id: 'M100001-SEC-ORCH-C-row-C-s006',
 				rowId: 'M100001-SEC-ORCH-C-row-C',
 				name: '006',
-				positionX: 340,
-				positionY: 440,
+				positionX: 330.98,
+				positionY: 424.09,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -899,8 +932,8 @@
 				id: 'M100001-SEC-ORCH-C-row-C-s007',
 				rowId: 'M100001-SEC-ORCH-C-row-C',
 				name: '007',
-				positionX: 340,
-				positionY: 460,
+				positionX: 324.76,
+				positionY: 445.43,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -909,8 +942,8 @@
 				id: 'M100001-SEC-ORCH-C-row-D-s001',
 				rowId: 'M100001-SEC-ORCH-C-row-D',
 				name: '001',
-				positionX: 355,
-				positionY: 293,
+				positionX: 341.73,
+				positionY: 308.57,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -919,8 +952,8 @@
 				id: 'M100001-SEC-ORCH-C-row-D-s002',
 				rowId: 'M100001-SEC-ORCH-C-row-D',
 				name: '002',
-				positionX: 355,
-				positionY: 323,
+				positionX: 348.52,
+				positionY: 331.86,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -929,8 +962,8 @@
 				id: 'M100001-SEC-ORCH-C-row-D-s003',
 				rowId: 'M100001-SEC-ORCH-C-row-D',
 				name: '003',
-				positionX: 355,
-				positionY: 353,
+				positionX: 352.62,
+				positionY: 355.77,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -939,8 +972,8 @@
 				id: 'M100001-SEC-ORCH-C-row-D-s004',
 				rowId: 'M100001-SEC-ORCH-C-row-D',
 				name: '004',
-				positionX: 355,
-				positionY: 383,
+				positionX: 354.0,
+				positionY: 380.0,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -949,8 +982,8 @@
 				id: 'M100001-SEC-ORCH-C-row-D-s005',
 				rowId: 'M100001-SEC-ORCH-C-row-D',
 				name: '005',
-				positionX: 355,
-				positionY: 413,
+				positionX: 352.62,
+				positionY: 404.23,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -959,8 +992,8 @@
 				id: 'M100001-SEC-ORCH-C-row-D-s006',
 				rowId: 'M100001-SEC-ORCH-C-row-D',
 				name: '006',
-				positionX: 355,
-				positionY: 443,
+				positionX: 348.52,
+				positionY: 428.14,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -969,8 +1002,8 @@
 				id: 'M100001-SEC-ORCH-C-row-D-s007',
 				rowId: 'M100001-SEC-ORCH-C-row-D',
 				name: '007',
-				positionX: 355,
-				positionY: 465,
+				positionX: 341.73,
+				positionY: 451.43,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -979,8 +1012,8 @@
 				id: 'M100001-SEC-ORCH-C-row-E-s001',
 				rowId: 'M100001-SEC-ORCH-C-row-E',
 				name: '001',
-				positionX: 370,
-				positionY: 288,
+				positionX: 358.69,
+				positionY: 302.56,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -989,8 +1022,8 @@
 				id: 'M100001-SEC-ORCH-C-row-E-s002',
 				rowId: 'M100001-SEC-ORCH-C-row-E',
 				name: '002',
-				positionX: 370,
-				positionY: 320,
+				positionX: 366.05,
+				positionY: 327.81,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -999,8 +1032,8 @@
 				id: 'M100001-SEC-ORCH-C-row-E-s003',
 				rowId: 'M100001-SEC-ORCH-C-row-E',
 				name: '003',
-				positionX: 370,
-				positionY: 352,
+				positionX: 370.51,
+				positionY: 353.74,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -1009,8 +1042,8 @@
 				id: 'M100001-SEC-ORCH-C-row-E-s004',
 				rowId: 'M100001-SEC-ORCH-C-row-E',
 				name: '004',
-				positionX: 370,
-				positionY: 384,
+				positionX: 372.0,
+				positionY: 380.0,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -1019,8 +1052,8 @@
 				id: 'M100001-SEC-ORCH-C-row-E-s005',
 				rowId: 'M100001-SEC-ORCH-C-row-E',
 				name: '005',
-				positionX: 370,
-				positionY: 416,
+				positionX: 370.51,
+				positionY: 406.26,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -1029,8 +1062,8 @@
 				id: 'M100001-SEC-ORCH-C-row-E-s006',
 				rowId: 'M100001-SEC-ORCH-C-row-E',
 				name: '006',
-				positionX: 370,
-				positionY: 448,
+				positionX: 366.05,
+				positionY: 432.19,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -1039,8 +1072,8 @@
 				id: 'M100001-SEC-ORCH-C-row-E-s007',
 				rowId: 'M100001-SEC-ORCH-C-row-E',
 				name: '007',
-				positionX: 370,
-				positionY: 472,
+				positionX: 358.69,
+				positionY: 457.44,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -1049,8 +1082,8 @@
 				id: 'M100001-SEC-ORCH-C-row-F-s001',
 				rowId: 'M100001-SEC-ORCH-C-row-F',
 				name: '001',
-				positionX: 385,
-				positionY: 282,
+				positionX: 375.66,
+				positionY: 296.55,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -1059,8 +1092,8 @@
 				id: 'M100001-SEC-ORCH-C-row-F-s002',
 				rowId: 'M100001-SEC-ORCH-C-row-F',
 				name: '002',
-				positionX: 385,
-				positionY: 318,
+				positionX: 383.59,
+				positionY: 323.76,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -1069,8 +1102,8 @@
 				id: 'M100001-SEC-ORCH-C-row-F-s003',
 				rowId: 'M100001-SEC-ORCH-C-row-F',
 				name: '003',
-				positionX: 385,
-				positionY: 354,
+				positionX: 388.39,
+				positionY: 351.7,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -1079,8 +1112,8 @@
 				id: 'M100001-SEC-ORCH-C-row-F-s004',
 				rowId: 'M100001-SEC-ORCH-C-row-F',
 				name: '004',
-				positionX: 385,
-				positionY: 390,
+				positionX: 390.0,
+				positionY: 380.0,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -1089,8 +1122,8 @@
 				id: 'M100001-SEC-ORCH-C-row-F-s005',
 				rowId: 'M100001-SEC-ORCH-C-row-F',
 				name: '005',
-				positionX: 385,
-				positionY: 426,
+				positionX: 388.39,
+				positionY: 408.3,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -1099,8 +1132,8 @@
 				id: 'M100001-SEC-ORCH-C-row-F-s006',
 				rowId: 'M100001-SEC-ORCH-C-row-F',
 				name: '006',
-				positionX: 385,
-				positionY: 462,
+				positionX: 383.59,
+				positionY: 436.24,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -1109,8 +1142,8 @@
 				id: 'M100001-SEC-ORCH-C-row-F-s007',
 				rowId: 'M100001-SEC-ORCH-C-row-F',
 				name: '007',
-				positionX: 385,
-				positionY: 478,
+				positionX: 375.66,
+				positionY: 463.45,
 				status: 'AVAILABLE',
 				priceLevelId: null,
 				sectionId: 'M100001-SEC-ORCH-C'
@@ -1948,8 +1981,8 @@
 		const secProgress = _secProgress(sc);
 		const secFill = Math.max(0, 0.85 * (1 - secProgress));
 		const secStroke = Math.max(0.3, 1.0 - secProgress * 0.7);
-		const showLabel = sc < fitScale * 2.0;
 		const showSeats = _showSeats(sc);
+		const showLabel = !showSeats;
 
 		layoutObjects.forEach((obj, idx) => {
 			const ox = obj.x ?? 100,
@@ -2054,33 +2087,43 @@
 		});
 
 		gaSections.forEach((ga, idx) => {
-			const x = ga.x || 50 + idx * 220,
-				y = ga.y || 50,
-				gw = ga.width || 200,
-				gh = ga.height || 100;
+			const ud = ga.uiData || {};
+			const bx = ud.x ?? (50 + idx * 220);
+			const by = ud.y ?? 50;
+			const gw = ud.width ?? 200;
+			const gh = ud.height ?? 100;
 			const isSel = selectedGaSectionId === ga.id;
-			const g = new Konva.Group({ x, y, draggable: false, id: ga.id });
-			g.add(
-				new Konva.Rect({
-					width: gw,
-					height: gh,
-					fill: isSel ? '#F1F5F9' : '#F8FAFC',
-					stroke: isSel ? '#0F172A' : '#CBD5E1',
-					strokeWidth: isSel ? 2 : 1
-				})
-			);
+			const g = new Konva.Group({ x: bx, y: by, draggable: false, id: ga.id });
+			
+			const shapeAttrs = {
+				fill: isSel ? '#F1F5F9' : '#F8FAFC',
+				stroke: isSel ? '#0F172A' : '#CBD5E1',
+				strokeWidth: isSel ? 2 : 1
+			};
+
+			if (ud.polygon?.length >= 6) {
+				const hull = (ud.polygon as [number, number][]).flatMap(([px, py]) => [
+					px - bx,
+					py - by
+				]);
+				g.add(new Konva.Line({ ...shapeAttrs, points: hull, closed: true }));
+			} else {
+				g.add(new Konva.Rect({ ...shapeAttrs, width: gw, height: gh }));
+			}
+
 			const gaLabel = (ga.name || ga.id).toUpperCase();
 			g.add(
 				new Konva.Text({
 					text: gaLabel,
-					fontSize: Math.max(14, Math.min(gw, gh) * 0.2),
+					fontSize: 14,
 					fontStyle: 'bold',
 					fill: '#94A3B8',
 					opacity: 0.4,
 					width: gw,
 					height: gh,
 					align: 'center',
-					verticalAlign: 'middle'
+					verticalAlign: 'middle',
+					padding: 10
 				})
 			);
 			g.on('click tap', (e: any) => {
@@ -2132,10 +2175,7 @@
 				const sec = sections.find((s) => s.id === section.id);
 				const rawLabel = section.name || sec?.name || sec?.description || cleanId(section.id);
 				const labelText = rawLabel.toUpperCase();
-				const chars = labelText.length;
-				const maxFontByWidth = (boxW * 0.78) / Math.max(chars * 0.58, 1);
-				const maxFontByHeight = boxH * 0.28;
-				const fontSize = Math.max(8, Math.min(22, maxFontByWidth, maxFontByHeight));
+				const fontSize = 14;
 				ag.add(
 					new Konva.Text({
 						text: labelText,
@@ -2230,11 +2270,11 @@
 								}
 								return;
 							}
+							if (!isRight) return;
 							let ids: string[] = [];
 							if (selectionTool === 'row') ids = row.seats.map((s: any) => s.id);
 							else rows.forEach((r: any) => ids.push(...(r.seats || []).map((s: any) => s.id)));
-							if (isRight) selectedSeatIds = selectedSeatIds.filter((x) => !ids.includes(x));
-							else selectedSeatIds = Array.from(new Set([...selectedSeatIds, ...ids]));
+							selectedSeatIds = selectedSeatIds.filter((x) => !ids.includes(x));
 							drawSeatingMap();
 						});
 						circle.on('mouseenter', () => {
@@ -2292,12 +2332,6 @@
 						const isRight = e.evt?.button === 2 || e.evt?.which === 3;
 						if (isRight) {
 							selectedSeatIds = selectedSeatIds.filter((x) => x !== id);
-						} else if (isShiftPressed) {
-							selectedSeatIds = selectedSeatIds.includes(id)
-								? selectedSeatIds.filter((x) => x !== id)
-								: [...selectedSeatIds, id];
-						} else if (!selectedSeatIds.includes(id)) {
-							selectedSeatIds = [...selectedSeatIds, id];
 						}
 						drawSeatingMap();
 					}
@@ -2305,6 +2339,8 @@
 				return;
 			}
 			if (activeTool !== 'select') return;
+			const isRightBg = e.evt?.button === 2 || e.evt?.which === 3;
+			if (!isRightBg) return;
 			brushActive = false;
 			const pos = stage.getPointerPosition();
 			if (!pos) return;
@@ -2337,9 +2373,8 @@
 							if (brushSectionId) paintSection(id, brushSectionId);
 							else if (brushPriceLevelId) paintSeat(id, brushPriceLevelId);
 							drawSeatingMap();
-						} else if (activeTool === 'select' && !selectedSeatIds.includes(id)) {
-							selectedSeatIds = [...selectedSeatIds, id];
-							drawSeatingMap();
+						} else if (activeTool === 'select') {
+							// right-click only — no-op on hover
 						}
 					}
 				}
@@ -2982,15 +3017,12 @@
 							class="pointer-events-none h-full w-full"
 						>
 							{#each rsSections as section}
-								{@const secColor = section.color || '#94A3B8'}
 								{#if section.polygon?.length >= 6}
 									<polygon
 										points={section.polygon.map((p: [number, number]) => p.join(',')).join(' ')}
-										fill={secColor}
-										fill-opacity="0.9"
-										stroke="#FFFFFF"
-										stroke-opacity="1"
-										stroke-width="2"
+										fill="#FFFFFF"
+										stroke="#CBD5E1"
+										stroke-width="1"
 										vector-effect="non-scaling-stroke"
 									/>
 								{:else if section.uiData}
@@ -2999,27 +3031,37 @@
 										y={section.uiData.y}
 										width={section.uiData.width}
 										height={section.uiData.height}
-										fill={secColor}
-										fill-opacity="0.9"
-										stroke="#FFFFFF"
-										stroke-opacity="1"
-										stroke-width="2"
+										fill="#FFFFFF"
+										stroke="#CBD5E1"
+										stroke-width="1"
 										vector-effect="non-scaling-stroke"
 									/>
 								{/if}
 							{/each}
 							{#each gaSections as ga}
-								<rect
-									x={ga.x || 50}
-									y={ga.y || 50}
-									width={ga.width || 200}
-									height={ga.height || 100}
-									fill="none"
-									stroke="#334155"
-									stroke-opacity="0.35"
-									stroke-width="1.5"
-									rx="3"
-								/>
+								{#if ga.uiData?.polygon?.length >= 6}
+									<polygon
+										points={ga.uiData.polygon.map((p: [number, number]) => p.join(',')).join(' ')}
+										fill="none"
+										stroke="#334155"
+										stroke-opacity="0.35"
+										stroke-width="0.5"
+										vector-effect="non-scaling-stroke"
+									/>
+								{:else}
+									<rect
+										x={ga.uiData?.x ?? (ga.x || 50)}
+										y={ga.uiData?.y ?? (ga.y || 50)}
+										width={ga.uiData?.width ?? (ga.width || 200)}
+										height={ga.uiData?.height ?? (ga.height || 100)}
+										fill="none"
+										stroke="#334155"
+										stroke-opacity="0.35"
+										stroke-width="0.5"
+										rx="3"
+										vector-effect="non-scaling-stroke"
+									/>
+								{/if}
 							{/each}
 							{#each layoutObjects as obj}
 								{#if obj.type === 'stage'}
