@@ -3,7 +3,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
-	import { IconPointer2 } from '@tabler/icons-svelte';
+	import { IconPointer2, IconArmchair } from '@tabler/icons-svelte';
 
 	const pointer2Cursor = (() => {
 		const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><path d='M0 0h24v24H0z' fill='none'/><path d='M14.185 13.14l5.644 -2.202c1.625 -.634 1.538 -2.962 -.13 -3.473l-14.319 -4.382c-1.41 -.431 -2.73 .888 -2.298 2.298l4.382 14.318c.51 1.668 2.84 1.755 3.473 .13l2.202 -5.644a1.84 1.84 0 0 1 1.045 -1.045' fill='none' stroke='#000' stroke-width='2'/></svg>`;
@@ -758,23 +758,7 @@
 								drawSeatingMap();
 								return;
 							}
-							const isRight = e.evt?.button === 2 || e.evt?.which === 3;
-							if (selectionTool === 'seat') {
-								if (isRight) {
-									selectedSeatIds = selectedSeatIds.filter((x) => x !== seat.id);
-									drawSeatingMap();
-								}
-								return;
-							}
-							let ids: string[] = [];
-							if (selectionTool === 'row') ids = row.seats.map((s: any) => s.id);
-							else rows.forEach((r: any) => ids.push(...(r.seats || []).map((s: any) => s.id)));
-							if (isRight) {
-								selectedSeatIds = selectedSeatIds.filter((x) => !ids.includes(x));
-							} else {
-								selectedSeatIds = Array.from(new Set([...selectedSeatIds, ...ids]));
-							}
-							drawSeatingMap();
+							// select handled in mousedown
 						});
 						circle.on('mouseenter', () => {
 							if (activeTool !== 'pan') stage.container().style.cursor = pointer2Cursor;
@@ -802,9 +786,13 @@
 	function setupCanvasEvents() {
 		if (!stage) return;
 		let isDown = false,
-			brushActive = false;
+			brushActive = false,
+			isRightButton = false;
 
 		stage.on('mousedown touchstart', (e: any) => {
+			e.evt?.preventDefault();
+			const isRight = e.evt?.button === 2 || e.evt?.which === 3;
+			isRightButton = isRight;
 			if (e.target === stage) {
 				selectedObjectId = null;
 				selectedGaSectionId = '';
@@ -830,15 +818,29 @@
 						else if (brushPriceLevelId) paintSeat(id, brushPriceLevelId);
 						drawSeatingMap();
 					} else if (activeTool === 'select') {
-						const isRight = e.evt?.button === 2 || e.evt?.which === 3;
-						if (isRight) {
-							selectedSeatIds = selectedSeatIds.filter((x) => x !== id);
-						} else if (isShiftPressed) {
-							selectedSeatIds = selectedSeatIds.includes(id)
-								? selectedSeatIds.filter((x) => x !== id)
-								: [...selectedSeatIds, id];
-						} else if (!selectedSeatIds.includes(id)) {
-							selectedSeatIds = [...selectedSeatIds, id];
+						if (!isRight) return;
+						let idsToAdd: string[] = [id];
+						if (selectionTool !== 'seat') {
+							const found = findSeatById(id);
+							if (found) {
+								if (selectionTool === 'row') {
+									idsToAdd = found.row.seats.map((s: any) => s.id);
+								} else {
+									idsToAdd = [];
+									(found.section.rows || []).forEach((r: any) =>
+										(r.seats || []).forEach((s: any) => idsToAdd.push(s.id))
+									);
+								}
+							}
+						}
+						if (isShiftPressed) {
+							idsToAdd.forEach((sid: string) => {
+								selectedSeatIds = selectedSeatIds.includes(sid)
+									? selectedSeatIds.filter((x) => x !== sid)
+									: [...selectedSeatIds, sid];
+							});
+						} else {
+							selectedSeatIds = Array.from(new Set([...selectedSeatIds, ...idsToAdd]));
 						}
 						drawSeatingMap();
 					}
@@ -846,6 +848,9 @@
 				return;
 			}
 			if (activeTool !== 'select') return;
+			if (!isRight) return;
+			const isShape = t?.className === 'Line' || t?.className === 'Rect' || t?.className === 'Text';
+			if (isShape) return;
 			brushActive = false;
 			const pos = stage.getPointerPosition();
 			if (!pos) return;
@@ -878,7 +883,7 @@
 							if (brushSectionId) paintSection(id, brushSectionId);
 							else if (brushPriceLevelId) paintSeat(id, brushPriceLevelId);
 							drawSeatingMap();
-						} else if (activeTool === 'select' && !selectedSeatIds.includes(id)) {
+						} else if (activeTool === 'select' && isRightButton && !selectedSeatIds.includes(id)) {
 							selectedSeatIds = [...selectedSeatIds, id];
 							drawSeatingMap();
 						}
@@ -1426,8 +1431,20 @@
 							? 'ring-2 ring-slate-300 ring-inset'
 							: ''}"
 						onclick={() => {
-							brushPriceLevelId = pl.id;
-							activeTool = 'brush';
+							if (selectedSeatIds.length > 0) {
+								assignPriceLevelToSelected(pl.id);
+							} else {
+								brushPriceLevelId = pl.id;
+								activeTool = 'brush';
+							}
+						}}
+						ondragover={(e) => {
+							e.preventDefault();
+							e.dataTransfer.dropEffect = 'move';
+						}}
+						ondrop={(e) => {
+							e.preventDefault();
+							if (selectedSeatIds.length > 0) assignPriceLevelToSelected(pl.id);
 						}}
 						role="button"
 					>
@@ -1683,21 +1700,19 @@
 			{#if selectedSeatIds.length > 0}
 				<div
 					class="absolute top-3 left-3 z-30 flex items-center gap-3 rounded-xl border border-slate-200 bg-white/95 px-4 py-2.5 shadow-lg backdrop-blur-md"
+					draggable="true"
+					ondragstart={(e) => {
+						e.dataTransfer?.setData('text/plain', selectedSeatIds.length.toString());
+					}}
 				>
 					<div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100">
-						<svg class="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-							><path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"
-							/></svg
-						>
+						<IconArmchair class="h-4 w-4 text-blue-600" />
 					</div>
 					<span class="text-xs font-bold text-slate-800"
-						>{selectedSeatIds.length} seats selected</span
+						>{selectedSeatIds.length} seats</span
 					>
 					<button
+						draggable="false"
 						onclick={() => {
 							selectedSeatIds = [];
 							drawSeatingMap();

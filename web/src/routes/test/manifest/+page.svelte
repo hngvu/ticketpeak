@@ -2262,20 +2262,7 @@
 								drawSeatingMap();
 								return;
 							}
-							const isRight = e.evt?.button === 2 || e.evt?.which === 3;
-							if (selectionTool === 'seat') {
-								if (isRight) {
-									selectedSeatIds = selectedSeatIds.filter((x) => x !== seat.id);
-									drawSeatingMap();
-								}
-								return;
-							}
-							if (!isRight) return;
-							let ids: string[] = [];
-							if (selectionTool === 'row') ids = row.seats.map((s: any) => s.id);
-							else rows.forEach((r: any) => ids.push(...(r.seats || []).map((s: any) => s.id)));
-							selectedSeatIds = selectedSeatIds.filter((x) => !ids.includes(x));
-							drawSeatingMap();
+							// select handled in mousedown
 						});
 						circle.on('mouseenter', () => {
 							if (activeTool !== 'pan') stage.container().style.cursor = pointer2Cursor;
@@ -2301,9 +2288,13 @@
 	function setupCanvasEvents() {
 		if (!stage) return;
 		let isDown = false,
-			brushActive = false;
+			brushActive = false,
+			isRightButton = false;
 
 		stage.on('mousedown touchstart', (e: any) => {
+			e.evt?.preventDefault();
+			const isRight = e.evt?.button === 2 || e.evt?.which === 3;
+			isRightButton = isRight;
 			if (e.target === stage) {
 				selectedObjectId = null;
 				selectedGaSectionId = '';
@@ -2329,9 +2320,29 @@
 						else if (brushPriceLevelId) paintSeat(id, brushPriceLevelId);
 						drawSeatingMap();
 					} else if (activeTool === 'select') {
-						const isRight = e.evt?.button === 2 || e.evt?.which === 3;
-						if (isRight) {
-							selectedSeatIds = selectedSeatIds.filter((x) => x !== id);
+						if (!isRight) return;
+						let idsToAdd: string[] = [id];
+						if (selectionTool !== 'seat') {
+							const found = findSeatById(id);
+							if (found) {
+								if (selectionTool === 'row') {
+									idsToAdd = found.row.seats.map((s: any) => s.id);
+								} else {
+									idsToAdd = [];
+									(found.section.rows || []).forEach((r: any) =>
+										(r.seats || []).forEach((s: any) => idsToAdd.push(s.id))
+									);
+								}
+							}
+						}
+						if (isShiftPressed) {
+							idsToAdd.forEach((sid: string) => {
+								selectedSeatIds = selectedSeatIds.includes(sid)
+									? selectedSeatIds.filter((x) => x !== sid)
+									: [...selectedSeatIds, sid];
+							});
+						} else {
+							selectedSeatIds = Array.from(new Set([...selectedSeatIds, ...idsToAdd]));
 						}
 						drawSeatingMap();
 					}
@@ -2339,8 +2350,9 @@
 				return;
 			}
 			if (activeTool !== 'select') return;
-			const isRightBg = e.evt?.button === 2 || e.evt?.which === 3;
-			if (!isRightBg) return;
+			if (!isRight) return;
+			const isShape = t?.className === 'Line' || t?.className === 'Rect' || t?.className === 'Text';
+			if (isShape) return;
 			brushActive = false;
 			const pos = stage.getPointerPosition();
 			if (!pos) return;
@@ -2373,8 +2385,9 @@
 							if (brushSectionId) paintSection(id, brushSectionId);
 							else if (brushPriceLevelId) paintSeat(id, brushPriceLevelId);
 							drawSeatingMap();
-						} else if (activeTool === 'select') {
-							// right-click only — no-op on hover
+						} else if (activeTool === 'select' && isRightButton && !selectedSeatIds.includes(id)) {
+							selectedSeatIds = [...selectedSeatIds, id];
+							drawSeatingMap();
 						}
 					}
 				}
