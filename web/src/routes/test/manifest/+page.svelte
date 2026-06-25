@@ -2,8 +2,7 @@
 	/* eslint-disable @typescript-eslint/no-explicit-any, svelte/no-navigation-without-resolve, svelte/require-each-key */
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
-	import { IconPointer2 } from '@tabler/icons-svelte';
-
+	import { IconPointer2, IconArmchair, IconChevronRight } from '@tabler/icons-svelte';
 	const pointer2Cursor = (() => {
 		const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><path d='M0 0h24v24H0z' fill='none'/><path d='M14.185 13.14l5.644 -2.202c1.625 -.634 1.538 -2.962 -.13 -3.473l-14.319 -4.382c-1.41 -.431 -2.73 .888 -2.298 2.298l4.382 14.318c.51 1.668 2.84 1.755 3.473 .13l2.202 -5.644a1.84 1.84 0 0 1 1.045 -1.045' fill='white' stroke='#000' stroke-width='2'/></svg>`;
 		return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 2 2, default`;
@@ -41,17 +40,17 @@
 		priceLevels: [
 			{
 				id: 'PL-VIP',
-				description: 'VIP - 2.500.000VND',
+				description: 'VIP',
 				color: '#F59E0B'
 			},
 			{
 				id: 'PL-PREM',
-				description: 'Premium - 1.500.000VND',
+				description: 'Premium',
 				color: '#3B82F6'
 			},
 			{
 				id: 'PL-STD',
-				description: 'Standard - 800.000VND',
+				description: 'Standard',
 				color: '#EC4899'
 			}
 		],
@@ -1701,6 +1700,10 @@
 				});
 			});
 		});
+		gaSections.forEach((ga) => {
+			if (ga.priceLevelId) counts[ga.priceLevelId] = (counts[ga.priceLevelId] || 0) + Number(ga.capacity || 0);
+			else unassigned += Number(ga.capacity || 0);
+		});
 		return { counts, unassigned };
 	});
 
@@ -1972,6 +1975,64 @@
 		return '#3B82F6';
 	}
 
+	const selectedSeatsSummary = $derived.by(() => {
+		const summary = new Map<string, { count: number; name: string; color: string }>();
+		let unassignedCount = 0;
+		const seatMap = new Map();
+		for (const sec of rsSections) {
+			for (const r of sec.rows || []) {
+				if (r.seats) {
+					for (const s of r.seats) {
+						seatMap.set(s.id, s);
+					}
+				}
+			}
+		}
+		for (const id of selectedSeatIds) {
+			const s = seatMap.get(id);
+			if (s && s.priceLevelId) {
+				const pl = priceLevels.find((p: any) => p.id === s.priceLevelId);
+				if (pl) {
+					if (!summary.has(pl.id)) {
+						const name = pl.id.replace('PL-', ''); // P3 or VIP, etc.
+						summary.set(pl.id, { count: 0, name, color: pl.color });
+					}
+					summary.get(pl.id)!.count++;
+				} else {
+					unassignedCount++;
+				}
+			} else {
+				unassignedCount++;
+			}
+		}
+
+		if (selectedGaSectionId) {
+			const ga = gaSections.find(g => g.id === selectedGaSectionId);
+			if (ga) {
+				const cap = Number(ga.capacity || 0);
+				if (ga.priceLevelId) {
+					const pl = priceLevels.find(p => p.id === ga.priceLevelId);
+					if (pl) {
+						if (!summary.has(pl.id)) {
+							const name = pl.id.replace('PL-', '');
+							summary.set(pl.id, { count: 0, name, color: pl.color });
+						}
+						summary.get(pl.id)!.count += cap;
+					} else {
+						unassignedCount += cap;
+					}
+				} else {
+					unassignedCount += cap;
+				}
+			}
+		}
+		const arr = Array.from(summary.values());
+		if (unassignedCount > 0) {
+			arr.push({ count: unassignedCount, name: 'Unassigned', color: '#94A3B8' });
+		}
+		return arr;
+	});
+
 	function drawSeatingMap() {
 		if (!stage || !layer || !Konva) return;
 		layer.destroyChildren();
@@ -2095,10 +2156,24 @@
 			const isSel = selectedGaSectionId === ga.id;
 			const g = new Konva.Group({ x: bx, y: by, draggable: false, id: ga.id });
 			
+			let gaColor = '#F8FAFC';
+			let gaStroke = '#CBD5E1';
+			let gaOpacity = 0.4;
+			
+			if (ga.priceLevelId) {
+				const pl = priceLevels.find(p => p.id === ga.priceLevelId);
+				if (pl) {
+					gaColor = pl.color;
+					gaStroke = pl.color;
+					gaOpacity = 0.8; // More opaque when assigned
+				}
+			}
+
 			const shapeAttrs = {
-				fill: isSel ? '#F1F5F9' : '#F8FAFC',
-				stroke: isSel ? '#0F172A' : '#CBD5E1',
-				strokeWidth: isSel ? 2 : 1
+				fill: isSel && !ga.priceLevelId ? '#F1F5F9' : gaColor,
+				stroke: isSel ? '#0F172A' : gaStroke,
+				strokeWidth: isSel ? 2 : 1,
+				opacity: 1
 			};
 
 			if (ud.polygon?.length >= 6) {
@@ -2117,17 +2192,21 @@
 					text: gaLabel,
 					fontSize: 14,
 					fontStyle: 'bold',
-					fill: '#94A3B8',
-					opacity: 0.4,
+					fill: ga.priceLevelId ? '#FFFFFF' : '#94A3B8',
+					opacity: ga.priceLevelId ? 1 : 0.4,
 					width: gw,
 					height: gh,
 					align: 'center',
 					verticalAlign: 'middle',
-					padding: 10
+					padding: 10,
+					shadowColor: ga.priceLevelId ? '#000000' : 'transparent',
+					shadowBlur: ga.priceLevelId ? 4 : 0,
+					shadowOpacity: 0.3
 				})
 			);
-			g.on('click tap', (e: any) => {
-				e.cancelBubble = true;
+			g.on('mousedown touchstart', (e: any) => {
+				if (e.evt.button !== 2 && e.evt.which !== 3) return; // Only allow right click to select
+				e.cancelBubble = true; // Prevent stage mousedown (which starts selection sweep)
 				selectedGaSectionId = ga.id;
 				selectedRsSectionId = '';
 				selectedObjectId = null;
@@ -2206,20 +2285,16 @@
 						let isFiltered = false;
 						if (onlyAvailable && seat.status !== 'AVAILABLE') isFiltered = true;
 						const isSeatSel = selectedSeatIds.includes(seat.id);
-						let color = secColor;
+						let color = '#CBD5E1'; // Default unassigned
 						if (activeMode === 'inventory') {
 							color = seat.status === 'AVAILABLE' ? '#10B981' : '#EF4444';
 						} else if (seat.status === 'UNAVAILABLE') {
 							color = '#E2E8F0';
 						} else {
-							const secObj = seat.sectionId ? sections.find((s) => s.id === seat.sectionId) : null;
-							if (secObj?.color) color = secObj.color;
-							else {
-								const pl = seat.priceLevelId
-									? priceLevels.find((p) => p.id === seat.priceLevelId)
-									: null;
-								if (pl?.color) color = pl.color;
-							}
+							const pl = seat.priceLevelId
+								? priceLevels.find((p) => p.id === seat.priceLevelId)
+								: null;
+							if (pl?.color) color = pl.color;
 						}
 						const sg = new Konva.Group({
 							x: sx - boxX,
@@ -2282,6 +2357,12 @@
 			}
 			layer.add(ag);
 		});
+
+		if (selectedGaSectionId) {
+			const node = layer.findOne('#' + selectedGaSectionId);
+			if (node) node.moveToTop();
+		}
+
 		layer.batchDraw();
 	}
 
@@ -2351,8 +2432,6 @@
 			}
 			if (activeTool !== 'select') return;
 			if (!isRight) return;
-			const isShape = t?.className === 'Line' || t?.className === 'Rect' || t?.className === 'Text';
-			if (isShape) return;
 			brushActive = false;
 			const pos = stage.getPointerPosition();
 			if (!pos) return;
@@ -2585,17 +2664,27 @@
 	}
 
 	function assignPriceLevelToSelected(plId: string) {
-		if (!selectedSeatIds.length) return;
-		rsSections.forEach((section) =>
-			(section.rows || []).forEach((row: any) =>
-				(row.seats || []).forEach((seat: any) => {
-					if (selectedSeatIds.includes(seat.id)) seat.priceLevelId = plId;
-				})
-			)
-		);
-		rsSections = [...rsSections];
+		if (!selectedSeatIds.length && !selectedGaSectionId) return;
+		if (selectedSeatIds.length > 0) {
+			rsSections.forEach((section) =>
+				(section.rows || []).forEach((row: any) =>
+					(row.seats || []).forEach((seat: any) => {
+						if (selectedSeatIds.includes(seat.id)) seat.priceLevelId = plId;
+					})
+				)
+			);
+			rsSections = [...rsSections];
+		}
+		if (selectedGaSectionId) {
+			const ga = gaSections.find(g => g.id === selectedGaSectionId);
+			if (ga) {
+				ga.priceLevelId = plId;
+				gaSections = [...gaSections];
+			}
+		}
 		saveMessage = `Assigned ${plId}!`;
 		selectedSeatIds = [];
+		selectedGaSectionId = '';
 		drawSeatingMap();
 	}
 
@@ -2828,9 +2917,10 @@
 
 	<div class="relative flex min-h-0 flex-1">
 		<!-- ── Left Sidebar: Price Levels ── -->
-		<aside class="flex w-[280px] shrink-0 flex-col border-r border-slate-200 bg-white">
-			<div class="flex items-center justify-between border-b border-slate-200 px-4 py-2.5">
-				<h3 class="text-[10px] font-black tracking-widest text-slate-400 uppercase">
+		<aside class="flex w-[280px] shrink-0 flex-col border-r border-[#E2E8F0] bg-white shadow-sm z-10">
+			<!-- Header -->
+			<div class="flex items-center justify-between border-b border-[#F1F5F9] px-4 py-3 bg-white">
+				<h3 class="text-[13px] font-bold text-[#334155] uppercase tracking-wide">
 					Price Levels
 				</h3>
 				<button
@@ -2840,51 +2930,71 @@
 							description: 'New Level',
 							color: getNextPriceLevelColor()
 						})}
-					class="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+					class="flex items-center justify-center h-4 w-4 rounded-full border border-[#3B82F6] text-[#3B82F6] hover:bg-blue-50 transition"
 				>
-					<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-						><path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2.5"
-							d="M12 4v16m8-8H4"
-						/></svg
+					<svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"
+						><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m-8-8h16" /></svg
 					>
 				</button>
 			</div>
-			<div class="flex-1 space-y-px overflow-y-auto px-3 py-2">
-				<div class="flex items-center gap-2 rounded-lg px-2.5 py-2 text-[11px]">
-					<span
-						class="flex h-3 w-3 shrink-0 items-center justify-center rounded-full border-2 border-slate-300 bg-white"
-					></span>
-					<span class="flex-1 font-semibold text-slate-500">Unassigned</span>
-					<span class="font-bold text-slate-400">{seatCountsByPriceLevel.unassigned}</span>
+			
+			<div class="flex-1 overflow-y-auto">
+				<!-- Unassigned Row -->
+				<div class="flex items-center justify-between px-4 py-[14px] border-b border-[#F1F5F9] bg-white">
+					<div class="flex items-center gap-3">
+						<span class="h-[14px] w-[14px] shrink-0 rounded-full bg-[#E2E8F0]"></span>
+						<span class="text-[14px] font-medium text-[#64748B]">Unassigned</span>
+					</div>
+					<span class="text-[14px] font-semibold text-[#475569]">{seatCountsByPriceLevel.unassigned}</span>
 				</div>
+
+				<!-- Price Level Rows -->
 				{#each priceLevels as pl}
 					{@const count = seatCountsByPriceLevel.counts[pl.id] || 0}
 					{@const price = priceLevelBasePrices[pl.id] || 0}
 					{@const revenue = count * price}
+					{@const isActive = brushPriceLevelId === pl.id}
 					<div
-						class="flex items-center gap-2 rounded-lg px-2.5 py-2 text-[11px] transition-colors hover:bg-slate-50 {brushPriceLevelId ===
-						pl.id
-							? 'ring-2 ring-slate-300 ring-inset'
-							: ''}"
+						class="flex flex-col gap-2.5 px-4 py-3 bg-white cursor-pointer transition-colors border-b {isActive ? 'border-[#2563EB] border-b-2 -mb-[1px] relative z-10' : 'border-[#F1F5F9] hover:bg-slate-50'}"
 						onclick={() => {
+							if (selectedSeatIds.length > 0 || selectedGaSectionId) {
+								assignPriceLevelToSelected(pl.id);
+							}
 							brushPriceLevelId = pl.id;
-							activeTool = 'brush';
+							// activeTool = 'brush'; // Brush tool completely removed
+						}}
+						ondragover={(e) => {
+							e.preventDefault();
+							if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+						}}
+						ondrop={(e) => {
+							e.preventDefault();
+							if (e.dataTransfer?.getData('text/plain') === 'selected_seats') {
+								assignPriceLevelToSelected(pl.id);
+							}
 						}}
 						role="button"
+						tabindex="0"
 					>
-						<span
-							class="h-3 w-3 shrink-0 rounded-full border border-white/50"
-							style="background:{pl.color}"
-						></span>
-						<div class="flex flex-1 flex-col gap-0.5">
-							<span class="font-bold text-slate-800">{pl.description || pl.id}</span>
-							<div class="flex items-center gap-1 text-[10px] text-slate-400">
-								<span class="font-semibold">{count.toLocaleString()}</span>
-								<span class="text-slate-300">·</span>
-								<span>$</span>
+						<div class="flex items-center justify-between">
+							<div class="flex items-center gap-3">
+								<span
+									class="h-[14px] w-[14px] shrink-0 rounded-full {isActive ? 'ring-2 ring-[#2563EB] ring-offset-2' : ''}"
+									style="background-color: {pl.color}"
+								></span>
+								<input
+									type="text"
+									value={pl.description || pl.id}
+									oninput={(e) => pl.description = e.currentTarget.value}
+									class="text-[14px] font-medium text-[#475569] bg-transparent outline-none w-[150px] border border-transparent hover:border-slate-200 focus:border-[#3B82F6] rounded px-1.5 py-0.5 -ml-1.5 transition-colors"
+								/>
+							</div>
+							<span class="text-[14px] font-medium text-[#475569] ml-2 shrink-0">{count.toLocaleString()}</span>
+						</div>
+						
+						<div class="flex items-center justify-between">
+							<div class="flex items-center gap-3">
+								<span class="text-[11px] font-bold text-[#94A3B8] uppercase">BASE</span>
 								<input
 									type="number"
 									step="0.01"
@@ -2896,48 +3006,51 @@
 											[pl.id]: Number((e.target as HTMLInputElement).value) || 0
 										};
 									}}
-									class="w-14 border-b border-transparent bg-transparent px-0.5 text-[10px] font-semibold text-slate-500 outline-none hover:border-slate-300 focus:border-slate-400"
+									class="w-[80px] rounded border border-[#CBD5E1] bg-white px-2 py-0.5 text-[13px] text-[#334155] outline-none hover:border-[#94A3B8] focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
 								/>
 							</div>
-						</div>
-						<div class="text-right">
-							<div class="font-bold text-slate-800">${revenue.toLocaleString()}</div>
-							<div class="text-[9px] text-slate-400">revenue</div>
+							<span class="text-[14px] font-medium text-[#64748B]">${revenue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
 						</div>
 					</div>
 				{/each}
 			</div>
-			<div class="border-t border-slate-200 bg-slate-50/50 px-4 py-3">
-				<h4 class="mb-2 text-[9px] font-black tracking-widest text-slate-400 uppercase">
-					Financial Information
-				</h4>
-				<div class="space-y-1.5 text-[11px]">
-					<div class="flex items-center justify-between">
-						<span class="font-medium text-slate-500">Sellable Capacity</span>
-						<span class="font-bold text-slate-800"
-							>{financialInfo.sellableCapacity.toLocaleString()}</span
-						>
+
+			<!-- Toggle -->
+			<div class="border-t border-[#F1F5F9] bg-white px-4 py-4">
+				<label class="flex cursor-pointer items-center justify-between text-[14px] font-medium text-[#64748B]">
+					Exclude kills from seats counts
+					<div class="relative">
+						<input type="checkbox" class="sr-only peer" checked>
+						<div class="w-10 h-6 bg-[#94A3B8] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-4 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#94A3B8]"></div>
 					</div>
-					<div class="flex items-center justify-between">
-						<span class="font-medium text-slate-500">Average per seat</span>
-						<span class="font-bold text-slate-800">${financialInfo.averagePerSeat.toFixed(2)}</span>
+				</label>
+			</div>
+
+			<!-- Financial Info -->
+			<div class="border-t border-[#F1F5F9] bg-white px-4 py-4">
+				<div class="mb-4 flex items-center justify-between">
+					<h4 class="text-[12px] font-bold text-[#64748B] uppercase tracking-wide">
+						FINANCIAL INFORMATION
+					</h4>
+					<button class="text-[11px] font-bold text-[#2563EB] hover:text-blue-800 uppercase">HIDE</button>
+				</div>
+				<div class="grid grid-cols-3 gap-2">
+					<div class="flex flex-col gap-1">
+						<span class="text-[11px] font-bold text-slate-400">Sellable<br />Capacity</span>
+						<span class="text-[13px] font-bold text-slate-700">{financialInfo.sellableCapacity}</span>
 					</div>
-					<div class="flex items-center justify-between">
-						<span class="font-medium text-slate-500">Potential Revenue</span>
-						<span class="font-bold text-emerald-700"
-							>${financialInfo.potentialRevenue.toLocaleString(undefined, {
-								minimumFractionDigits: 2,
-								maximumFractionDigits: 2
-							})}</span
-						>
+					<div class="flex flex-col gap-1">
+						<span class="text-[11px] font-bold text-slate-400">Average<br />per seat</span>
+						<span class="text-[13px] font-bold text-slate-700">${financialInfo.averagePerSeat.toFixed(2)}</span>
+					</div>
+					<div class="flex flex-col gap-1 text-right">
+						<span class="text-[11px] font-bold text-slate-400">Potential<br />Revenue</span>
+						<span class="text-[13px] font-bold text-slate-700 truncate" title="${financialInfo.potentialRevenue.toLocaleString(undefined, {minimumFractionDigits: 2})}">${financialInfo.potentialRevenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
 					</div>
 				</div>
-				<label
-					class="mt-2 flex cursor-pointer items-center gap-1.5 text-[10px] text-slate-400 hover:text-slate-600"
-				>
-					<input type="checkbox" class="h-3 w-3 rounded border-slate-300" checked />
-					Exclude kills from seat counts
-				</label>
+				<div class="mt-4 text-[12px] font-medium text-[#94A3B8]">
+					0 kills and all unassigned seats are excluded.
+				</div>
 			</div>
 		</aside>
 
@@ -3132,52 +3245,59 @@
 				</div>
 			</div>
 
-			{#if selectedSeatIds.length > 0}
-				<div
-					class="absolute top-3 left-3 z-30 flex items-center gap-3 rounded-xl border border-slate-200 bg-white/95 px-4 py-2.5 shadow-lg backdrop-blur-md"
+			{#if selectedSeatIds.length > 0 || selectedGaSectionId}
+				{@const totalSelectedCount = selectedSeatIds.length + (selectedGaSectionId ? Number(gaSections.find(g => g.id === selectedGaSectionId)?.capacity || 0) : 0)}
+				<div 
+					class="absolute top-3 left-3 z-30 min-w-48 rounded-xl bg-white shadow-xl cursor-grab active:cursor-grabbing"
+					draggable="true"
+					ondragstart={(e) => {
+						if (e.dataTransfer) {
+							e.dataTransfer.setData('text/plain', 'selected_seats');
+							e.dataTransfer.effectAllowed = 'copyMove';
+						}
+					}}
 				>
-					<div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100">
-						<svg class="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-							><path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"
-							/></svg
+					<!-- Header -->
+					<div class="flex items-center gap-4 border-b border-slate-100 p-3 px-4">
+						<div
+							class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white shadow-[inset_0_-2px_4px_rgba(0,0,0,0.2)]"
 						>
-					</div>
-					<span class="text-xs font-bold text-slate-800"
-						>{selectedSeatIds.length} seats selected</span
-					>
-					<div class="flex gap-1">
-						<button
-							onclick={() => setInventoryStatus('AVAILABLE')}
-							class="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700 transition hover:bg-emerald-100"
-							>Mark Available</button
-						>
-						<button
-							onclick={() => setInventoryStatus('UNAVAILABLE')}
-							class="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-700 transition hover:bg-rose-100"
-							>Mark Unavailable</button
-						>
-					</div>
-					<div class="flex gap-1">
-						{#each priceLevels as pl}
+							<IconArmchair class="h-6 w-6" />
+						</div>
+						<div class="flex flex-1 items-center justify-between gap-4">
+							<span class="text-xl font-semibold text-slate-600">{totalSelectedCount}</span>
 							<button
-								onclick={() => assignPriceLevelToSelected(pl.id)}
-								class="rounded-lg px-2 py-1 text-[10px] font-bold text-white transition"
-								style="background:{pl.color}">{pl.id}</button
+								class="text-sm font-medium text-blue-600 hover:text-blue-800"
+								onclick={() => {
+									selectedSeatIds = [];
+									selectedGaSectionId = '';
+									drawSeatingMap();
+								}}
 							>
-						{/each}
+								Clear
+							</button>
+						</div>
 					</div>
-					<button
-						onclick={() => {
-							selectedSeatIds = [];
-							drawSeatingMap();
-						}}
-						class="ml-2 rounded-lg border border-slate-200 px-3 py-1.5 text-[10px] font-bold text-slate-600 transition hover:bg-slate-50 hover:text-slate-800"
-						>Clear</button
-					>
+
+					<!-- Details -->
+					{#if selectedSeatsSummary.length > 0}
+						<div class="flex flex-col gap-3 p-3 px-4 pt-3">
+							{#each selectedSeatsSummary as summary}
+								<div class="flex items-center justify-between">
+									<div class="flex items-center gap-2">
+										<div
+											class="flex h-4 w-4 items-center justify-center rounded-full text-white"
+											style="background-color: {summary.color};"
+										>
+											<IconChevronRight class="h-3 w-3" stroke-width="3" />
+										</div>
+										<span class="text-sm font-medium text-slate-400">{summary.name}</span>
+									</div>
+									<span class="text-sm font-bold text-slate-400">{summary.count}</span>
+								</div>
+							{/each}
+						</div>
+					{/if}
 				</div>
 			{/if}
 
