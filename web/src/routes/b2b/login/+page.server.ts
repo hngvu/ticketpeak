@@ -4,8 +4,11 @@ import type { PageServerLoad, Actions } from './$types';
 import { apiFetch } from '$lib/server/api';
 
 export const load: PageServerLoad = async ({ locals }) => {
-	// If already logged in as organizer, redirect to B2B dashboard
-	if (locals.user && locals.user.roles.includes('ORGANIZER')) {
+	// If already logged in as organizer or venue manager, redirect to B2B dashboard
+	if (
+		locals.user &&
+		locals.user.roles.some((r: string) => ['ORGANIZER', 'VENUE_MANAGER'].includes(r))
+	) {
 		throw redirect(303, '/b2b/dashboard');
 	}
 	return {};

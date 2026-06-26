@@ -93,7 +93,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		if (user) {
 			if (user.roles.includes('ADMIN')) {
 				throw redirect(303, '/ops/dashboard');
-			} else if (user.roles.includes('ORGANIZER')) {
+			} else if (user.roles.some((r: string) => ['ORGANIZER', 'VENUE_MANAGER'].includes(r))) {
 				throw redirect(303, '/b2b/dashboard');
 			} else {
 				const redirectTo = event.url.searchParams.get('redirect') || '/discover';
@@ -102,9 +102,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	// 2. /b2b/**: require role ORGANIZER except landing and login
+	// 2. /b2b/**: require role ORGANIZER or VENUE_MANAGER except landing and login
 	if (pathname.startsWith('/b2b') && pathname !== '/b2b' && pathname !== '/b2b/login') {
-		if (!user || !user.roles.includes('ORGANIZER')) {
+		if (!user || !user.roles.some((r: string) => ['ORGANIZER', 'VENUE_MANAGER'].includes(r))) {
 			throw redirect(303, '/b2b/login');
 		}
 	}

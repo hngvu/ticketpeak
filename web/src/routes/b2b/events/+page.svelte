@@ -6,11 +6,12 @@
 	import { enhance } from '$app/forms';
 	import EmptyState from '$lib/components/common/EmptyState.svelte';
 	import DateTimePicker from '$lib/components/common/DateTimePicker.svelte';
-	import { IconChevronDown } from '@tabler/icons-svelte';
+	import { IconChevronDown, IconCalendarEvent, IconX } from '@tabler/icons-svelte';
 
 	let { data, form } = $props();
 
 	// Svelte 5 States
+	let activeTab = $state<'individual' | 'groups'>('individual');
 	let isCloneModalOpen = $state(false);
 	let cloneEventId = $state('');
 	let cloneEventTitle = $state('');
@@ -283,8 +284,32 @@
 		</div>
 	{/if}
 
-	<!-- Top Header with Create Button -->
-	<div class="flex items-center justify-end border-b border-slate-200 pb-4">
+	<!-- Top Header with Tabs and Create Button -->
+	<div class="flex items-center justify-between">
+		<!-- Tabs (underline style) -->
+		<div class="flex items-center">
+			<button
+				type="button"
+				onclick={() => (activeTab = 'individual')}
+				class="cursor-pointer border-b-2 px-4 pb-3 text-xs font-semibold transition-all {activeTab ===
+				'individual'
+					? 'border-[#026CDF] text-[#026CDF]'
+					: 'border-transparent text-slate-400 hover:text-slate-600'}"
+			>
+				Individual
+			</button>
+			<button
+				type="button"
+				onclick={() => (activeTab = 'groups')}
+				class="cursor-pointer border-b-2 px-4 pb-3 text-xs font-semibold transition-all {activeTab ===
+				'groups'
+					? 'border-[#026CDF] text-[#026CDF]'
+					: 'border-transparent text-slate-400 hover:text-slate-600'}"
+			>
+				Groups
+			</button>
+		</div>
+		<!-- Create Button -->
 		<button
 			type="button"
 			onclick={() => (isCreateModalOpen = true)}
@@ -297,26 +322,16 @@
 	<!-- EVENTS LIST -->
 	<div>
 		<div class="space-y-6">
-			<!-- TAB PANEL: INDIVIDUAL EVENTS -->
-			<div class="space-y-6">
-				<!-- Search & Filters Row -->
-				<div
-					class="grid grid-cols-1 gap-4 border-b border-slate-100 pb-4 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end xl:flex-nowrap"
-				>
-					<!-- Search Input -->
-					<div class="space-y-1.5 sm:col-span-2 lg:min-w-[280px] lg:flex-1">
-						<label for="search-input" class="block text-xs font-semibold text-slate-500"
-							>Search</label
-						>
-						<div class="relative">
-							<input
-								id="search-input"
-								type="text"
-								placeholder="Search by event, attraction, venue and/or event ID"
-								bind:value={searchQuery}
-								class="w-full rounded-sm border border-slate-200 bg-white py-2 pr-4 pl-9 text-xs text-slate-800 focus:border-blue-500 focus:outline-none"
-							/>
-							<div class="absolute top-2.5 left-3 text-slate-400">
+			{#if activeTab === 'individual'}
+				<!-- TAB PANEL: INDIVIDUAL EVENTS -->
+				<div class="space-y-6">
+					<!-- Search & Filters Row (TM style) -->
+					<div class="flex items-center gap-3 py-3">
+						<!-- Search Input (takes most of the width) -->
+						<div class="relative w-[60%] flex-none">
+							<div
+								class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400"
+							>
 								<svg
 									class="h-4 w-4"
 									fill="none"
@@ -331,312 +346,308 @@
 									/>
 								</svg>
 							</div>
-						</div>
-					</div>
-
-					<!-- Date Filter Select -->
-					<div class="space-y-1.5 lg:w-44">
-						<label for="date-filter" class="block text-xs font-semibold text-slate-500">Date</label>
-						<select
-							id="date-filter"
-							bind:value={filterDateRange}
-							class="text-slate-705 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 text-xs font-semibold focus:border-blue-500 focus:outline-none"
-						>
-							<option value="all">Upcoming Events</option>
-							<option value="today">Today</option>
-							<option value="this-week">Next 7 Days</option>
-							<option value="this-month">Next 30 Days</option>
-							<option value="custom">Custom Date...</option>
-						</select>
-						{#if filterDateRange === 'custom'}
 							<input
-								type="date"
-								bind:value={customFilterDate}
-								class="mt-1.5 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 focus:border-blue-500 focus:outline-none"
+								id="search-input"
+								type="text"
+								bind:value={searchQuery}
+								placeholder="Search by event, artist, venue or event ID..."
+								class="w-full rounded-md border border-slate-400 bg-white py-2 pr-4 pl-9 text-sm text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none"
 							/>
-						{/if}
-					</div>
-
-					<!-- Venue Filter Select -->
-					<div class="space-y-1.5 lg:w-44">
-						<label for="venue-filter" class="block text-xs font-semibold text-slate-500"
-							>Venue</label
-						>
-						<select
-							id="venue-filter"
-							bind:value={filterVenueId}
-							class="text-slate-705 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 text-xs font-semibold focus:border-blue-500 focus:outline-none"
-						>
-							<option value="all">All Venues</option>
-							{#each data.venues as venue (venue.id)}
-								<option value={venue.id}>{venue.name} ({venue.city})</option>
-							{/each}
-						</select>
-					</div>
-
-					<!-- Event Type / Classification Filter Select -->
-					<div class="space-y-1.5 lg:w-44">
-						<label for="type-filter" class="block text-xs font-semibold text-slate-500"
-							>Event Type</label
-						>
-						<select
-							id="type-filter"
-							bind:value={filterClassId}
-							class="text-slate-705 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 text-xs font-semibold focus:border-blue-500 focus:outline-none"
-						>
-							<option value="all">All Types</option>
-							<option value="concert">Concerts</option>
-							{#each data.classifications as cat (cat.id)}
-								{#if cat.id !== 'concert'}
-									<option value={cat.id}>{cat.name}</option>
-								{/if}
-							{/each}
-						</select>
-					</div>
-
-					<!-- View Bookmarks Checkbox (Horizontally inline) -->
-					<div class="flex h-9 items-center gap-2 pb-1 lg:self-end">
-						<input
-							type="checkbox"
-							id="bookmarks-toggle"
-							class="border-slate-350 cursor-pointer rounded-sm text-blue-600 focus:ring-blue-400"
-						/>
-						<label
-							for="bookmarks-toggle"
-							class="cursor-pointer text-xs font-semibold text-slate-500 select-none"
-						>
-							View Bookmarks
-						</label>
-					</div>
-				</div>
-
-				<!-- Secondary bar only for clearing active filters -->
-				{#if searchQuery || filterVenueId !== 'all' || filterClassId !== 'all' || filterDateRange !== 'all'}
-					<div class="flex justify-end pt-1">
-						<button
-							type="button"
-							onclick={() => {
-								searchQuery = '';
-								filterVenueId = 'all';
-								filterClassId = 'all';
-								filterDateRange = 'all';
-								customFilterDate = '';
-							}}
-							class="hover:text-blue-750 cursor-pointer border-0 bg-transparent text-xs font-bold text-blue-600 transition outline-none"
-						>
-							Clear Filters
-						</button>
-					</div>
-				{/if}
-
-				{#if allEvents && allEvents.length > 0}
-					<!-- Select All Row -->
-					<div class="mb-2 flex items-center gap-2 py-1 text-xs font-semibold text-slate-500">
-						<input
-							type="checkbox"
-							class="border-slate-350 cursor-pointer rounded-sm text-blue-600 focus:ring-blue-400"
-						/>
-						<span>Select all ({filteredEvents.length})</span>
-						<span class="cursor-pointer text-slate-400 hover:text-slate-600" title="Information"
-							>ⓘ</span
-						>
-					</div>
-
-					{#if filteredEvents.length > 0}
-						<!-- Events List Rows divided by thin lines -->
-						<div class="divide-y divide-slate-100 border-t border-slate-100">
-							{#each filteredEvents as event (event.id)}
-								{@const venue = data.venues.find((v: any) => v.id === event.venueId)}
-								<!-- svelte-ignore a11y_click_events_have_key_events -->
-								<!-- svelte-ignore a11y_no_static_element_interactions -->
-								<div
-									onclick={(e) => {
-										if (!(e.target as HTMLElement).closest('button, a, input')) {
-											window.location.href = `/b2b/events/${event.id}`;
-										}
-									}}
-									class="flex cursor-pointer items-center justify-between px-2 py-4 transition-colors hover:bg-slate-50/40"
-								>
-									<div class="flex min-w-0 flex-1 items-center gap-4">
-										<!-- Select Checkbox -->
-										<input
-											type="checkbox"
-											class="shrink-0 cursor-pointer rounded-sm border-slate-300 text-blue-600 focus:ring-blue-400"
-										/>
-
-										<!-- Performer Circle/Avatar or placeholder -->
-										<div
-											class="hidden h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 shadow-xs sm:flex"
-										>
-											<!-- Camera icon placeholder inside solid grey circle -->
-											<div
-												class="text-slate-455 flex h-full w-full items-center justify-center bg-slate-100"
-											>
-												<svg
-													class="h-5 w-5"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke="currentColor"
-													stroke-width="1.5"
-												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"
-													/>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"
-													/>
-												</svg>
-											</div>
-										</div>
-
-										<!-- Date display (month abbreviation, day range, and year underneath) -->
-										<div class="w-24 shrink-0 text-xs select-none sm:w-32">
-											<div class="text-xs font-extrabold tracking-wide text-slate-900 uppercase">
-												{formatDateHeader(event.startAt, event.endAt)}
-											</div>
-											<div class="mt-0.5 text-[10px] font-semibold text-slate-400">
-												{getYear(event.startAt)}
-											</div>
-										</div>
-
-										<!-- Event Details (Title & Venue/City details) -->
-										<div class="min-w-0 flex-1">
-											<a
-												href="/b2b/events/{event.id}"
-												class="block truncate text-sm leading-tight font-extrabold text-slate-900 transition-colors hover:text-blue-600"
-											>
-												{event.title}
-											</a>
-											<div class="text-slate-450 mt-0.5 truncate text-xs font-medium">
-												{venue?.name} • {venue?.city}, {venue?.stateCode}
-											</div>
-										</div>
-									</div>
-
-									<!-- Badges and context actions trigger -->
-									<div class="ml-4 flex shrink-0 items-center gap-3">
-										<!-- Contextual Badges exactly matching image -->
-										<span
-											class="bg-purple-650 rounded px-2.5 py-0.5 text-[9px] font-extrabold tracking-wider text-white uppercase select-none"
-										>
-											RUN
-										</span>
-
-										{#if event.status === 'DRAFT'}
-											<span
-												class="rounded bg-slate-200 px-2.5 py-0.5 text-[9px] font-extrabold tracking-wider text-slate-600 uppercase select-none"
-											>
-												DRAFT
-											</span>
-										{:else if event.status === 'PUBLISHED'}
-											<span
-												class="rounded bg-slate-200 px-2.5 py-0.5 text-[9px] font-extrabold tracking-wider text-slate-600 uppercase select-none"
-											>
-												PUBLISHED
-											</span>
-										{:else if event.status === 'SALES_ACTIVE'}
-											<span
-												class="rounded bg-blue-600 px-2.5 py-0.5 text-[9px] font-extrabold tracking-wider text-white uppercase select-none"
-											>
-												VISIBLE
-											</span>
-										{/if}
-
-										<!-- More Vertical Action Dots Menu trigger / Bookmark outline -->
-										<div class="relative flex items-center justify-center">
-											{#if event.status === 'SALES_ACTIVE'}
-												<!-- Blue Bookmark Icon -->
-												<button
-													class="flex cursor-pointer items-center justify-center border-0 bg-transparent p-1.5 text-blue-600 transition outline-none hover:text-blue-800"
-												>
-													<svg
-														class="h-4 w-4"
-														fill="none"
-														viewBox="0 0 24 24"
-														stroke="currentColor"
-														stroke-width="2.5"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-														/>
-													</svg>
-												</button>
-											{:else}
-												<!-- Scanner simulator shortcut -->
-												<a
-													href="/b2b/check-in/{event.id}"
-													class="mr-1.5 inline-flex items-center gap-1 rounded-full border border-purple-200 bg-purple-50 p-1.5 text-xs font-bold text-purple-700 transition hover:bg-purple-100"
-													title="Check-In Scanner"
-												>
-													<svg
-														class="h-3.5 w-3.5"
-														fill="none"
-														viewBox="0 0 24 24"
-														stroke="currentColor"
-														stroke-width="2.5"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"
-														/>
-													</svg>
-												</a>
-
-												<!-- Clone button shortcut -->
-												<button
-													onclick={() => openCloneModal(event.id, event.title)}
-													class="mr-1.5 cursor-pointer rounded-full border border-hairline bg-white p-1.5 text-slate-400 transition outline-none hover:bg-slate-100 hover:text-slate-600"
-													title="Clone event"
-												>
-													<svg
-														class="h-3.5 w-3.5"
-														fill="none"
-														viewBox="0 0 24 24"
-														stroke="currentColor"
-														stroke-width="2"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"
-														/>
-													</svg>
-												</button>
-
-												<a
-													href="/b2b/events/{event.id}"
-													class="cursor-pointer border-0 bg-transparent p-1.5 text-sm font-semibold text-slate-400 transition outline-none select-none hover:text-slate-700"
-													title="View details"
-												>
-													⋮
-												</a>
-											{/if}
-										</div>
-									</div>
-								</div>
-							{/each}
 						</div>
-					{:else}
-						<div class="border-t border-slate-100 py-12 text-center text-xs text-slate-400">
-							No events match your current search or filter options.
+						<!-- Date Filter (pill button style) -->
+						<div class="relative flex items-center">
+							{#if filterDateRange === 'custom'}
+								<div class="flex items-center gap-2">
+									<div class="w-[200px]">
+										<DateTimePicker
+											name="filter-date"
+											placeholder="Select custom date"
+											bind:value={customFilterDate}
+										/>
+									</div>
+									<button
+										type="button"
+										onclick={() => {
+											filterDateRange = 'all';
+											customFilterDate = '';
+										}}
+										class="cursor-pointer text-slate-400 hover:text-slate-700"
+									>
+										<IconX size={16} stroke={2} />
+									</button>
+								</div>
+							{:else}
+								<div
+									class="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-slate-400"
+								>
+									<IconCalendarEvent size={16} stroke={1.8} />
+								</div>
+								<select
+									id="date-filter"
+									bind:value={filterDateRange}
+									class="cursor-pointer appearance-none rounded-md border border-slate-400 bg-white py-2 pr-8 pl-8 text-sm font-medium text-slate-700 focus:border-blue-500 focus:outline-none"
+								>
+									<option value="all">Upcoming Events</option>
+									<option value="today">Today</option>
+									<option value="this-week">Next 7 Days</option>
+									<option value="this-month">Next 30 Days</option>
+									<option value="custom">Custom Date...</option>
+								</select>
+								<div
+									class="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-slate-400"
+								>
+									<svg
+										class="h-3.5 w-3.5"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke="currentColor"
+										stroke-width="2.5"
+									>
+										<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+									</svg>
+								</div>
+							{/if}
+						</div>
+					</div>
+
+					<!-- Secondary bar only for clearing active filters -->
+					{#if searchQuery || filterVenueId !== 'all' || filterClassId !== 'all' || filterDateRange !== 'all'}
+						<div class="flex justify-end pt-1">
+							<button
+								type="button"
+								onclick={() => {
+									searchQuery = '';
+									filterVenueId = 'all';
+									filterClassId = 'all';
+									filterDateRange = 'all';
+									customFilterDate = '';
+								}}
+								class="hover:text-blue-750 cursor-pointer border-0 bg-transparent text-xs font-bold text-blue-600 transition outline-none"
+							>
+								Clear Filters
+							</button>
 						</div>
 					{/if}
-				{:else}
+
+					{#if allEvents && allEvents.length > 0}
+						<!-- Select All Row -->
+						<div class="mb-2 flex items-center gap-2 py-1 text-xs font-semibold text-slate-500">
+							<input
+								type="checkbox"
+								class="border-slate-350 cursor-pointer rounded-sm text-blue-600 focus:ring-blue-400"
+							/>
+							<span>Select all ({filteredEvents.length})</span>
+							<span class="cursor-pointer text-slate-400 hover:text-slate-600" title="Information"
+								>ⓘ</span
+							>
+						</div>
+
+						{#if filteredEvents.length > 0}
+							<!-- Events List Rows divided by thin lines -->
+							<div class="divide-y divide-slate-300 border-t border-slate-300">
+								{#each filteredEvents as event (event.id)}
+									{@const venue = data.venues.find((v: any) => v.id === event.venueId)}
+									<!-- svelte-ignore a11y_click_events_have_key_events -->
+									<!-- svelte-ignore a11y_no_static_element_interactions -->
+									<div
+										onclick={(e) => {
+											if (!(e.target as HTMLElement).closest('button, a, input')) {
+												window.location.href = `/b2b/events/${event.id}`;
+											}
+										}}
+										class="flex cursor-pointer items-center justify-between px-2 py-4 transition-colors hover:bg-slate-50/40"
+									>
+										<div class="flex min-w-0 flex-1 items-center gap-4">
+											<!-- Select Checkbox -->
+											<input
+												type="checkbox"
+												class="shrink-0 cursor-pointer rounded-sm border-slate-300 text-blue-600 focus:ring-blue-400"
+											/>
+
+											<!-- Performer Circle/Avatar or placeholder -->
+											<div
+												class="hidden h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 shadow-xs sm:flex"
+											>
+												<!-- Camera icon placeholder inside solid grey circle -->
+												<div
+													class="text-slate-455 flex h-full w-full items-center justify-center bg-slate-100"
+												>
+													<svg
+														class="h-5 w-5"
+														fill="none"
+														viewBox="0 0 24 24"
+														stroke="currentColor"
+														stroke-width="1.5"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"
+														/>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"
+														/>
+													</svg>
+												</div>
+											</div>
+
+											<!-- Date display (month abbreviation, day range, and year underneath) -->
+											<div class="w-24 shrink-0 text-xs select-none sm:w-32">
+												<div class="text-xs font-extrabold tracking-wide text-slate-900 uppercase">
+													{formatDateHeader(event.startAt, event.endAt)}
+												</div>
+												<div class="mt-0.5 text-[10px] font-semibold text-slate-400">
+													{getYear(event.startAt)}
+												</div>
+											</div>
+
+											<!-- Event Details (Title & Venue/City details) -->
+											<div class="min-w-0 flex-1">
+												<a
+													href="/b2b/events/{event.id}"
+													class="block truncate text-sm leading-tight font-extrabold text-slate-900 transition-colors hover:text-blue-600"
+												>
+													{event.title}
+												</a>
+												<div class="text-slate-450 mt-0.5 truncate text-xs font-medium">
+													{venue?.name} • {venue?.city}, {venue?.stateCode}
+												</div>
+											</div>
+										</div>
+
+										<!-- Badges and context actions trigger -->
+										<div class="ml-4 flex shrink-0 items-center gap-3">
+											<!-- Contextual Badges exactly matching image -->
+											<span
+												class="bg-purple-650 rounded px-2.5 py-0.5 text-[9px] font-extrabold tracking-wider text-white uppercase select-none"
+											>
+												RUN
+											</span>
+
+											{#if event.status === 'DRAFT'}
+												<span
+													class="rounded bg-slate-200 px-2.5 py-0.5 text-[9px] font-extrabold tracking-wider text-slate-600 uppercase select-none"
+												>
+													DRAFT
+												</span>
+											{:else if event.status === 'PUBLISHED'}
+												<span
+													class="rounded bg-slate-200 px-2.5 py-0.5 text-[9px] font-extrabold tracking-wider text-slate-600 uppercase select-none"
+												>
+													PUBLISHED
+												</span>
+											{:else if event.status === 'SALES_ACTIVE'}
+												<span
+													class="rounded bg-blue-600 px-2.5 py-0.5 text-[9px] font-extrabold tracking-wider text-white uppercase select-none"
+												>
+													VISIBLE
+												</span>
+											{/if}
+
+											<!-- More Vertical Action Dots Menu trigger / Bookmark outline -->
+											<div class="relative flex items-center justify-center">
+												{#if event.status === 'SALES_ACTIVE'}
+													<!-- Blue Bookmark Icon -->
+													<button
+														class="flex cursor-pointer items-center justify-center border-0 bg-transparent p-1.5 text-blue-600 transition outline-none hover:text-blue-800"
+													>
+														<svg
+															class="h-4 w-4"
+															fill="none"
+															viewBox="0 0 24 24"
+															stroke="currentColor"
+															stroke-width="2.5"
+														>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+															/>
+														</svg>
+													</button>
+												{:else}
+													<!-- Scanner simulator shortcut -->
+													<a
+														href="/b2b/check-in/{event.id}"
+														class="mr-1.5 inline-flex items-center gap-1 rounded-full border border-purple-200 bg-purple-50 p-1.5 text-xs font-bold text-purple-700 transition hover:bg-purple-100"
+														title="Check-In Scanner"
+													>
+														<svg
+															class="h-3.5 w-3.5"
+															fill="none"
+															viewBox="0 0 24 24"
+															stroke="currentColor"
+															stroke-width="2.5"
+														>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"
+															/>
+														</svg>
+													</a>
+
+													<!-- Clone button shortcut -->
+													<button
+														onclick={() => openCloneModal(event.id, event.title)}
+														class="mr-1.5 cursor-pointer rounded-full border border-hairline bg-white p-1.5 text-slate-400 transition outline-none hover:bg-slate-100 hover:text-slate-600"
+														title="Clone event"
+													>
+														<svg
+															class="h-3.5 w-3.5"
+															fill="none"
+															viewBox="0 0 24 24"
+															stroke="currentColor"
+															stroke-width="2"
+														>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"
+															/>
+														</svg>
+													</button>
+
+													<a
+														href="/b2b/events/{event.id}"
+														class="cursor-pointer border-0 bg-transparent p-1.5 text-sm font-semibold text-slate-400 transition outline-none select-none hover:text-slate-700"
+														title="View details"
+													>
+														⋮
+													</a>
+												{/if}
+											</div>
+										</div>
+									</div>
+								{/each}
+							</div>
+						{:else}
+							<div class="border-t border-slate-200 py-12 text-center text-xs text-slate-400">
+								No events match your current search or filter options.
+							</div>
+						{/if}
+					{:else}
+						<EmptyState
+							title="No Events Found"
+							message="This organization hasn't created any events yet. Open the Create button above to configure."
+							actionHref="#"
+							actionText=""
+						/>
+					{/if}
+				</div>
+			{:else}
+				<!-- TAB PANEL: GROUPS -->
+				<div class="space-y-6 pt-4">
 					<EmptyState
-						title="No Events Found"
-						message="This organization hasn't created any events yet. Open the Create button above to configure."
+						title="No Group Events"
+						message="Group events and season passes feature is coming soon."
 						actionHref="#"
 						actionText=""
 					/>
-				{/if}
-			</div>
+				</div>
+			{/if}
 		</div>
 	</div>
 </div>
@@ -762,7 +773,7 @@
 			class="no-scrollbar max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-8 shadow-2xl"
 			role="dialog"
 		>
-			<div class="mb-6 flex items-center justify-between border-b border-slate-100 pb-4">
+			<div class="mb-6 flex items-center justify-between border-b border-slate-200 pb-4">
 				<div>
 					<h3 class="text-lg font-bold text-slate-900">Create New Event</h3>
 					<p class="mt-0.5 text-xs font-normal text-slate-400">
@@ -1048,7 +1059,7 @@
 				</div>
 
 				<!-- Field 6: URL Slug Preview (Minimalist clean text label at the bottom) -->
-				<div class="mt-4 border-t border-slate-100 pt-4">
+				<div class="mt-4 border-t border-slate-200 pt-4">
 					<span class="mb-1 block text-[10px] font-bold tracking-wider text-slate-400 uppercase">
 						Event URL Slug
 					</span>
@@ -1067,7 +1078,7 @@
 				</div>
 
 				<!-- Action Buttons (Bottom Right Align) -->
-				<div class="flex items-center justify-end gap-3 border-t border-slate-100 pt-5">
+				<div class="flex items-center justify-end gap-3 border-t border-slate-200 pt-5">
 					<button
 						type="button"
 						onclick={() => (isCreateModalOpen = false)}

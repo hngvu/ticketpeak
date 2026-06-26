@@ -18,9 +18,9 @@
 		IconChartBar,
 		IconCalendarEvent,
 		IconDots,
-		IconSparkles,
 		IconArrowLeft,
-		IconHelpCircle
+		IconHelpCircle,
+		IconMapPin
 	} from '@tabler/icons-svelte';
 
 	let { data, children }: { data: any; children: Snippet } = $props();
@@ -39,130 +39,89 @@
 
 	const isLoginPageOrLanding = $derived(page.url.pathname === '/b2b/login');
 
-	const categories = $derived([
-		{
-			id: 'events',
-			label: 'EVENTS',
-			subtitle: 'Quản lý Sự kiện',
-			icon: IconCalendarEvent,
-			items: [
-				{
-					label: 'Event Management',
-					href: `/b2b/events?organizationId=${data.selectedOrgId || ''}`,
-					active: page.url.pathname.startsWith('/b2b/events')
-				},
-				{
-					label: 'Platinum Tool',
-					href: '#',
-					active: false
-				},
-				{
-					label: 'Publish',
-					href: '#',
-					active: false
-				},
-				{
-					label: 'Scaling',
-					href: '#',
-					active: false
-				}
-			]
-		},
-		{
-			id: 'reports',
-			label: 'REPORTS',
-			subtitle: 'Kiểm toán & Đối soát',
-			icon: IconChartBar,
-			items: [
-				{
-					label: 'Overview',
-					href: `/b2b/reports?tab=overview&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/reports') &&
-						(page.url.searchParams.get('tab') === 'overview' || !page.url.searchParams.get('tab'))
-				},
-				{
-					label: 'Sales Report',
-					href: `/b2b/reports?tab=sales-report&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/reports') &&
-						page.url.searchParams.get('tab') === 'sales-report'
-				},
-				{
-					label: 'Inventory Status',
-					href: `/b2b/reports?tab=inventory-status&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/reports') &&
-						page.url.searchParams.get('tab') === 'inventory-status'
-				}
-			]
-		},
-		{
-			id: 'marketing',
-			label: 'MARKETING',
-			subtitle: 'Tiếp cận & Tối ưu hóa',
-			icon: IconSpeakerphone,
-			items: [
-				{
-					label: 'Campaigns',
-					href: `/b2b/marketing?tab=campaigns&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/marketing') &&
-						(page.url.searchParams.get('tab') === 'campaigns' || !page.url.searchParams.get('tab'))
-				},
-				{
-					label: 'Audience Segments',
-					href: `/b2b/marketing?tab=segments&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/marketing') &&
-						page.url.searchParams.get('tab') === 'segments'
-				}
-			]
-		},
-		{
-			id: 'sales',
-			label: 'SALES',
-			subtitle: 'Thương mại & Kho vé',
-			icon: IconTicket,
-			isExternal: true,
-			items: [
-				{
-					label: 'Real-time Sales',
-					href: `/b2b/sales?tab=realtime&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/sales') &&
-						page.url.searchParams.get('tab') === 'realtime'
-				},
-				{
-					label: 'Inventory',
-					href: `/b2b/sales?tab=inventory&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/sales') &&
-						page.url.searchParams.get('tab') === 'inventory'
-				},
-				{
-					label: 'Price Management',
-					href: `/b2b/sales?tab=pricing&organizationId=${data.selectedOrgId || ''}`,
-					active:
-						page.url.pathname.startsWith('/b2b/sales') &&
-						page.url.searchParams.get('tab') === 'pricing'
-				}
-			]
-		},
-		{
-			id: 'tools',
-			label: 'TOOLS',
-			subtitle: 'Vận hành & Kiểm soát',
-			icon: IconScan,
-			items: [
-				{
-					label: 'Gate Simulator',
-					href: `/b2b/entry?tab=entrances&organizationId=${data.selectedOrgId || ''}`,
-					active: page.url.pathname.startsWith('/b2b/entry')
-				}
-			]
-		}
-	]);
+	const isVenueManagerOnly = $derived(
+		data.user?.roles.includes('VENUE_MANAGER') && !data.user?.roles.includes('ORGANIZER')
+	);
+
+	const categories = $derived(
+		isVenueManagerOnly
+			? [
+					{
+						id: 'venues',
+						label: 'VENUES',
+						subtitle: 'Quản lý Địa điểm',
+						icon: IconMapPin,
+						href: '/b2b/venues',
+						active: page.url.pathname.startsWith('/b2b/venues'),
+						items: []
+					},
+					{
+						id: 'events',
+						label: 'EVENTS',
+						subtitle: 'Lịch trình Sự kiện',
+						icon: IconCalendarEvent,
+						href: '/b2b/events',
+						active: page.url.pathname.startsWith('/b2b/events'),
+						items: []
+					},
+					{
+						id: 'reports',
+						label: 'REPORTS',
+						subtitle: 'Báo cáo Vận hành',
+						icon: IconChartBar,
+						href: '/b2b/reports',
+						active: page.url.pathname.startsWith('/b2b/reports'),
+						items: []
+					}
+				]
+			: [
+					{
+						id: 'events',
+						label: 'EVENTS',
+						subtitle: 'Quản lý Sự kiện',
+						icon: IconCalendarEvent,
+						href: `/b2b/events?organizationId=${data.selectedOrgId || ''}`,
+						active: page.url.pathname.startsWith('/b2b/events'),
+						items: []
+					},
+					{
+						id: 'reports',
+						label: 'REPORTS',
+						subtitle: 'Kiểm toán & Đối soát',
+						icon: IconChartBar,
+						href: `/b2b/reports?organizationId=${data.selectedOrgId || ''}`,
+						active: page.url.pathname.startsWith('/b2b/reports'),
+						items: []
+					},
+					{
+						id: 'marketing',
+						label: 'MARKETING',
+						subtitle: 'Tiếp cận & Tối ưu hóa',
+						icon: IconSpeakerphone,
+						href: `/b2b/marketing?organizationId=${data.selectedOrgId || ''}`,
+						active: page.url.pathname.startsWith('/b2b/marketing'),
+						items: []
+					},
+					{
+						id: 'sales',
+						label: 'SALES',
+						subtitle: 'Thương mại & Kho vé',
+						icon: IconTicket,
+						href: `/b2b/sales?organizationId=${data.selectedOrgId || ''}`,
+						active: page.url.pathname.startsWith('/b2b/sales'),
+						items: []
+					},
+					{
+						id: 'tools',
+						label: 'TOOLS',
+						subtitle: 'Vận hành & Kiểm soát',
+						icon: IconScan,
+						href: `/b2b/entry?organizationId=${data.selectedOrgId || ''}`,
+						active: page.url.pathname.startsWith('/b2b/entry'),
+						items: []
+					}
+				]
+	);
 
 	const activeOrg = $derived(data.organizations?.find((o: any) => o.id === data.selectedOrgId));
 
@@ -173,7 +132,9 @@
 		window.location.href = url.toString();
 	}
 
-	const activeCategory = $derived(categories.find((cat) => cat.items.some((item) => item.active)));
+	const activeCategory = $derived(
+		categories.find((cat) => cat.active || cat.items.some((item) => item.active))
+	);
 	const activeItem = $derived(activeCategory?.items.find((item) => item.active));
 
 	const breadcrumbParent = $derived(
@@ -249,10 +210,10 @@
 		<div class="flex h-screen w-screen flex-row overflow-hidden bg-slate-50/40">
 			<!-- Sidebar (Full Height) -->
 			<aside
-				class="flex h-full w-64 shrink-0 flex-col justify-between border-r border-slate-200 bg-white"
+				class="flex h-full w-64 shrink-0 flex-col justify-between border-r border-slate-400 bg-white"
 			>
 				<!-- Top Branding Block -->
-				<div class="flex shrink-0 items-center justify-between border-b border-slate-100 p-4">
+				<div class="flex shrink-0 items-center justify-between border-b border-slate-300 p-4">
 					<a href="/b2b/events" class="flex min-w-0 items-center gap-2">
 						<!-- Blue TP Square Logo -->
 						<div
@@ -278,70 +239,95 @@
 						{@const hasActiveItem = cat.items.some((i) => i.active)}
 						<!-- Sidebar Category block (flat style, no borders or background) -->
 						<div class="flex flex-col">
-							<!-- Category Header Toggle Button -->
-							<button
-								type="button"
-								onclick={() => {
-									if (cat.items.length > 0) {
-										openFolders[cat.id] = !openFolders[cat.id];
-									}
-								}}
-								class="flex w-full cursor-pointer items-center justify-between rounded-lg border-0 bg-transparent px-2.5 py-2 text-left transition-all hover:bg-slate-50"
-							>
-								<div class="flex items-center gap-2.5">
-									<!-- Highlight icon in blue with circular bg if active submenu item is present -->
-									<div
-										class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-all duration-200 {hasActiveItem
-											? 'bg-blue-600 text-white shadow-xs'
-											: 'text-slate-400'}"
-									>
-										<CategoryIcon
-											size={hasActiveItem ? 14 : 18}
-											stroke={hasActiveItem ? 2.2 : 1.8}
-										/>
-									</div>
-									<span
-										class="text-[11px] font-bold tracking-wider uppercase transition-colors {hasActiveItem
-											? 'text-slate-900'
-											: 'text-slate-500'}"
-									>
-										{cat.label}
-									</span>
-								</div>
-								{#if cat.items.length > 0}
-									<IconChevronDown
-										size={13}
-										stroke={2.5}
-										class="text-slate-400 transition-transform duration-200 {openFolders[cat.id]
-											? 'rotate-180'
-											: ''}"
-									/>
-								{:else if cat.isExternal}
-									<IconExternalLink size={13} stroke={2} class="text-slate-400" />
-								{/if}
-							</button>
-
-							<!-- Collapsible Submenus List -->
-							{#if openFolders[cat.id] && cat.items.length > 0}
-								<div class="mt-0.5 flex flex-col gap-1 pr-1 pb-1.5 pl-2">
-									{#each cat.items as item (item.label)}
-										<a
-											href={item.href}
-											class="relative flex items-center border-l-[3px] py-1.5 pr-3.5 pl-9 text-xs font-semibold transition-all duration-150 {item.active
-												? 'rounded-r-lg border-blue-600 bg-blue-50/70 text-blue-600'
-												: 'border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800'}"
+							{#if cat.href && cat.items.length === 0}
+								<!-- Flat link without submenu -->
+								<a
+									href={cat.href}
+									class="flex w-full cursor-pointer items-center justify-between rounded-lg border-0 bg-transparent px-2.5 py-2 text-left transition-all hover:bg-slate-50"
+								>
+									<div class="flex items-center gap-2.5">
+										<div
+											class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-all duration-200 {cat.active
+												? 'bg-blue-600 text-white shadow-xs'
+												: 'text-slate-400'}"
 										>
-											<span class="truncate">{item.label}</span>
-										</a>
-									{/each}
-								</div>
+											<CategoryIcon size={cat.active ? 14 : 18} stroke={cat.active ? 2.2 : 1.8} />
+										</div>
+										<span
+											class="text-[11px] font-bold tracking-wider uppercase transition-colors {cat.active
+												? 'text-slate-900'
+												: 'text-slate-500'}"
+										>
+											{cat.label}
+										</span>
+									</div>
+								</a>
+							{:else}
+								<!-- Category Header Toggle Button -->
+								<button
+									type="button"
+									onclick={() => {
+										if (cat.items.length > 0) {
+											openFolders[cat.id] = !openFolders[cat.id];
+										}
+									}}
+									class="flex w-full cursor-pointer items-center justify-between rounded-lg border-0 bg-transparent px-2.5 py-2 text-left transition-all hover:bg-slate-50"
+								>
+									<div class="flex items-center gap-2.5">
+										<!-- Highlight icon in blue with circular bg if active submenu item is present -->
+										<div
+											class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-all duration-200 {hasActiveItem
+												? 'bg-blue-600 text-white shadow-xs'
+												: 'text-slate-400'}"
+										>
+											<CategoryIcon
+												size={hasActiveItem ? 14 : 18}
+												stroke={hasActiveItem ? 2.2 : 1.8}
+											/>
+										</div>
+										<span
+											class="text-[11px] font-bold tracking-wider uppercase transition-colors {hasActiveItem
+												? 'text-slate-900'
+												: 'text-slate-500'}"
+										>
+											{cat.label}
+										</span>
+									</div>
+									{#if cat.items.length > 0}
+										<IconChevronDown
+											size={13}
+											stroke={2.5}
+											class="text-slate-400 transition-transform duration-200 {openFolders[cat.id]
+												? 'rotate-180'
+												: ''}"
+										/>
+									{:else if cat.isExternal}
+										<IconExternalLink size={13} stroke={2} class="text-slate-400" />
+									{/if}
+								</button>
+
+								<!-- Collapsible Submenus List -->
+								{#if openFolders[cat.id] && cat.items.length > 0}
+									<div class="mt-0.5 flex flex-col gap-1 pr-1 pb-1.5 pl-2">
+										{#each cat.items as item (item.label)}
+											<a
+												href={item.href}
+												class="relative flex items-center border-l-[3px] py-1.5 pr-3.5 pl-9 text-xs font-semibold transition-all duration-150 {item.active
+													? 'rounded-r-lg border-blue-600 bg-blue-50/70 text-blue-600'
+													: 'border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800'}"
+											>
+												<span class="truncate">{item.label}</span>
+											</a>
+										{/each}
+									</div>
+								{/if}
 							{/if}
 						</div>
 					{/each}
 				</div>
 
 				<!-- Bottom Actions and Profile Block -->
-				<div class="shrink-0 space-y-1 border-t border-slate-100 bg-white p-3.5">
+				<div class="shrink-0 space-y-1 border-t border-slate-300 bg-white p-3.5">
 					<!-- Organization Switcher -->
 					{#if data.organizations && data.organizations.length > 1}
 						<div class="relative mb-2">
@@ -505,7 +491,7 @@
 			<div class="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
 				<!-- B2B Top Header (White Theme) -->
 				<header
-					class="z-40 flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-6 text-slate-800"
+					class="z-40 flex h-16 shrink-0 items-center justify-between border-b border-slate-400 bg-white px-6 text-slate-800"
 				>
 					<!-- Left: Breadcrumb / Active Context Path -->
 					<div class="flex items-center gap-2">
@@ -530,7 +516,7 @@
 							<input
 								type="text"
 								placeholder="Search events..."
-								class="w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pr-12 pl-9 text-xs font-medium text-slate-800 placeholder-slate-400 transition-all focus:border-blue-500 focus:bg-white focus:outline-none"
+								class="w-full rounded-lg border border-slate-400 bg-slate-50 py-1.5 pr-12 pl-9 text-xs font-medium text-slate-800 placeholder-slate-400 transition-all focus:border-blue-500 focus:bg-white focus:outline-none"
 							/>
 							<span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
 								<kbd
