@@ -19,6 +19,8 @@
 
 	// Create Event Modal States
 	let isCreateModalOpen = $state(false);
+	let isCreateDropdownOpen = $state(false);
+	let createDropdownEl = $state<HTMLDivElement | null>(null);
 	let title = $state('');
 	let slug = $state('');
 	let isSlugManuallyEdited = $state(false);
@@ -208,20 +210,25 @@
 		}) || []
 	);
 
-	function formatDateHeader(startIso: string, endIso?: string) {
-		if (!startIso) return 'APR 1';
+	function formatDateHeader(startIso: string) {
+		if (!startIso) return '1 Apr';
 		const startDate = new Date(startIso);
-		const startMonth = startDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-		const startDay = startDate.getDate();
+		const month = startDate.toLocaleDateString('en-US', { month: 'short' });
+		const day = startDate.getDate();
+		return `${day} ${month}`;
+	}
 
-		if (endIso) {
-			const endDate = new Date(endIso);
-			const endMonth = endDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-			const endDay = endDate.getDate();
-			return `${startMonth} ${startDay} - ${endMonth} ${endDay}`;
-		}
-
-		return `${startMonth} ${startDay}`;
+	function formatSubtitle(startIso: string, venueName: string) {
+		const v = venueName || 'Capital One Arena';
+		if (!startIso) return `Tue 19:00 • ${v}`;
+		const date = new Date(startIso);
+		const day = date.toLocaleDateString('en-US', { weekday: 'short' });
+		const time = date.toLocaleTimeString('en-US', {
+			hour: '2-digit',
+			minute: '2-digit',
+			hour12: false
+		});
+		return `${day} ${time} • ${v}`;
 	}
 
 	function getYear(isoString: string) {
@@ -235,6 +242,14 @@
 		isCloneModalOpen = true;
 	}
 </script>
+
+<svelte:window
+	onclick={(e) => {
+		if (isCreateDropdownOpen && createDropdownEl && !createDropdownEl.contains(e.target as Node)) {
+			isCreateDropdownOpen = false;
+		}
+	}}
+/>
 
 <svelte:head>
 	<title>Event Management — Ticketpeak for Business</title>
@@ -309,14 +324,71 @@
 				Groups
 			</button>
 		</div>
-		<!-- Create Button -->
-		<button
-			type="button"
-			onclick={() => (isCreateModalOpen = true)}
-			class="flex cursor-pointer items-center justify-center gap-1.5 rounded-none bg-[#026CDF] px-5 py-2.5 text-xs font-bold text-white shadow-none transition hover:bg-blue-700 focus:outline-none"
-		>
-			<span>+ Create Event</span>
-		</button>
+		<!-- Create Button Dropdown -->
+		<div class="relative" bind:this={createDropdownEl}>
+			<button
+				type="button"
+				onclick={() => (isCreateDropdownOpen = !isCreateDropdownOpen)}
+				class="flex cursor-pointer items-center justify-center gap-1.5 rounded-none bg-[#026CDF] px-5 py-2.5 text-xs font-bold text-white shadow-none transition hover:bg-blue-700 focus:outline-none"
+			>
+				<span>Create</span>
+				<IconChevronDown
+					size={14}
+					stroke={2.5}
+					class="transition-transform duration-200 {isCreateDropdownOpen ? 'rotate-180' : ''}"
+				/>
+			</button>
+
+			{#if isCreateDropdownOpen}
+				<div
+					class="absolute top-full right-0 z-50 mt-1 w-48 rounded bg-white shadow-lg ring-1 ring-black/5"
+				>
+					<div class="p-1.5">
+						<button
+							type="button"
+							onclick={() => {
+								isCreateDropdownOpen = false;
+								isCreateModalOpen = true;
+							}}
+							class="flex w-full cursor-pointer items-center gap-3 rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+						>
+							<div
+								class="flex h-8 w-8 items-center justify-center rounded bg-slate-100 text-slate-500"
+							>
+								<IconCalendarEvent size={18} stroke={1.5} />
+							</div>
+							<span class="text-[13px] font-medium">Event</span>
+						</button>
+						<button
+							type="button"
+							onclick={() => {
+								isCreateDropdownOpen = false;
+							}}
+							class="flex w-full cursor-pointer items-center gap-3 rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+						>
+							<div
+								class="flex h-8 w-8 items-center justify-center rounded bg-slate-100 text-slate-500"
+							>
+								<svg
+									class="h-[18px] w-[18px]"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+									stroke-width="1.5"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+									/>
+								</svg>
+							</div>
+							<span class="text-[13px] font-medium">Event Group</span>
+						</button>
+					</div>
+				</div>
+			{/if}
+		</div>
 	</div>
 
 	<!-- EVENTS LIST -->
@@ -464,55 +536,41 @@
 												class="shrink-0 cursor-pointer rounded-sm border-slate-300 text-blue-600 focus:ring-blue-400"
 											/>
 
-											<!-- Performer Circle/Avatar or placeholder -->
+											<!-- Thumbnail -->
 											<div
-												class="hidden h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 shadow-xs sm:flex"
+												class="hidden h-[54px] w-[96px] shrink-0 items-center justify-center overflow-hidden rounded border border-slate-200 bg-slate-100 sm:flex"
 											>
-												<!-- Camera icon placeholder inside solid grey circle -->
-												<div
-													class="text-slate-455 flex h-full w-full items-center justify-center bg-slate-100"
-												>
-													<svg
-														class="h-5 w-5"
-														fill="none"
-														viewBox="0 0 24 24"
-														stroke="currentColor"
-														stroke-width="1.5"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"
-														/>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"
-														/>
-													</svg>
-												</div>
+												{#if event.imageUrl}
+													<img
+														src={event.imageUrl}
+														alt={event.title}
+														class="h-full w-full object-cover"
+													/>
+												{:else}
+													<IconCalendarEvent size={24} stroke={1.5} class="text-slate-400" />
+												{/if}
 											</div>
 
-											<!-- Date display (month abbreviation, day range, and year underneath) -->
-											<div class="w-24 shrink-0 text-xs select-none sm:w-32">
-												<div class="text-xs font-extrabold tracking-wide text-slate-900 uppercase">
-													{formatDateHeader(event.startAt, event.endAt)}
+											<!-- Date display -->
+											<div class="w-20 shrink-0 select-none">
+												<div class="text-sm font-bold text-[#1e8d9b]">
+													{formatDateHeader(event.startAt)}
 												</div>
-												<div class="mt-0.5 text-[10px] font-semibold text-slate-400">
+												<div class="text-[13px] text-slate-500">
 													{getYear(event.startAt)}
 												</div>
 											</div>
 
-											<!-- Event Details (Title & Venue/City details) -->
+											<!-- Event Details -->
 											<div class="min-w-0 flex-1">
 												<a
 													href="/b2b/events/{event.id}"
-													class="block truncate text-sm leading-tight font-extrabold text-slate-900 transition-colors hover:text-blue-600"
+													class="block truncate text-[15px] font-bold text-slate-900 transition-colors hover:text-blue-600"
 												>
 													{event.title}
 												</a>
-												<div class="text-slate-450 mt-0.5 truncate text-xs font-medium">
-													{venue?.name} • {venue?.city}, {venue?.stateCode}
+												<div class="mt-0.5 truncate text-[13px] text-slate-500">
+													{formatSubtitle(event.startAt, venue?.name)}
 												</div>
 											</div>
 										</div>

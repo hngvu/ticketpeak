@@ -1,16 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import {
-		IconChevronLeft,
-		IconChevronRight,
-		IconCalendarEvent,
-		IconClock
-	} from '@tabler/icons-svelte';
+	import { IconChevronLeft, IconChevronRight, IconCalendarEvent } from '@tabler/icons-svelte';
 
 	let {
 		name,
 		required = false,
-		placeholder = 'Select date & time',
+		placeholder = 'Select date',
 		value = $bindable('')
 	}: {
 		name: string;
@@ -27,20 +22,6 @@
 	const today = new Date();
 	let viewYear = $state(today.getFullYear());
 	let viewMonth = $state(today.getMonth()); // 0-11
-
-	// Time state
-	let hour12 = $state('09');
-	let minute = $state('00');
-	let ampm = $state('AM');
-
-	const hour24 = $derived.by(() => {
-		const h = parseInt(hour12, 10);
-		if (ampm === 'PM') {
-			return h === 12 ? '12' : String(h + 12).padStart(2, '0');
-		} else {
-			return h === 12 ? '00' : String(h).padStart(2, '0');
-		}
-	});
 
 	// Selected Date representation
 	let selectedDate = $state<Date | null>(null);
@@ -62,8 +43,6 @@
 	];
 
 	const daysOfWeek = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-	const hours12 = Array.from({ length: 12 }, (_, i) => i + 1);
-	const minutes = Array.from({ length: 60 }, (_, i) => i);
 
 	// Initialize selected values from input string if provided
 	$effect(() => {
@@ -73,17 +52,6 @@
 				selectedDate = parsed;
 				viewYear = parsed.getFullYear();
 				viewMonth = parsed.getMonth();
-				const h24 = parsed.getHours();
-				minute = String(parsed.getMinutes()).padStart(2, '0');
-				if (h24 >= 12) {
-					ampm = 'PM';
-					const h12 = h24 === 12 ? 12 : h24 - 12;
-					hour12 = String(h12).padStart(2, '0');
-				} else {
-					ampm = 'AM';
-					const h12 = h24 === 0 ? 12 : h24;
-					hour12 = String(h12).padStart(2, '0');
-				}
 			}
 		}
 	});
@@ -144,16 +112,16 @@
 		const d = selectedDate.getDate();
 		const m = months[selectedDate.getMonth()].slice(0, 3);
 		const y = selectedDate.getFullYear();
-		return `${d} ${m} ${y}, ${hour12}:${minute} ${ampm}`;
+		return `${d} ${m} ${y}`;
 	});
 
-	// Update raw bound string value (format: YYYY-MM-DDTHH:mm)
+	// Update raw bound string value (format: YYYY-MM-DD)
 	function updateValue() {
 		if (!selectedDate) return;
 		const y = selectedDate.getFullYear();
 		const m = String(selectedDate.getMonth() + 1).padStart(2, '0');
 		const d = String(selectedDate.getDate()).padStart(2, '0');
-		value = `${y}-${m}-${d}T${hour24}:${minute}`;
+		value = `${y}-${m}-${d}`;
 	}
 
 	function handlePrevMonth() {
@@ -179,13 +147,6 @@
 		updateValue();
 	}
 
-	function handleTimeChange() {
-		if (!selectedDate) {
-			selectedDate = new Date();
-		}
-		updateValue();
-	}
-
 	// Close on click outside
 	onMount(() => {
 		function handleClickOutside(e: MouseEvent) {
@@ -205,14 +166,14 @@
 	<button
 		type="button"
 		onclick={() => (isOpen = !isOpen)}
-		class="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left text-sm font-medium text-slate-800 transition-all hover:border-blue-500 focus:border-blue-500 focus:outline-none"
+		class="flex w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left text-sm font-medium text-slate-800 transition-all hover:border-blue-500 focus:border-blue-500 focus:outline-none"
 	>
+		<IconCalendarEvent size={18} stroke={1.8} class="shrink-0 text-slate-400" />
 		{#if displayValue}
-			<span class="text-slate-800">{displayValue}</span>
+			<span class="truncate text-slate-800">{displayValue}</span>
 		{:else}
-			<span class="text-slate-400">{placeholder}</span>
+			<span class="truncate text-slate-400">{placeholder}</span>
 		{/if}
-		<IconCalendarEvent size={18} stroke={1.8} class="text-slate-400" />
 	</button>
 
 	<!-- Hidden input for standard HTML Form submission integration -->
@@ -279,60 +240,6 @@
 						{cell.day}
 					</button>
 				{/each}
-			</div>
-
-			<!-- Sleek Divider -->
-			<div class="my-4 border-t border-slate-100"></div>
-
-			<!-- Time Selection Block -->
-			<div class="flex items-center justify-between">
-				<div class="flex items-center gap-1.5 text-slate-400">
-					<IconClock size={16} stroke={1.8} />
-					<span class="text-[11px] font-bold tracking-wider text-slate-400 uppercase">Time</span>
-				</div>
-				<div class="flex items-center gap-1">
-					<!-- Hour select -->
-					<select
-						value={hour12}
-						onchange={(e) => {
-							hour12 = (e.target as HTMLSelectElement).value;
-							handleTimeChange();
-						}}
-						class="appearance-none rounded-lg border border-slate-200 bg-slate-50/50 bg-none px-2.5 py-1 text-center text-xs font-semibold text-slate-700 focus:border-blue-500 focus:outline-none"
-					>
-						{#each hours12 as h (h)}
-							{@const formatted = String(h).padStart(2, '0')}
-							<option value={formatted}>{formatted}</option>
-						{/each}
-					</select>
-					<span class="font-bold text-slate-400">:</span>
-					<!-- Minute select -->
-					<select
-						value={minute}
-						onchange={(e) => {
-							minute = (e.target as HTMLSelectElement).value;
-							handleTimeChange();
-						}}
-						class="appearance-none rounded-lg border border-slate-200 bg-slate-50/50 bg-none px-2.5 py-1 text-center text-xs font-semibold text-slate-700 focus:border-blue-500 focus:outline-none"
-					>
-						{#each minutes as m (m)}
-							{@const formatted = String(m).padStart(2, '0')}
-							<option value={formatted}>{formatted}</option>
-						{/each}
-					</select>
-					<!-- AM/PM select -->
-					<select
-						value={ampm}
-						onchange={(e) => {
-							ampm = (e.target as HTMLSelectElement).value;
-							handleTimeChange();
-						}}
-						class="ml-1 appearance-none rounded-lg border border-slate-200 bg-slate-50/50 bg-none px-2.5 py-1 text-center text-xs font-semibold text-slate-700 focus:border-blue-500 focus:outline-none"
-					>
-						<option value="AM">AM</option>
-						<option value="PM">PM</option>
-					</select>
-				</div>
 			</div>
 
 			<!-- Popover Footer Action -->
