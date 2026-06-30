@@ -1708,9 +1708,7 @@
 					<div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100">
 						<IconArmchair class="h-4 w-4 text-blue-600" />
 					</div>
-					<span class="text-xs font-bold text-slate-800"
-						>{selectedSeatIds.length} seats</span
-					>
+					<span class="text-xs font-bold text-slate-800">{selectedSeatIds.length} seats</span>
 					<button
 						draggable="false"
 						onclick={() => {

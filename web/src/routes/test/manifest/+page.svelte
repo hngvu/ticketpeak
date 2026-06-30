@@ -1701,7 +1701,8 @@
 			});
 		});
 		gaSections.forEach((ga) => {
-			if (ga.priceLevelId) counts[ga.priceLevelId] = (counts[ga.priceLevelId] || 0) + Number(ga.capacity || 0);
+			if (ga.priceLevelId)
+				counts[ga.priceLevelId] = (counts[ga.priceLevelId] || 0) + Number(ga.capacity || 0);
 			else unassigned += Number(ga.capacity || 0);
 		});
 		return { counts, unassigned };
@@ -2007,11 +2008,11 @@
 		}
 
 		if (selectedGaSectionId) {
-			const ga = gaSections.find(g => g.id === selectedGaSectionId);
+			const ga = gaSections.find((g) => g.id === selectedGaSectionId);
 			if (ga) {
 				const cap = Number(ga.capacity || 0);
 				if (ga.priceLevelId) {
-					const pl = priceLevels.find(p => p.id === ga.priceLevelId);
+					const pl = priceLevels.find((p) => p.id === ga.priceLevelId);
 					if (pl) {
 						if (!summary.has(pl.id)) {
 							const name = pl.id.replace('PL-', '');
@@ -2149,19 +2150,19 @@
 
 		gaSections.forEach((ga, idx) => {
 			const ud = ga.uiData || {};
-			const bx = ud.x ?? (50 + idx * 220);
+			const bx = ud.x ?? 50 + idx * 220;
 			const by = ud.y ?? 50;
 			const gw = ud.width ?? 200;
 			const gh = ud.height ?? 100;
 			const isSel = selectedGaSectionId === ga.id;
 			const g = new Konva.Group({ x: bx, y: by, draggable: false, id: ga.id });
-			
+
 			let gaColor = '#F8FAFC';
 			let gaStroke = '#CBD5E1';
 			let gaOpacity = 0.4;
-			
+
 			if (ga.priceLevelId) {
-				const pl = priceLevels.find(p => p.id === ga.priceLevelId);
+				const pl = priceLevels.find((p) => p.id === ga.priceLevelId);
 				if (pl) {
 					gaColor = pl.color;
 					gaStroke = pl.color;
@@ -2177,10 +2178,7 @@
 			};
 
 			if (ud.polygon?.length >= 6) {
-				const hull = (ud.polygon as [number, number][]).flatMap(([px, py]) => [
-					px - bx,
-					py - by
-				]);
+				const hull = (ud.polygon as [number, number][]).flatMap(([px, py]) => [px - bx, py - by]);
 				g.add(new Konva.Line({ ...shapeAttrs, points: hull, closed: true }));
 			} else {
 				g.add(new Konva.Rect({ ...shapeAttrs, width: gw, height: gh }));
@@ -2676,7 +2674,7 @@
 			rsSections = [...rsSections];
 		}
 		if (selectedGaSectionId) {
-			const ga = gaSections.find(g => g.id === selectedGaSectionId);
+			const ga = gaSections.find((g) => g.id === selectedGaSectionId);
 			if (ga) {
 				ga.priceLevelId = plId;
 				gaSections = [...gaSections];
@@ -2917,12 +2915,12 @@
 
 	<div class="relative flex min-h-0 flex-1">
 		<!-- ── Left Sidebar: Price Levels ── -->
-		<aside class="flex w-[280px] shrink-0 flex-col border-r border-[#E2E8F0] bg-white shadow-sm z-10">
+		<aside
+			class="z-10 flex w-[280px] shrink-0 flex-col border-r border-[#E2E8F0] bg-white shadow-sm"
+		>
 			<!-- Header -->
-			<div class="flex items-center justify-between border-b border-[#F1F5F9] px-4 py-3 bg-white">
-				<h3 class="text-[13px] font-bold text-[#334155] uppercase tracking-wide">
-					Price Levels
-				</h3>
+			<div class="flex items-center justify-between border-b border-[#F1F5F9] bg-white px-4 py-3">
+				<h3 class="text-[13px] font-bold tracking-wide text-[#334155] uppercase">Price Levels</h3>
 				<button
 					onclick={() =>
 						priceLevels.push({
@@ -2930,22 +2928,31 @@
 							description: 'New Level',
 							color: getNextPriceLevelColor()
 						})}
-					class="flex items-center justify-center h-4 w-4 rounded-full border border-[#3B82F6] text-[#3B82F6] hover:bg-blue-50 transition"
+					class="flex h-4 w-4 items-center justify-center rounded-full border border-[#3B82F6] text-[#3B82F6] transition hover:bg-blue-50"
 				>
-					<svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"
+					<svg
+						class="h-3 w-3"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2.5"
+						viewBox="0 0 24 24"
 						><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m-8-8h16" /></svg
 					>
 				</button>
 			</div>
-			
+
 			<div class="flex-1 overflow-y-auto">
 				<!-- Unassigned Row -->
-				<div class="flex items-center justify-between px-4 py-[14px] border-b border-[#F1F5F9] bg-white">
+				<div
+					class="flex items-center justify-between border-b border-[#F1F5F9] bg-white px-4 py-[14px]"
+				>
 					<div class="flex items-center gap-3">
 						<span class="h-[14px] w-[14px] shrink-0 rounded-full bg-[#E2E8F0]"></span>
 						<span class="text-[14px] font-medium text-[#64748B]">Unassigned</span>
 					</div>
-					<span class="text-[14px] font-semibold text-[#475569]">{seatCountsByPriceLevel.unassigned}</span>
+					<span class="text-[14px] font-semibold text-[#475569]"
+						>{seatCountsByPriceLevel.unassigned}</span
+					>
 				</div>
 
 				<!-- Price Level Rows -->
@@ -2955,7 +2962,9 @@
 					{@const revenue = count * price}
 					{@const isActive = brushPriceLevelId === pl.id}
 					<div
-						class="flex flex-col gap-2.5 px-4 py-3 bg-white cursor-pointer transition-colors border-b {isActive ? 'border-[#2563EB] border-b-2 -mb-[1px] relative z-10' : 'border-[#F1F5F9] hover:bg-slate-50'}"
+						class="flex cursor-pointer flex-col gap-2.5 border-b bg-white px-4 py-3 transition-colors {isActive
+							? 'relative z-10 -mb-[1px] border-b-2 border-[#2563EB]'
+							: 'border-[#F1F5F9] hover:bg-slate-50'}"
 						onclick={() => {
 							if (selectedSeatIds.length > 0 || selectedGaSectionId) {
 								assignPriceLevelToSelected(pl.id);
@@ -2979,19 +2988,23 @@
 						<div class="flex items-center justify-between">
 							<div class="flex items-center gap-3">
 								<span
-									class="h-[14px] w-[14px] shrink-0 rounded-full {isActive ? 'ring-2 ring-[#2563EB] ring-offset-2' : ''}"
+									class="h-[14px] w-[14px] shrink-0 rounded-full {isActive
+										? 'ring-2 ring-[#2563EB] ring-offset-2'
+										: ''}"
 									style="background-color: {pl.color}"
 								></span>
 								<input
 									type="text"
 									value={pl.description || pl.id}
-									oninput={(e) => pl.description = e.currentTarget.value}
-									class="text-[14px] font-medium text-[#475569] bg-transparent outline-none w-[150px] border border-transparent hover:border-slate-200 focus:border-[#3B82F6] rounded px-1.5 py-0.5 -ml-1.5 transition-colors"
+									oninput={(e) => (pl.description = e.currentTarget.value)}
+									class="-ml-1.5 w-[150px] rounded border border-transparent bg-transparent px-1.5 py-0.5 text-[14px] font-medium text-[#475569] transition-colors outline-none hover:border-slate-200 focus:border-[#3B82F6]"
 								/>
 							</div>
-							<span class="text-[14px] font-medium text-[#475569] ml-2 shrink-0">{count.toLocaleString()}</span>
+							<span class="ml-2 shrink-0 text-[14px] font-medium text-[#475569]"
+								>{count.toLocaleString()}</span
+							>
 						</div>
-						
+
 						<div class="flex items-center justify-between">
 							<div class="flex items-center gap-3">
 								<span class="text-[11px] font-bold text-[#94A3B8] uppercase">BASE</span>
@@ -3006,10 +3019,15 @@
 											[pl.id]: Number((e.target as HTMLInputElement).value) || 0
 										};
 									}}
-									class="w-[80px] rounded border border-[#CBD5E1] bg-white px-2 py-0.5 text-[13px] text-[#334155] outline-none hover:border-[#94A3B8] focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+									class="w-[80px] [appearance:textfield] rounded border border-[#CBD5E1] bg-white px-2 py-0.5 text-[13px] text-[#334155] transition-colors outline-none hover:border-[#94A3B8] focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
 								/>
 							</div>
-							<span class="text-[14px] font-medium text-[#64748B]">${revenue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+							<span class="text-[14px] font-medium text-[#64748B]"
+								>${revenue.toLocaleString(undefined, {
+									minimumFractionDigits: 2,
+									maximumFractionDigits: 2
+								})}</span
+							>
 						</div>
 					</div>
 				{/each}
@@ -3017,11 +3035,15 @@
 
 			<!-- Toggle -->
 			<div class="border-t border-[#F1F5F9] bg-white px-4 py-4">
-				<label class="flex cursor-pointer items-center justify-between text-[14px] font-medium text-[#64748B]">
+				<label
+					class="flex cursor-pointer items-center justify-between text-[14px] font-medium text-[#64748B]"
+				>
 					Exclude kills from seats counts
 					<div class="relative">
-						<input type="checkbox" class="sr-only peer" checked>
-						<div class="w-10 h-6 bg-[#94A3B8] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-4 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#94A3B8]"></div>
+						<input type="checkbox" class="peer sr-only" checked />
+						<div
+							class="peer h-6 w-10 rounded-full bg-[#94A3B8] peer-checked:bg-[#94A3B8] peer-focus:outline-none after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-slate-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-4 peer-checked:after:border-white"
+						></div>
 					</div>
 				</label>
 			</div>
@@ -3029,23 +3051,37 @@
 			<!-- Financial Info -->
 			<div class="border-t border-[#F1F5F9] bg-white px-4 py-4">
 				<div class="mb-4 flex items-center justify-between">
-					<h4 class="text-[12px] font-bold text-[#64748B] uppercase tracking-wide">
+					<h4 class="text-[12px] font-bold tracking-wide text-[#64748B] uppercase">
 						FINANCIAL INFORMATION
 					</h4>
-					<button class="text-[11px] font-bold text-[#2563EB] hover:text-blue-800 uppercase">HIDE</button>
+					<button class="text-[11px] font-bold text-[#2563EB] uppercase hover:text-blue-800"
+						>HIDE</button
+					>
 				</div>
 				<div class="grid grid-cols-3 gap-2">
 					<div class="flex flex-col gap-1">
 						<span class="text-[11px] font-bold text-slate-400">Sellable<br />Capacity</span>
-						<span class="text-[13px] font-bold text-slate-700">{financialInfo.sellableCapacity}</span>
+						<span class="text-[13px] font-bold text-slate-700"
+							>{financialInfo.sellableCapacity}</span
+						>
 					</div>
 					<div class="flex flex-col gap-1">
 						<span class="text-[11px] font-bold text-slate-400">Average<br />per seat</span>
-						<span class="text-[13px] font-bold text-slate-700">${financialInfo.averagePerSeat.toFixed(2)}</span>
+						<span class="text-[13px] font-bold text-slate-700"
+							>${financialInfo.averagePerSeat.toFixed(2)}</span
+						>
 					</div>
 					<div class="flex flex-col gap-1 text-right">
 						<span class="text-[11px] font-bold text-slate-400">Potential<br />Revenue</span>
-						<span class="text-[13px] font-bold text-slate-700 truncate" title="${financialInfo.potentialRevenue.toLocaleString(undefined, {minimumFractionDigits: 2})}">${financialInfo.potentialRevenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+						<span
+							class="truncate text-[13px] font-bold text-slate-700"
+							title="${financialInfo.potentialRevenue.toLocaleString(undefined, {
+								minimumFractionDigits: 2
+							})}"
+							>${financialInfo.potentialRevenue.toLocaleString(undefined, {
+								minimumFractionDigits: 2
+							})}</span
+						>
 					</div>
 				</div>
 				<div class="mt-4 text-[12px] font-medium text-[#94A3B8]">
@@ -3246,9 +3282,13 @@
 			</div>
 
 			{#if selectedSeatIds.length > 0 || selectedGaSectionId}
-				{@const totalSelectedCount = selectedSeatIds.length + (selectedGaSectionId ? Number(gaSections.find(g => g.id === selectedGaSectionId)?.capacity || 0) : 0)}
-				<div 
-					class="absolute top-3 left-3 z-30 min-w-48 rounded-xl bg-white shadow-xl cursor-grab active:cursor-grabbing"
+				{@const totalSelectedCount =
+					selectedSeatIds.length +
+					(selectedGaSectionId
+						? Number(gaSections.find((g) => g.id === selectedGaSectionId)?.capacity || 0)
+						: 0)}
+				<div
+					class="absolute top-3 left-3 z-30 min-w-48 cursor-grab rounded-xl bg-white shadow-xl active:cursor-grabbing"
 					draggable="true"
 					ondragstart={(e) => {
 						if (e.dataTransfer) {
