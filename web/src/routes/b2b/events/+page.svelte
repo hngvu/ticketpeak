@@ -6,6 +6,7 @@
 	import { enhance } from '$app/forms';
 	import EmptyState from '$lib/components/common/EmptyState.svelte';
 	import DateTimePicker from '$lib/components/common/DateTimePicker.svelte';
+	import TimePicker from '$lib/components/common/TimePicker.svelte';
 	import { IconChevronDown, IconCalendarEvent, IconX } from '@tabler/icons-svelte';
 
 	let { data, form } = $props();
@@ -26,7 +27,9 @@
 	let isSlugManuallyEdited = $state(false);
 	let selectedAttractionIds = $state<string[]>([]);
 	let selectedVenueId = $state('');
-	let startAt = $state('');
+	let startDate = $state('');
+	let startTime = $state('');
+	let startAt = $derived(startDate && startTime ? `${startDate}T${startTime}:00` : '');
 
 	// Dropdowns
 	let showAttractionDropdown = $state(false);
@@ -826,93 +829,63 @@
 
 <!-- ======================== CREATE EVENT MODAL (Ticketmaster Inspired Minimalist) ======================== -->
 {#if isCreateModalOpen}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs">
-		<div
-			class="no-scrollbar max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-8 shadow-2xl"
-			role="dialog"
-		>
-			<div class="mb-6 flex items-center justify-between border-b border-slate-200 pb-4">
-				<div>
-					<h3 class="text-lg font-bold text-slate-900">Create New Event</h3>
-					<p class="mt-0.5 text-xs font-normal text-slate-400">
-						Fill in the fields to configure your ticketed event.
-					</p>
+	<div class="fixed inset-0 z-50 overflow-y-auto bg-black/50">
+		<div class="flex min-h-full items-center justify-center p-4">
+			<div class="w-full max-w-md rounded-xl bg-white p-8 shadow-2xl" role="dialog">
+				<div class="mb-6 flex items-center justify-between pb-4">
+					<div>
+						<h3 class="text-lg font-bold text-slate-900">Create Event</h3>
+					</div>
 				</div>
-				<button
-					onclick={() => (isCreateModalOpen = false)}
-					class="cursor-pointer rounded-full border-0 bg-transparent p-1 text-slate-400 outline-none hover:bg-slate-100 hover:text-slate-600"
+
+				<form
+					method="POST"
+					action="/b2b/events/create"
+					use:enhance={() => {
+						loading = true;
+						return async ({ update }) => {
+							await update();
+							loading = false;
+							isCreateModalOpen = false;
+						};
+					}}
+					class="space-y-6"
 				>
-					<svg
-						class="h-5 w-5"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-						stroke-width="2.5"
-					>
-						<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-					</svg>
-				</button>
-			</div>
+					<!-- Hidden organization input for B2B API compliance -->
+					<input type="hidden" name="organizationId" value={page.data.selectedOrgId} />
+					<input type="hidden" name="safeTixEnabled" value="off" />
+					<input type="hidden" name="restrictSingleSeat" value="off" />
+					<input type="hidden" name="transferEnabled" value="on" />
+					<input type="hidden" name="maxTransferCount" value="5" />
 
-			<form
-				method="POST"
-				action="/b2b/events/create"
-				use:enhance={() => {
-					loading = true;
-					return async ({ update }) => {
-						await update();
-						loading = false;
-						isCreateModalOpen = false;
-					};
-				}}
-				class="space-y-6"
-			>
-				<!-- Hidden organization input for B2B API compliance -->
-				<input type="hidden" name="organizationId" value={page.data.selectedOrgId} />
-				<input type="hidden" name="safeTixEnabled" value="off" />
-				<input type="hidden" name="restrictSingleSeat" value="off" />
-				<input type="hidden" name="transferEnabled" value="on" />
-				<input type="hidden" name="maxTransferCount" value="5" />
+					<!-- Hidden inputs to submit multiple classificationIds via Svelte Action -->
+					{#each selectedClassIds as id (id)}
+						<input type="hidden" name="classificationIds" value={id} />
+					{/each}
 
-				<!-- Hidden inputs to submit multiple classificationIds via Svelte Action -->
-				{#each selectedClassIds as id (id)}
-					<input type="hidden" name="classificationIds" value={id} />
-				{/each}
+					<!-- Field 2: Event Title -->
+					<div class="space-y-1.5">
+						<label for="modal-title" class="block text-xs font-semibold text-slate-700">
+							Event Name
+						</label>
+						<input
+							type="text"
+							id="modal-title"
+							name="title"
+							bind:value={title}
+							required
+							class="w-full rounded-none border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-normal text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+						/>
+					</div>
 
-				<!-- Field 2: Event Title -->
-				<div class="space-y-1.5">
-					<label for="modal-title" class="block text-xs font-semibold text-slate-700">
-						Event Title *
-					</label>
-					<input
-						type="text"
-						id="modal-title"
-						name="title"
-						bind:value={title}
-						required
-						placeholder="e.g. Son Tung M-TP Live Session"
-						class="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-normal text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-					/>
-				</div>
-
-				<!-- Field 3: Attraction / Artists -->
-				<div class="relative space-y-1.5">
-					<label for="modal-attraction" class="block text-xs font-semibold text-slate-700">
-						Attraction
-					</label>
-					<div
-						role="button"
-						tabindex="0"
-						onclick={() => (showAttractionDropdown = !showAttractionDropdown)}
-						onkeydown={(e) => {
-							if (e.key === 'Enter' || e.key === ' ') {
-								e.preventDefault();
-								showAttractionDropdown = !showAttractionDropdown;
-							}
-						}}
-						class="flex min-h-[42px] w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-2 text-left text-sm font-normal text-slate-900 focus-within:border-blue-500 hover:border-slate-300 focus:outline-none"
-					>
-						<div class="flex flex-wrap gap-1.5">
+					<!-- Field 3: Attraction / Artists -->
+					<div class="relative space-y-1.5">
+						<label for="modal-attraction" class="block text-xs font-semibold text-slate-700">
+							Attraction
+						</label>
+						<div
+							class="flex min-h-[42px] w-full flex-wrap items-center gap-1.5 rounded-none border border-slate-300 bg-white p-2 text-sm focus-within:border-blue-500 hover:border-slate-400"
+						>
 							{#each selectedAttractionIds as id (id)}
 								{@const artist = data.attractions.find((a: any) => a.id === id)}
 								{#if artist}
@@ -937,227 +910,199 @@
 										</button>
 									</span>
 								{/if}
-							{:else}
-								<span class="text-slate-400 px-1.5 text-xs">Select artists...</span>
 							{/each}
+							<input
+								type="text"
+								id="modal-attraction"
+								bind:value={attractionSearchQuery}
+								onfocus={() => (showAttractionDropdown = true)}
+								class="min-w-[120px] flex-1 border-none bg-transparent px-1 py-0 text-sm font-normal text-slate-900 placeholder-slate-400 shadow-none outline-none focus:border-transparent focus:ring-0"
+							/>
 						</div>
-						<IconChevronDown
-							size={14}
-							class="mr-1 shrink-0 text-slate-400 transition-transform {showAttractionDropdown
-								? 'rotate-180'
-								: ''}"
-						/>
-					</div>
 
-					<!-- Hidden inputs to submit multiple attractionIds via Svelte Action -->
-					{#each selectedAttractionIds as id (id)}
-						<input type="hidden" name="attractionIds" value={id} />
-					{/each}
+						<!-- Hidden inputs to submit multiple attractionIds via Svelte Action -->
+						{#each selectedAttractionIds as id (id)}
+							<input type="hidden" name="attractionIds" value={id} />
+						{/each}
 
-					{#if showAttractionDropdown}
-						<button
-							type="button"
-							class="fixed inset-0 z-45 bg-transparent"
-							onclick={() => (showAttractionDropdown = false)}
-							aria-label="Close attraction dropdown"
-						></button>
-						<div
-							class="absolute left-0 z-50 mt-1 w-full space-y-1.5 rounded-lg border border-slate-200 bg-white p-2 shadow-lg"
-						>
-							<div class="relative">
-								<input
-									type="text"
-									placeholder="Search artists..."
-									bind:value={attractionSearchQuery}
-									class="text-slate-855 w-full rounded border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-normal focus:border-blue-500 focus:bg-white focus:outline-none"
-								/>
-							</div>
-
-							<div class="no-scrollbar max-h-40 space-y-0.5 overflow-y-auto">
-								{#each filteredAttractions as artist (artist.id)}
-									{@const isSelected = selectedAttractionIds.includes(artist.id)}
-									<button
-										type="button"
-										onclick={() => {
-											if (isSelected) {
-												selectedAttractionIds = selectedAttractionIds.filter(
-													(x) => x !== artist.id
-												);
-											} else {
-												selectedAttractionIds = [...selectedAttractionIds, artist.id];
-											}
-										}}
-										class="flex w-full cursor-pointer items-center justify-between rounded border-0 bg-transparent px-2 py-1 text-left text-xs font-medium transition-colors outline-none hover:bg-slate-50 {isSelected
-											? 'text-blue-655 bg-slate-50 font-semibold'
-											: 'text-slate-700'}"
-									>
-										<div class="flex items-center gap-2">
-											<img
-												src={artist.imageUrl || '/placeholder-artist.jpg'}
-												alt={artist.name}
-												class="h-5 w-5 shrink-0 rounded-full object-cover"
-											/>
-											<span>{artist.name}</span>
-										</div>
-										{#if isSelected}
-											<span class="text-blue-655 text-xs font-bold">✓</span>
-										{/if}
-									</button>
-								{:else}
-									<p class="text-xs text-slate-400 py-2 text-center">No artists found.</p>
-								{/each}
-							</div>
-						</div>
-					{/if}
-
-					<!-- Dynamic Auto-Populated Classification Sub-label -->
-					{#if selectedAttractionIds.length > 0}
-						<div class="mt-1.5 text-xs font-semibold text-slate-500 select-none">
-							Classification: <span class="font-normal tracking-wide text-slate-600 uppercase"
-								>Music</span
+						{#if showAttractionDropdown}
+							<button
+								type="button"
+								class="fixed inset-0 z-45 bg-transparent"
+								onclick={() => (showAttractionDropdown = false)}
+								aria-label="Close attraction dropdown"
+							></button>
+							<div
+								class="absolute left-0 z-50 mt-1 w-full space-y-0.5 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
 							>
-						</div>
-					{/if}
-				</div>
-
-				<!-- Field 4: Hosting Venue -->
-				<div class="relative space-y-1.5">
-					<label for="modal-venue" class="block text-xs font-semibold text-slate-700">
-						Hosting Venue *
-					</label>
-					<div
-						role="button"
-						tabindex="0"
-						onclick={() => (showVenueDropdown = !showVenueDropdown)}
-						onkeydown={(e) => {
-							if (e.key === 'Enter' || e.key === ' ') {
-								e.preventDefault();
-								showVenueDropdown = !showVenueDropdown;
-							}
-						}}
-						class="flex min-h-[42px] w-full cursor-pointer items-center justify-between rounded-lg border border-slate-200 bg-white p-2.5 text-left text-sm font-normal text-slate-900 hover:border-slate-300 focus:border-blue-500 focus:outline-none"
-					>
-						{#if selectedVenue}
-							<span class="truncate text-xs font-medium text-slate-700">
-								{selectedVenue.name} ({selectedVenue.city})
-							</span>
-						{:else}
-							<span class="text-xs text-slate-400">Select Venue...</span>
-						{/if}
-						<IconChevronDown
-							size={14}
-							class="shrink-0 text-slate-400 transition-transform {showVenueDropdown
-								? 'rotate-180'
-								: ''}"
-						/>
-					</div>
-
-					<!-- Hidden input to submit selected venueId -->
-					<input type="hidden" name="venueId" value={selectedVenueId} required />
-
-					{#if showVenueDropdown}
-						<button
-							type="button"
-							class="fixed inset-0 z-45 bg-transparent"
-							onclick={() => (showVenueDropdown = false)}
-							aria-label="Close venue dropdown"
-						></button>
-						<div
-							class="absolute left-0 z-50 mt-1 w-full space-y-1.5 rounded-lg border border-slate-200 bg-white p-1.5 shadow-lg"
-						>
-							<div class="relative">
-								<input
-									type="text"
-									placeholder="Search venues..."
-									bind:value={venueSearchQuery}
-									class="text-slate-855 w-full rounded border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-normal focus:border-blue-500 focus:bg-white focus:outline-none"
-								/>
+								<div class="no-scrollbar max-h-40 overflow-y-auto">
+									{#each filteredAttractions as artist (artist.id)}
+										{@const isSelected = selectedAttractionIds.includes(artist.id)}
+										<button
+											type="button"
+											onclick={() => {
+												if (isSelected) {
+													selectedAttractionIds = selectedAttractionIds.filter(
+														(x) => x !== artist.id
+													);
+												} else {
+													selectedAttractionIds = [...selectedAttractionIds, artist.id];
+												}
+												attractionSearchQuery = '';
+												showAttractionDropdown = false;
+											}}
+											class="flex w-full cursor-pointer items-center justify-between border-0 bg-transparent px-3 py-2 text-left text-xs font-medium transition-colors outline-none hover:bg-slate-50 {isSelected
+												? 'text-blue-655 bg-slate-50 font-semibold'
+												: 'text-slate-700'}"
+										>
+											<div class="flex items-center gap-3">
+												<img
+													src={artist.imageUrl || '/placeholder-artist.jpg'}
+													alt={artist.name}
+													class="h-6 w-6 shrink-0 rounded-full object-cover shadow-sm"
+												/>
+												<span class="text-sm">{artist.name}</span>
+											</div>
+										</button>
+									{:else}
+										<p class="text-xs text-slate-400 py-3 text-center">No artists found.</p>
+									{/each}
+								</div>
 							</div>
-
-							<div class="no-scrollbar max-h-40 space-y-0.5 overflow-y-auto">
-								{#each filteredVenues as venue (venue.id)}
-									{@const isSelected = selectedVenueId === venue.id}
-									<button
-										type="button"
-										onclick={() => {
-											selectedVenueId = venue.id;
-											showVenueDropdown = false;
-										}}
-										class="flex w-full cursor-pointer items-center justify-between rounded border-0 bg-transparent px-2.5 py-1.5 text-left text-xs font-medium transition-colors outline-none hover:bg-slate-50 {isSelected
-											? 'text-blue-655 bg-slate-50 font-semibold'
-											: 'text-slate-750'}"
-									>
-										<div class="flex min-w-0 flex-col">
-											<span class="truncate">{venue.name}</span>
-											<span class="mt-0.5 text-[9px] text-slate-400"
-												>{venue.city}, {venue.countryCode}</span
-											>
-										</div>
-										{#if isSelected}
-											<span class="text-blue-655 text-xs font-bold">✓</span>
-										{/if}
-									</button>
-								{:else}
-									<p class="text-xs text-slate-400 py-2 text-center">No venues found.</p>
-								{/each}
-							</div>
-						</div>
-					{/if}
-				</div>
-
-				<!-- Field 5: Start Date & Time -->
-				<div class="space-y-1.5">
-					<span class="block text-xs font-semibold text-slate-700"> Start Date & Time * </span>
-					<DateTimePicker
-						name="startAt"
-						required={true}
-						placeholder="Select start date & time"
-						bind:value={startAt}
-					/>
-				</div>
-
-				<!-- Field 6: URL Slug Preview (Minimalist clean text label at the bottom) -->
-				<div class="mt-4 border-t border-slate-200 pt-4">
-					<span class="mb-1 block text-[10px] font-bold tracking-wider text-slate-400 uppercase">
-						Event URL Slug
-					</span>
-					<div class="flex items-center gap-1.5 text-xs font-semibold text-slate-600 select-all">
-						<span class="text-slate-400">ticketpeak.com/event/</span>
-						{#if slug}
-							<span class="font-semibold text-blue-600 underline decoration-2 underline-offset-2"
-								>{slug}</span
-							>
-						{:else}
-							<span class="font-normal text-slate-400 italic">[auto-generated-slug]</span>
 						{/if}
 					</div>
+
+					<!-- Field 4: Hosting Venue -->
+					<div class="relative space-y-1.5">
+						<label for="modal-venue" class="block text-xs font-semibold text-slate-700">
+							Venue
+						</label>
+						<div class="relative flex items-center">
+							<input
+								type="text"
+								id="modal-venue"
+								bind:value={venueSearchQuery}
+								onfocus={() => {
+									if (selectedVenue) {
+										venueSearchQuery = selectedVenue.name;
+									}
+									showVenueDropdown = true;
+								}}
+								oninput={() => {
+									if (selectedVenue && venueSearchQuery !== selectedVenue.name) {
+										selectedVenueId = '';
+									}
+									showVenueDropdown = true;
+								}}
+								class="w-full rounded-none border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-normal text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+							/>
+							{#if venueSearchQuery || selectedVenue}
+								<button
+									type="button"
+									onclick={() => {
+										venueSearchQuery = '';
+										selectedVenueId = '';
+									}}
+									class="absolute right-3 cursor-pointer text-slate-400 outline-none hover:text-slate-600"
+								>
+									✕
+								</button>
+							{/if}
+						</div>
+
+						<!-- Hidden input to submit selected venueId -->
+						<input type="hidden" name="venueId" value={selectedVenueId} required />
+
+						{#if showVenueDropdown}
+							<button
+								type="button"
+								class="fixed inset-0 z-45 bg-transparent"
+								onclick={() => {
+									if (selectedVenue) {
+										venueSearchQuery = selectedVenue.name;
+									} else {
+										venueSearchQuery = '';
+									}
+									showVenueDropdown = false;
+								}}
+								aria-label="Close venue dropdown"
+							></button>
+							<div
+								class="absolute left-0 z-50 mt-1 w-full overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+							>
+								<div class="no-scrollbar max-h-40 overflow-y-auto">
+									{#each filteredVenues as venue (venue.id)}
+										{@const isSelected = selectedVenueId === venue.id}
+										<button
+											type="button"
+											onclick={() => {
+												selectedVenueId = venue.id;
+												venueSearchQuery = venue.name;
+												showVenueDropdown = false;
+											}}
+											class="flex w-full cursor-pointer items-center justify-between border-0 bg-transparent px-3 py-2 text-left transition-colors outline-none hover:bg-slate-50 {isSelected
+												? 'bg-blue-50/50'
+												: ''}"
+										>
+											<div class="flex min-w-0 flex-col">
+												<span
+													class="truncate text-sm font-medium {isSelected
+														? 'text-blue-700'
+														: 'text-slate-800'}">{venue.name}</span
+												>
+												<span class="mt-0.5 text-[10px] text-slate-400"
+													>{venue.city}, {venue.countryCode}</span
+												>
+											</div>
+										</button>
+									{:else}
+										<p class="text-xs text-slate-400 py-3 text-center">No venues found.</p>
+									{/each}
+								</div>
+							</div>
+						{/if}
+					</div>
+
+					<!-- Field 5: Start Date & Time -->
+					<div class="flex gap-4">
+						<div class="flex-1 space-y-1.5">
+							<span class="block text-xs font-semibold text-slate-700">Date</span>
+							<DateTimePicker name="startDate" required={true} bind:value={startDate} />
+						</div>
+						<div class="flex-1 space-y-1.5">
+							<span class="block text-xs font-semibold text-slate-700">Time</span>
+							<TimePicker name="startTime" required={true} bind:value={startTime} />
+						</div>
+					</div>
+					<input type="hidden" name="startAt" value={startAt} />
+
 					<input type="hidden" name="slug" value={slug} />
 					<input type="hidden" name="timezone" value="Asia/Ho_Chi_Minh" />
-				</div>
 
-				<!-- Action Buttons (Bottom Right Align) -->
-				<div class="flex items-center justify-end gap-3 border-t border-slate-200 pt-5">
-					<button
-						type="button"
-						onclick={() => (isCreateModalOpen = false)}
-						class="animate-none cursor-pointer rounded-full border border-0 border-slate-200 bg-white px-5 py-2 text-xs font-bold text-slate-700 transition outline-none hover:bg-slate-50"
-					>
-						Cancel
-					</button>
-					<button
-						type="submit"
-						disabled={loading}
-						class="flex animate-none cursor-pointer items-center justify-center gap-2 rounded-full border-0 bg-slate-900 px-6 py-2.5 text-xs font-bold text-white transition outline-none hover:bg-slate-800 disabled:opacity-50"
-					>
-						{#if loading}
-							<span
-								class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent"
-							></span>
-						{/if}
-						<span>Create Event</span>
-					</button>
-				</div>
-			</form>
+					<!-- Action Buttons -->
+					<div class="flex items-center justify-between pt-5">
+						<button
+							type="button"
+							onclick={() => (isCreateModalOpen = false)}
+							class="animate-none cursor-pointer rounded-none border border-0 border-slate-200 bg-white px-5 py-2 text-sm font-bold text-[#026CDF] transition outline-none hover:bg-slate-50"
+						>
+							Cancel
+						</button>
+						<button
+							type="submit"
+							disabled={loading}
+							class="flex animate-none cursor-pointer items-center justify-center gap-2 rounded-none border-0 bg-[#026CDF] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition outline-none hover:bg-blue-700 disabled:opacity-50"
+						>
+							{#if loading}
+								<span
+									class="h-3.5 w-3.5 animate-spin rounded-none border-2 border-white border-t-transparent"
+								></span>
+							{/if}
+							<span>Create</span>
+						</button>
+					</div>
+				</form>
+			</div>
 		</div>
 	</div>
 {/if}

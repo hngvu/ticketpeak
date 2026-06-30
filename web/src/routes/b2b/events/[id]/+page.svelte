@@ -1,8 +1,13 @@
 <script lang="ts">
 	/* eslint-disable @typescript-eslint/no-explicit-any */
-	import { IconPlus, IconChevronDown, IconTicket, IconFolderPlus } from '@tabler/icons-svelte';
+	import { 
+		IconPlus, IconChevronDown, IconTicket, IconFolderPlus,
+		IconPointer2, IconArmchair, IconBorderOuter, IconHandGrab, IconFilter, IconWand
+	} from '@tabler/icons-svelte';
 	import Combobox from '$lib/components/ui/combobox.svelte';
 	import DateTimePicker from '$lib/components/common/DateTimePicker.svelte';
+	import TimePicker from '$lib/components/common/TimePicker.svelte';
+	import KonvaSeatingCanvas from '$lib/components/event/KonvaSeatingCanvas.svelte';
 
 	function cleanVietnamese(text: string): string {
 		return text
@@ -11,6 +16,10 @@
 			.replace(/đ/g, 'd')
 			.replace(/Đ/g, 'D');
 	}
+
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+	import { tick } from 'svelte';
 
 	let { data } = $props();
 
@@ -31,32 +40,17 @@
 	let panStartX = $state(0);
 	let panStartY = $state(0);
 
+	let konvaCanvasRef: any;
+	let canvasViewport = $state({ x: 0, y: 0, w: 800, h: 600, scale: 1 });
+	let canvasBounds = $state({ minX: 0, minY: 0, width: 800, height: 600 });
+
 	function handleWheel(e: WheelEvent) {
-		e.preventDefault();
-		const oldZoom = canvasZoom;
-		let newZoom = e.deltaY < 0 ? oldZoom * 1.15 : oldZoom / 1.15;
-		canvasZoom = Math.max(0.1, Math.min(newZoom, 5));
+		// Handled internally by KonvaSeatingCanvas
 	}
 
-	function handlePointerDown(e: PointerEvent) {
-		if (e.button === 0 || e.button === 1) {
-			// Left or middle click pans
-			isPanning = true;
-			panStartX = e.clientX - panX;
-			panStartY = e.clientY - panY;
-			(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-		}
-	}
-	function handlePointerMove(e: PointerEvent) {
-		if (isPanning) {
-			panX = e.clientX - panStartX;
-			panY = e.clientY - panStartY;
-		}
-	}
-	function handlePointerUp(e: PointerEvent) {
-		isPanning = false;
-		(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-	}
+	function handlePointerDown(e: PointerEvent) {}
+	function handlePointerMove(e: PointerEvent) {}
+	function handlePointerUp(e: PointerEvent) {}
 	let canvasZoom = $state(1);
 
 	let activeTab = $state('general');
@@ -67,9 +61,11 @@
 	const attractions = $derived(data.attractions || []);
 
 	let localOffers = $state<any[]>([]);
+	let localOffersInitialized = $state(false);
 	$effect(() => {
-		if (offers && localOffers.length === 0) {
+		if (offers && !localOffersInitialized) {
 			localOffers = [...offers];
+			localOffersInitialized = true;
 		}
 	});
 
@@ -79,7 +75,9 @@
 	);
 	let venueId = $state(event.venueId || '');
 	let selectedAttractionIds = $state<string[]>(event.attractions?.map((a: any) => a.id) || []);
-	let startAt = $state(event.startAt || '');
+	let startDate = $state(event.startAt ? event.startAt.split('T')[0] : '');
+	let startTime = $state(event.startAt ? event.startAt.split('T')[1].substring(0, 5) : '');
+	let startAt = $derived(startDate && startTime ? `${startDate}T${startTime}:00` : '');
 
 	const sortedClassifications = $derived.by(() => {
 		const raw = data.classifications || [];
@@ -184,30 +182,43 @@
 
 	let selectedSeatIds = $state<string[]>([]);
 	let selectedManifestId = $state(
-		data.manifests.length > 0
-			? data.manifests.find((m) => m.status === 'PUBLISHED')?.id || data.manifests[0].id
-			: ''
+		data.event?.manifestId || (data.manifests && data.manifests[0]?.id)
 	);
-	const selectedManifest = $derived(data.manifests.find((m: any) => m.id === selectedManifestId));
-
-	let manifestDetail = $state<any>(null);
-	$effect(() => {
-		const mid = selectedManifestId;
-		const vid = event.venueId;
-		if (!mid || !vid) {
-			manifestDetail = null;
-			return;
-		}
-		manifestDetail = null;
-		fetch(`/api/partner/venues/${vid}/manifests/${mid}`)
-			.then((r) => (r.ok ? r.json() : null))
-			.then((json) => {
-				manifestDetail = json?.data || null;
-			})
-			.catch(() => {
-				manifestDetail = null;
-			});
+	let manifestDetail = $state({
+		manifest: data.activeManifest,
+		levels: data.levels,
+		sections: data.sections,
+		priceLevels: data.priceLevels,
+		rsAreas: data.rsSections,
+		gaAreas: data.gaSections,
+		objects: data.activeManifest?.objects || data.activeManifest?.uiData?.objects || []
 	});
+
+	async function handleManifestChange(e: Event) {
+		const newId = (e.target as HTMLSelectElement).value;
+		selectedManifestId = newId;
+		
+		try {
+			const res = await fetch(`/api/custom/manifests/${newId}`).then((r) => r.json());
+			if (res.success && res.data) {
+				const { levels, sections, priceLevels, rsAreas, gaAreas } = res.data;
+				const manifest = data.manifests.find((m: any) => m.id === newId);
+				manifestDetail = {
+					manifest,
+					levels,
+					sections,
+					priceLevels,
+					rsAreas,
+					gaAreas,
+					objects: manifest?.objects || manifest?.uiData?.objects || []
+				};
+			}
+		} catch (err) {
+			console.error('Error fetching manifest details:', err);
+		}
+	}
+
+	const selectedManifest = $derived(data.manifests.find((m: any) => m.id === selectedManifestId));
 
 	const hasLayoutData = $derived(
 		manifestDetail && (manifestDetail.gaAreas?.length > 0 || manifestDetail.rsAreas?.length > 0)
@@ -272,6 +283,9 @@
 					if (r === 4 && c < 2) status = 'Held';
 				}
 				status = seatStatuses[id] || status;
+				if (status === 'Available') {
+					status = (r * colsPerRow + c) % 7 === 0 ? 'Held' : 'Available';
+				}
 				result.push({ id, rowLetter, seatNum, status, x, y });
 			}
 		}
@@ -290,7 +304,25 @@
 		}
 		return result;
 	});
-	const selectedSeatDetails = $derived(seats.filter((s) => selectedSeatIds.includes(s.id)));
+	const selectedSeatDetails = $derived.by(() => {
+		if (selectedSeatIds.length === 0) return [];
+		if (!hasLayoutData) {
+			return seats.filter((s) => selectedSeatIds.includes(s.id));
+		}
+		
+		const result: any[] = [];
+		for (const sec of manifestDetail?.rsAreas || []) {
+			for (const row of sec.rows || []) {
+				for (const seat of row.seats || []) {
+					if (selectedSeatIds.includes(seat.id)) {
+						result.push(seat);
+					}
+				}
+			}
+		}
+		
+		return result;
+	});
 	let seatPriceLevels = $state<Record<string, string>>({});
 	let seatStatuses = $state<Record<string, string>>({});
 	let seatHoldIds = $state<Record<string, string>>({});
@@ -298,11 +330,11 @@
 	const selectedSeatsByPriceLevel = $derived.by(() => {
 		const counts: Record<string, number> = {};
 		selectedSeatDetails.forEach((s) => {
-			const plId = seatPriceLevels[s.id] || (s.rowLetter < 'C' ? 'VIP' : 'GA');
+			const plId = seatPriceLevels[s.id] || s.priceLevelId || 'unassigned';
 			counts[plId] = (counts[plId] || 0) + (s.capacity || 1);
 		});
 		return Object.entries(counts).map(([plId, count]) => ({
-			pl: basePriceLevels.find((p) => p.id === plId) || basePriceLevels[0],
+			pl: plId === 'unassigned' ? null : basePriceLevels.find((p) => p.id === plId),
 			count
 		}));
 	});
@@ -343,25 +375,58 @@
 		}
 		return PRESET_COLORS[basePriceLevels.length % PRESET_COLORS.length];
 	}
-	const priceLevels = $derived.by(() => {
-		return basePriceLevels.map((pl) => {
-			const plSeats = seats.filter(
-				(s) => (seatPriceLevels[s.id] || (s.rowLetter < 'C' ? 'VIP' : 'GA')) === pl.id
-			);
-			let count = 0;
-			let avail = 0;
-			plSeats.forEach((s) => {
-				const c = s.capacity || 1;
-				count += c;
-				if (s.status === 'Available') avail += c;
+
+	function drawStagePath(ow: number, oh: number) {
+		const curveStart = Math.max(ow * 0.6, ow - 60);
+		return `M 0 0 L ${curveStart} 0 Q ${2 * ow - curveStart} ${oh / 2} ${curveStart} ${oh} L 0 ${oh} Z`;
+	}
+
+	let unassignedCount = $derived.by(() => {
+		let total = 0;
+		let assigned = 0;
+		if (manifestDetail?.rsAreas) {
+			manifestDetail.rsAreas.forEach((sec: any) => {
+				sec.rows?.forEach((r: any) => {
+					total += r.seats?.length || 0;
+					r.seats?.forEach((s: any) => {
+						const plId = seatPriceLevels[s.id] || s.priceLevelId || 'unassigned';
+						if (plId !== 'unassigned') assigned++;
+					});
+				});
 			});
-			return {
-				...pl,
-				avail,
-				count
-			};
-		});
+		}
+		if (manifestDetail?.gaAreas) {
+			manifestDetail.gaAreas.forEach((ga: any) => {
+				total += ga.capacity || 0;
+				const plId = seatPriceLevels[ga.id] || ga.priceLevelId || 'unassigned';
+				if (plId !== 'unassigned') assigned += (ga.capacity || 0);
+			});
+		}
+		return Math.max(0, total - assigned);
 	});
+
+	let priceLevels = $derived(
+		basePriceLevels.map((bpl) => {
+			let count = 0;
+			if (manifestDetail?.rsAreas) {
+				manifestDetail.rsAreas.forEach((sec: any) => {
+					sec.rows?.forEach((r: any) => {
+						r.seats?.forEach((s: any) => {
+							const plId = seatPriceLevels[s.id] || s.priceLevelId || 'unassigned';
+							if (plId === bpl.id) count++;
+						});
+					});
+				});
+			}
+			if (manifestDetail?.gaAreas) {
+				manifestDetail.gaAreas.forEach((ga: any) => {
+					const plId = seatPriceLevels[ga.id] || ga.priceLevelId || 'unassigned';
+					if (plId === bpl.id) count += (ga.capacity || 0);
+				});
+			}
+			return { ...bpl, count };
+		})
+	);
 
 	function zoomIn() {
 		canvasZoom = Math.min(3, canvasZoom + 0.25);
@@ -584,6 +649,7 @@
 			saveSuccess = true;
 			// Reset local offers so next $effect reloads from server
 			localOffers = [];
+			localOffersInitialized = false;
 		} catch (err: any) {
 			saveError = err.message || 'Failed to save changes';
 		} finally {
@@ -651,11 +717,18 @@
 			{#if saveError}
 				<span class="text-sm font-semibold text-red-600">{saveError}</span>
 			{/if}
-			<button type="button" onclick={handleSaveAll} disabled={saving} class="btn-primary">
+			<button
+				type="button"
+				onclick={handleSaveAll}
+				disabled={saving}
+				class="flex cursor-pointer items-center justify-center gap-2 rounded border-0 bg-[#026CDF] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition outline-none hover:bg-blue-700 disabled:opacity-50"
+			>
 				{#if saving}
-					<span class="spinner"></span>
+					<span
+						class="h-3.5 w-3.5 animate-spin rounded-none border-2 border-white border-t-transparent"
+					></span>
 				{/if}
-				<span>{saving ? 'Saving...' : 'Save All'}</span>
+				<span>{saving ? 'Saving...' : 'Save'}</span>
 			</button>
 		</div>
 	</div>
@@ -756,14 +829,23 @@
 							{/snippet}
 						</Combobox>
 					</div>
-					<div class="field-row">
+					<div class="grid grid-cols-3 gap-4">
 						<div class="field">
 							<label for="edit-start" class="label">Date<span class="required">*</span></label>
 							<DateTimePicker
-								name="startAt"
-								bind:value={startAt}
+								name="startDate"
+								bind:value={startDate}
 								required={true}
-								placeholder="Select date & time"
+								placeholder="Select date"
+							/>
+						</div>
+						<div class="field">
+							<label for="edit-time" class="label">Time<span class="required">*</span></label>
+							<TimePicker
+								name="startTime"
+								bind:value={startTime}
+								required={true}
+								placeholder="Select time"
 							/>
 						</div>
 						<div class="field">
@@ -785,12 +867,13 @@
 				<select
 					id="seat-manifest"
 					name="manifestId"
-					class="input venue-select"
 					bind:value={selectedManifestId}
+					onchange={handleManifestChange}
+					class="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					{#each data.manifests as manifest (manifest.id)}
 						<option value={manifest.id}>
-							{manifest.name}
+							{manifest.description || manifest.id}
 						</option>
 					{/each}
 				</select>
@@ -800,7 +883,7 @@
 			</div>
 
 			<div
-				class="relative flex min-h-[600px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+				class="relative flex h-[calc(100vh-160px)] min-h-[500px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
 			>
 				<div class="relative flex min-h-0 flex-1">
 					<aside class="flex w-[280px] shrink-0 flex-col border-r border-slate-200 bg-white">
@@ -830,24 +913,25 @@
 									>
 								</button>
 							</div>
-							<div class="flex-1 space-y-px overflow-y-auto px-3 py-2">
-								<div class="flex items-center gap-2 rounded-lg px-2.5 py-2">
-									<span
-										class="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 border-slate-300 bg-white"
-									></span>
-									<span class="flex-1 text-sm font-medium text-slate-500">Unassigned</span>
-									<span class="text-sm text-slate-500">0</span>
+							<div class="flex-1 overflow-y-auto bg-slate-50">
+								<div class="flex items-center justify-between border-b border-[#F1F5F9] bg-[#F8FAFC] px-4 py-3">
+									<div class="flex items-center gap-3">
+										<span class="h-[14px] w-[14px] shrink-0 rounded-full bg-[#E2E8F0]"></span>
+										<span class="text-[14px] font-medium text-[#64748B]">Unassigned</span>
+									</div>
+									<span class="text-[14px] font-semibold text-[#475569]">{unassignedCount}</span>
 								</div>
 								{#each basePriceLevels as bpl, i (bpl.id)}
 									{@const pl = priceLevels[i]}
 									<div
-										class="group flex items-center gap-2 rounded-lg px-2.5 py-2 text-[11px] transition-colors hover:bg-slate-50"
-										role="listitem"
+										class="flex cursor-pointer flex-col gap-2.5 border-b bg-white px-4 py-3 transition-colors hover:bg-slate-50 border-[#F1F5F9]"
+										role="button"
+										tabindex="0"
 										ondragover={(e) => {
 											e.preventDefault();
 											if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
 										}}
-										ondrop={(e) => {
+										ondrop={async (e) => {
 											e.preventDefault();
 											const data = e.dataTransfer?.getData('text/plain');
 											if (data === 'selected_seats' && selectedSeatIds.length > 0) {
@@ -857,46 +941,62 @@
 												});
 												seatPriceLevels = updated;
 												selectedSeatIds = []; // clear selection after assign
+												await tick();
+												konvaCanvasRef?.redraw?.();
 											}
 										}}
 									>
-										<label
-											class="relative flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-white/50"
-											style="background:{bpl.color}"
-										>
-											<input
-												type="color"
-												bind:value={bpl.color}
-												class="absolute -inset-2 h-8 w-8 cursor-pointer opacity-0"
-											/>
-										</label>
-										<div class="flex flex-1 items-center justify-between gap-2">
-											<input
-												type="text"
-												bind:value={bpl.label}
-												class="w-full border-none bg-transparent p-0 text-sm font-medium text-slate-500 outline-none focus:border-none focus:ring-0"
-											/>
-											<div class="text-sm text-slate-500">
-												<span>{pl.count}</span>
+										<div class="flex items-center justify-between">
+											<div class="flex items-center gap-3">
+												<label
+													class="relative flex h-[14px] w-[14px] shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full"
+													style="background:{bpl.color}"
+												>
+													<input
+														type="color"
+														bind:value={bpl.color}
+														onchange={async () => {
+															await tick();
+															konvaCanvasRef?.redraw?.();
+														}}
+														class="absolute -inset-2 h-8 w-8 cursor-pointer opacity-0"
+													/>
+												</label>
+												<input
+													type="text"
+													bind:value={bpl.label}
+													placeholder="Price Level"
+													class="-ml-1.5 w-[150px] rounded border border-transparent bg-transparent px-1.5 py-0.5 text-[14px] font-medium text-[#475569] transition-colors outline-none hover:border-slate-200 focus:border-[#3B82F6]"
+												/>
 											</div>
+											<span class="ml-2 shrink-0 text-[14px] font-medium text-[#475569]">{pl.count.toLocaleString()}</span>
 										</div>
-										<button
-											type="button"
-											onclick={() => {
-												basePriceLevels = basePriceLevels.filter((p) => p.id !== bpl.id);
-											}}
-											class="hidden h-5 w-5 items-center justify-center rounded text-slate-400 group-hover:flex hover:bg-slate-200 hover:text-red-500"
-											aria-label="Remove {bpl.label}"
-										>
-											<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-												><path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M6 18L18 6M6 6l12 12"
-												/></svg
+
+										<div class="flex items-center justify-between">
+											<div class="flex items-center gap-3">
+												<span class="text-[11px] font-bold text-[#94A3B8] uppercase">BASE</span>
+												<input
+													type="number"
+													step="1000"
+													min="0"
+													bind:value={bpl.price}
+													class="-ml-1.5 w-[100px] rounded border border-transparent bg-transparent px-1.5 py-0.5 text-[14px] font-medium text-[#475569] transition-colors outline-none hover:border-slate-200 focus:border-[#3B82F6]"
+													placeholder="0"
+												/>
+											</div>
+											<button
+												type="button"
+												onclick={() => {
+													basePriceLevels = basePriceLevels.filter((p) => p.id !== bpl.id);
+												}}
+												class="flex h-6 w-6 items-center justify-center rounded text-slate-300 transition-colors hover:bg-slate-100 hover:text-red-500"
+												aria-label="Remove {bpl.label}"
 											>
-										</button>
+												<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+												</svg>
+											</button>
+										</div>
 									</div>
 								{/each}
 							</div>
@@ -1076,321 +1176,25 @@
 						</div>
 					</aside>
 
-					<main
-						class="relative flex flex-1 flex-col overflow-hidden bg-[#FAFAFA] select-none"
-						style="cursor: {activeCanvasTool === 'pan' || isPanning ? 'grabbing' : 'default'}"
-					>
+					<main class="relative flex flex-1 flex-col overflow-hidden bg-[#FAFAFA] select-none">
 						<div
 							class="relative flex w-full flex-1 items-center justify-center overflow-hidden"
 							role="application"
 							aria-label="Seat map canvas"
-							onwheel={handleWheel}
-							onpointerdown={handlePointerDown}
-							onpointermove={handlePointerMove}
-							onpointerup={handlePointerUp}
-							onpointercancel={handlePointerUp}
-							oncontextmenu={(e) => e.preventDefault()}
 						>
-							<div
-								style="transform: translate({panX}px, {panY}px) scale({canvasZoom}); transform-origin: center; pointer-events: {activeCanvasTool ===
-								'pan'
-									? 'none'
-									: 'auto'};"
-							>
-								<svg viewBox="0 0 420 300" class="seating-canvas h-[300px] w-[420px]">
-									<!-- Stage -->
-									{#if selectedManifest?.objects}
-										{#each selectedManifest.objects.filter((o: any) => o.type === 'stage') as obj (obj.type)}
-											<rect
-												x={obj.x || 135}
-												y={obj.y || 12}
-												width={obj.width || 150}
-												height={obj.height || 36}
-												rx="4"
-												fill="#e2e8f0"
-												stroke="#cbd5e1"
-											/>
-											<text
-												x={(obj.x || 135) + (obj.width || 150) / 2}
-												y={(obj.y || 12) + (obj.height || 36) / 2 + 4}
-												text-anchor="middle"
-												fill="#64748b"
-												font-size="11"
-												font-weight="700"
-												letter-spacing="2">{obj.text || 'STAGE'}</text
-											>
-										{/each}
-									{:else}
-										<rect
-											x="135"
-											y="12"
-											width="150"
-											height="36"
-											rx="4"
-											fill="#e2e8f0"
-											stroke="#cbd5e1"
-										/>
-										<text
-											x="210"
-											y="35"
-											text-anchor="middle"
-											fill="#64748b"
-											font-size="11"
-											font-weight="700"
-											letter-spacing="2">STAGE</text
-										>
-									{/if}
-
-									{#if hasLayoutData}
-										<!-- GA Areas as colored blocks -->
-										{#each manifestDetail.gaAreas || [] as ga (ga.id ?? ga.sectionId)}
-											<rect
-												x={ga.x || 55}
-												y={ga.y || 60}
-												width={ga.width || 310}
-												height={ga.height || 180}
-												rx="8"
-												fill={manifestDetail.sections?.find((s: any) => s.id === ga.sectionId)
-													?.color || '#EF4444'}
-												opacity="0.15"
-											/>
-											<rect
-												x={ga.x || 55}
-												y={ga.y || 60}
-												width={ga.width || 310}
-												height={ga.height || 180}
-												rx="8"
-												fill="none"
-												stroke={manifestDetail.sections?.find((s: any) => s.id === ga.sectionId)
-													?.color || '#EF4444'}
-												stroke-width="2"
-												stroke-dasharray="6 3"
-											/>
-											<text
-												x={(ga.x || 55) + (ga.width || 310) / 2}
-												y={(ga.y || 60) + (ga.height || 180) / 2 - 8}
-												text-anchor="middle"
-												fill={manifestDetail.sections?.find((s: any) => s.id === ga.sectionId)
-													?.color || '#EF4444'}
-												font-size="12"
-												font-weight="800"
-												letter-spacing="1"
-											>
-												{manifestDetail.sections?.find((s: any) => s.id === ga.sectionId)?.name ||
-													'GA'}
-											</text>
-											<text
-												x={(ga.x || 55) + (ga.width || 310) / 2}
-												y={(ga.y || 60) + (ga.height || 180) / 2 + 12}
-												text-anchor="middle"
-												fill={manifestDetail.sections?.find((s: any) => s.id === ga.sectionId)
-													?.color || '#EF4444'}
-												font-size="10"
-												font-weight="600"
-												opacity="0.7"
-											>
-												{(ga.capacity || 0).toLocaleString()} standing
-											</text>
-										{/each}
-
-										<!-- RS Areas as bordered sections -->
-										{#each manifestDetail.rsAreas || [] as rs (rs.id ?? rs.sectionId)}
-											<rect
-												x={rs.x || 55}
-												y={rs.y || 60}
-												width={rs.width || 310}
-												height={rs.height || 90}
-												rx="6"
-												fill={manifestDetail.sections?.find((s: any) => s.id === rs.sectionId)
-													?.color
-													? manifestDetail.sections.find((s: any) => s.id === rs.sectionId).color +
-														'15'
-													: '#f5f3ff'}
-												stroke={manifestDetail.sections?.find((s: any) => s.id === rs.sectionId)
-													?.color || '#e9d5ff'}
-												stroke-width="1"
-											/>
-											<text
-												x={(rs.x || 55) + 10}
-												y={(rs.y || 60) + 15}
-												fill={manifestDetail.sections?.find((s: any) => s.id === rs.sectionId)
-													?.color || '#7c3aed'}
-												font-size="8"
-												font-weight="700"
-												letter-spacing="1"
-											>
-												{manifestDetail.sections?.find((s: any) => s.id === rs.sectionId)?.name ||
-													'RS'}
-											</text>
-											<!-- Render seats within RS area -->
-											{#each rs.rows || [] as row (row.id ?? row.label)}
-												{#each row.seats || [] as seat (seat.id)}
-													<circle
-														cx={seat.positionX || 0}
-														cy={seat.positionY || 0}
-														r={seatR}
-														fill={getSeatFill(seat, activeTab)}
-														stroke="none"
-														class="cursor-pointer transition-all hover:opacity-80"
-													/>
-													{#if selectedSeatIds.includes(seat.id)}
-														<circle
-															cx={seat.positionX || 0}
-															cy={seat.positionY || 0}
-															r={seatR - 0.75}
-															fill="none"
-															stroke="#000000"
-															stroke-width="1.5"
-															class="pointer-events-none"
-														/>
-													{/if}
-												{/each}
-											{/each}
-										{/each}
-
-										<!-- Fallback: no areas at all, show empty state -->
-										{#if (manifestDetail.gaAreas || []).length === 0 && (manifestDetail.rsAreas || []).length === 0}
-											<text x="210" y="160" text-anchor="middle" fill="#94a3b8" font-size="12"
-												>No layout areas defined</text
-											>
-										{/if}
-									{:else}
-										<!-- Fallback: no manifest detail, show hardcoded grid -->
-										<rect
-											x="65"
-											y="65"
-											width="300"
-											height="80"
-											rx="6"
-											fill="#f5f3ff"
-											stroke="#e9d5ff"
-											stroke-width="1"
-										/>
-										<rect
-											x="65"
-											y="165"
-											width="300"
-											height="80"
-											rx="6"
-											fill={getSeatFill(
-												{ id: 'GA', rowLetter: 'C', status: 'Available' },
-												activeTab
-											)}
-											stroke="#a7f3d0"
-											stroke-dasharray="4 2"
-											stroke-width="1.5"
-											class="cursor-pointer transition-all hover:opacity-80"
-											oncontextmenu={(e) => {
-												e.preventDefault();
-												e.stopPropagation();
-												if (selectedSeatIds.includes('GA')) {
-													selectedSeatIds = selectedSeatIds.filter((id) => id !== 'GA');
-												} else {
-													selectedSeatIds = [...selectedSeatIds, 'GA'];
-												}
-											}}
-											onclick={() => {
-												selectedSeatIds = ['GA'];
-											}}
-											role="button"
-											tabindex="0"
-											onkeydown={(e) => e.key === 'Enter' && (selectedSeatIds = ['GA'])}
-											aria-label="GA Area"
-										/>
-										{#if selectedSeatIds.includes('GA')}
-											<rect
-												x="65"
-												y="165"
-												width="300"
-												height="80"
-												rx="6"
-												fill="none"
-												stroke="#000000"
-												stroke-width="2"
-												class="pointer-events-none"
-											/>
-										{/if}
-										<text
-											x="75"
-											y="80"
-											fill="#7c3aed"
-											font-size="8"
-											font-weight="700"
-											letter-spacing="1">VIP</text
-										>
-										<text
-											x="215"
-											y="210"
-											text-anchor="middle"
-											fill="#000000"
-											font-size="16"
-											font-weight="800"
-											letter-spacing="2">GA</text
-										>
-										{#each ['A', 'B'] as letter, i (letter)}
-											<text
-												x="85"
-												y={88 + i * 40}
-												text-anchor="end"
-												fill="#94a3b8"
-												font-size="10"
-												font-weight="700">{letter}</text
-											>
-										{/each}
-										{#each seats as seat (seat.id)}
-											{#if !seat.isArea}
-												<circle
-													cx={seat.x}
-													cy={seat.y}
-													r={seatR}
-													fill={getSeatFill(seat, activeTab)}
-													stroke="none"
-													oncontextmenu={(e) => {
-														e.preventDefault();
-														e.stopPropagation();
-														let idsToToggle = [seat.id];
-														if (selectionTool === 'row')
-															idsToToggle = seats
-																.filter((s) => s.rowLetter === seat.rowLetter)
-																.map((s) => s.id);
-														else if (selectionTool === 'section')
-															idsToToggle = seats
-																.filter((s) => s.rowLetter < 'C' === seat.rowLetter < 'C')
-																.map((s) => s.id);
-
-														const allSelected = idsToToggle.every((id) =>
-															selectedSeatIds.includes(id)
-														);
-														if (allSelected) {
-															selectedSeatIds = selectedSeatIds.filter(
-																(id) => !idsToToggle.includes(id)
-															);
-														} else {
-															selectedSeatIds = [...new Set([...selectedSeatIds, ...idsToToggle])];
-														}
-													}}
-													role="button"
-													tabindex="0"
-													onkeydown={(e) => e.key === 'Enter' && (selectedSeatIds = [seat.id])}
-													aria-label="Seat {seat.id} ({seat.status})"
-													class="cursor-pointer transition-all outline-none hover:opacity-80 focus:outline-none"
-												/>
-												{#if selectedSeatIds.includes(seat.id)}
-													<circle
-														cx={seat.x}
-														cy={seat.y}
-														r={seatR - 0.75}
-														fill="none"
-														stroke="#000000"
-														stroke-width="1.5"
-														class="pointer-events-none"
-													/>
-												{/if}
-											{/if}
-										{/each}
-									{/if}
-								</svg>
-							</div>
+							<KonvaSeatingCanvas
+								bind:this={konvaCanvasRef}
+								{manifestDetail}
+								{seats}
+								bind:selectedSeatIds
+								{activeTab}
+								seatPriceLevels={activeTab === 'seats' ? seatPriceLevels : undefined}
+								basePriceLevels={priceLevels}
+								{activeCanvasTool}
+								{selectionTool}
+								bind:viewport={canvasViewport}
+								bind:bounds={canvasBounds}
+							/>
 						</div>
 
 						<div
@@ -1398,7 +1202,7 @@
 						>
 							<button
 								type="button"
-								onclick={zoomIn}
+								onclick={() => konvaCanvasRef?.zoomIn?.()}
 								class="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
 								title="Zoom In"
 							>
@@ -1413,7 +1217,7 @@
 							</button>
 							<button
 								type="button"
-								onclick={zoomOut}
+								onclick={() => konvaCanvasRef?.zoomOut?.()}
 								class="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
 								title="Zoom Out"
 							>
@@ -1429,7 +1233,7 @@
 							<div class="h-px w-4 bg-slate-200"></div>
 							<button
 								type="button"
-								onclick={fitToView}
+								onclick={() => konvaCanvasRef?.fitToView?.()}
 								class="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
 								title="Fit to View"
 							>
@@ -1459,108 +1263,140 @@
 							<div
 								class="relative w-full flex-1 overflow-hidden rounded-lg border border-slate-200/60 bg-slate-50"
 							>
-								<svg viewBox="0 0 420 300" class="pointer-events-none h-full w-full">
-									<rect
-										x="55"
-										y="62"
-										width="310"
-										height="90"
-										rx="6"
-										fill="#e9d5ff"
-										fill-opacity="0.3"
-										stroke="#7c3aed"
-										stroke-width="2"
-									/>
-									<rect
-										x="55"
-										y="165"
-										width="310"
-										height="90"
-										rx="6"
-										fill="#a7f3d0"
-										fill-opacity="0.3"
-										stroke="#059669"
-										stroke-width="2"
-									/>
-									{#each seats as seat (seat.id)}
-										<circle
-											cx={seat.x}
-											cy={seat.y}
-											r="2"
-											fill={seat.status === 'Available'
-												? '#94a3b8'
-												: seat.status === 'Sold'
-													? '#059669'
-													: seat.status === 'Reserved'
-														? '#d97706'
-														: '#dc2626'}
-										/>
+								<svg viewBox="{canvasBounds.minX} {canvasBounds.minY} {canvasBounds.width} {canvasBounds.height}" class="pointer-events-none h-full w-full">
+									{#each manifestDetail?.rsAreas || [] as section}
+										{#if section.polygon?.length >= 6}
+											<polygon
+												points={section.polygon.map((p: any) => p.x != null ? `${p.x},${p.y}` : `${p[0]},${p[1]}`).join(' ')}
+												fill="#FFFFFF"
+												stroke="#CBD5E1"
+												stroke-width="1"
+												vector-effect="non-scaling-stroke"
+											/>
+										{:else if section.x != null}
+											<rect
+												x={section.x}
+												y={section.y}
+												width={section.width}
+												height={section.height}
+												fill="#FFFFFF"
+												stroke="#CBD5E1"
+												stroke-width="1"
+												vector-effect="non-scaling-stroke"
+											/>
+										{/if}
 									{/each}
+									{#each manifestDetail?.gaAreas || [] as ga}
+										{#if ga.polygon?.length >= 6}
+											<polygon
+												points={ga.polygon.map((p: any) => p.x != null ? `${p.x},${p.y}` : `${p[0]},${p[1]}`).join(' ')}
+												fill="none"
+												stroke="#334155"
+												stroke-opacity="0.35"
+												stroke-width="0.5"
+												vector-effect="non-scaling-stroke"
+											/>
+										{:else}
+											<rect
+												x={ga.x ?? 50}
+												y={ga.y ?? 50}
+												width={ga.width ?? 200}
+												height={ga.height ?? 100}
+												fill="none"
+												stroke="#334155"
+												stroke-opacity="0.35"
+												stroke-width="0.5"
+												rx="3"
+												vector-effect="non-scaling-stroke"
+											/>
+										{/if}
+									{/each}
+									{#each manifestDetail?.objects || [] as obj}
+										{#if obj.type === 'stage'}
+											{@const sx = obj.x ?? 100}{@const sy = obj.y ?? 100}{@const sw = obj.width ?? 200}{@const sh = obj.height ?? 100}{@const scs = Math.max(sw * 0.6, sw - 60)}
+											<path
+												d={`M ${sx} ${sy} L ${sx + scs} ${sy} Q ${sx + 2 * sw - scs} ${sy + sh / 2} ${sx + scs} ${sy + sh} L ${sx} ${sy + sh} Z`}
+												fill="#334155"
+												stroke="#64748B"
+												stroke-width="1.5"
+											/>
+										{:else}
+											<rect
+												x={obj.x ?? 100}
+												y={obj.y ?? 100}
+												width={obj.width ?? 200}
+												height={obj.height ?? 100}
+												fill={obj.color || '#94A3B8'}
+												fill-opacity="0.25"
+												stroke={obj.color || '#64748B'}
+												stroke-opacity="0.7"
+												stroke-width="1.5"
+												rx="3"
+											/>
+										{/if}
+									{/each}
+									<rect
+										x={canvasViewport.x}
+										y={canvasViewport.y}
+										width={canvasViewport.w}
+										height={canvasViewport.h}
+										fill="rgba(239,68,68,0.06)"
+										stroke="#EF4444"
+										stroke-width="5"
+										stroke-dasharray="8 6"
+										rx="3"
+									/>
 								</svg>
 							</div>
 						</div>
 
 						{#if selectedSeatDetails.length > 0}
 							<div
+								class="absolute top-3 left-3 z-30 min-w-48 cursor-grab rounded-xl bg-white shadow-xl active:cursor-grabbing"
 								draggable="true"
 								ondragstart={(e) => {
 									e.dataTransfer?.setData('text/plain', 'selected_seats');
-									if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+									if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copyMove';
 								}}
 								role="region"
 								aria-label="Selected seats"
-								class="absolute top-3 left-3 z-30 flex min-w-[200px] cursor-grab flex-col rounded-xl border border-slate-200 bg-white/95 shadow-lg backdrop-blur-md active:cursor-grabbing"
 							>
-								<div class="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-									<div class="flex items-center gap-2.5">
-										<div
-											class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0070F3] text-white shadow-sm"
-										>
-											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-												><path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"
-												/></svg
-											>
-										</div>
-										<span class="text-xl font-semibold text-slate-700">{totalSelectedCount}</span>
-									</div>
-									<button
-										type="button"
-										onclick={() => (selectedSeatIds = [])}
-										class="text-xs font-medium text-[#0070F3] transition-colors hover:text-blue-700"
-										>Clear</button
+								<!-- Header -->
+								<div class="flex items-center gap-4 border-b border-slate-100 p-3 px-4">
+									<div
+										class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white shadow-[inset_0_-2px_4px_rgba(0,0,0,0.2)]"
 									>
+										<IconArmchair class="h-6 w-6" />
+									</div>
+									<div class="flex flex-1 items-center justify-between gap-4">
+										<span class="text-xl font-semibold text-slate-600">{totalSelectedCount}</span>
+									<button
+										class="text-sm font-medium text-blue-600 hover:text-blue-800"
+										type="button"
+										onclick={async () => {
+											selectedSeatIds = [];
+											await tick();
+											konvaCanvasRef?.redraw?.();
+										}}
+									>
+										Clear
+									</button>
+									</div>
 								</div>
 
-								<div class="flex flex-col gap-1.5 p-2 text-xs">
+								<!-- Details -->
+								<div class="flex flex-col gap-3 p-3 px-4 pt-3">
 									{#each selectedSeatsByPriceLevel as item (item.pl?.id)}
-										<div class="flex items-center justify-between text-slate-600">
+										<div class="flex items-center justify-between">
 											<div class="flex items-center gap-2">
-												<span
-													class="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full text-white"
-													style="background:{item.pl?.color}"
+												<div
+													class="flex h-4 w-4 items-center justify-center rounded-full text-white"
+													style="background-color: {item.pl?.color || '#CBD5E1'};"
 												>
-													<svg
-														class="ml-px h-2 w-2"
-														fill="none"
-														stroke="currentColor"
-														viewBox="0 0 24 24"
-														><path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															stroke-width="3.5"
-															d="M9 5l7 7-7 7"
-														/></svg
-													>
-												</span>
-												<span class="text-[11px] font-medium text-slate-500"
-													>{item.pl?.label || item.pl?.id}</span
-												>
+												</div>
+												<span class="text-sm font-medium text-slate-600">{item.pl?.label || 'Unassigned'}</span>
 											</div>
-											<span class="text-[11px] font-bold text-slate-500">{item.count}</span>
+											<span class="font-semibold text-slate-600">{item.count}</span>
 										</div>
 									{/each}
 								</div>
@@ -1581,21 +1417,12 @@
 								? 'bg-slate-100 text-slate-900'
 								: 'text-slate-400 hover:bg-slate-50 hover:text-slate-700'}"
 						>
-							<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-								><path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="1.5"
-									d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"
-								/></svg
-							>
+							<IconPointer2 size={16} stroke={2} />
 							Seat
 						</button>
 						<button
-							onclick={() => {
-								activeCanvasTool = 'select';
-								selectionTool = 'row';
-							}}
+							type="button"
+							onclick={() => (selectionTool = 'row')}
 							class="flex w-10 flex-col items-center gap-0.5 rounded-lg px-1 py-2 text-[9px] font-bold transition-colors {activeCanvasTool ===
 								'select' && selectionTool === 'row'
 								? 'bg-slate-100 text-slate-900'
@@ -1612,10 +1439,8 @@
 							Row
 						</button>
 						<button
-							onclick={() => {
-								activeCanvasTool = 'select';
-								selectionTool = 'section';
-							}}
+							type="button"
+							onclick={() => (selectionTool = 'section')}
 							class="flex w-10 flex-col items-center gap-0.5 rounded-lg px-1 py-2 text-[9px] font-bold transition-colors {activeCanvasTool ===
 								'select' && selectionTool === 'section'
 								? 'bg-slate-100 text-slate-900'
@@ -1640,14 +1465,7 @@
 								? 'bg-slate-100 text-slate-900'
 								: 'text-slate-400 hover:bg-slate-50 hover:text-slate-700'}"
 						>
-							<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-								><path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="1.5"
-									d="M5 15l7-7 7 7"
-								/></svg
-							>
+							<IconHandGrab size={16} stroke={2} />
 							Pan
 						</button>
 						<div class="my-1.5 h-px w-8 bg-slate-100"></div>
@@ -1655,28 +1473,14 @@
 							onclick={() => (showFilterDialog = !showFilterDialog)}
 							class="flex w-10 flex-col items-center gap-0.5 rounded-lg px-1 py-2 text-[9px] font-bold text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-700"
 						>
-							<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-								><path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="1.5"
-									d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-								/></svg
-							>
+							<IconFilter size={16} stroke={2} />
 							Filters
 						</button>
 						<button
 							onclick={() => (showAssistantDialog = !showAssistantDialog)}
 							class="flex w-10 flex-col items-center gap-0.5 rounded-lg px-1 py-2 text-[9px] font-bold text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-700"
 						>
-							<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-								><path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="1.5"
-									d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-								/></svg
-							>
+							<IconWand size={16} stroke={2} />
 							Assist
 						</button>
 					</aside>

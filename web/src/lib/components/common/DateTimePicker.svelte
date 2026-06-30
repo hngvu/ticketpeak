@@ -166,7 +166,7 @@
 	<button
 		type="button"
 		onclick={() => (isOpen = !isOpen)}
-		class="flex w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left text-sm font-medium text-slate-800 transition-all hover:border-blue-500 focus:border-blue-500 focus:outline-none"
+		class="flex w-full items-center gap-2.5 rounded-none border border-slate-300 bg-white px-3.5 py-2.5 text-left text-sm font-medium text-slate-800 transition-all hover:border-blue-500 focus:border-blue-500 focus:outline-none"
 	>
 		<IconCalendarEvent size={18} stroke={1.8} class="shrink-0 text-slate-400" />
 		{#if displayValue}
