@@ -30,6 +30,62 @@
 
 	const seatR = 5;
 
+	// Price slider state
+	// Price slider state
+	let sliderMinPrice = $state(1000000);
+	let sliderMaxPrice = $state(9000000);
+	const MIN_ABS = 100000; // 100K
+	const MAX_ABS = 10000000; // 10M
+
+	let sliderMinPercent = $derived(Math.max(0, Math.min(100, ((sliderMinPrice - MIN_ABS) / (MAX_ABS - MIN_ABS)) * 100)));
+	let sliderMaxPercent = $derived(Math.max(0, Math.min(100, ((sliderMaxPrice - MIN_ABS) / (MAX_ABS - MIN_ABS)) * 100)));
+
+	let draggingThumb = $state<'min' | 'max' | null>(null);
+	let sliderTrack = $state<HTMLElement | null>(null);
+
+	let isMinFocused = $state(false);
+	let isMaxFocused = $state(false);
+
+	function formatPrice(val: number) {
+		return new Intl.NumberFormat('vi-VN').format(val) + ' ₫';
+	}
+
+	function parsePrice(str: string) {
+		return parseInt(str.replace(/\D/g, ''), 10) || 0;
+	}
+
+	function handleMinInput(e: Event) {
+		sliderMinPrice = parsePrice((e.target as HTMLInputElement).value);
+	}
+
+	function handleMaxInput(e: Event) {
+		sliderMaxPrice = parsePrice((e.target as HTMLInputElement).value);
+	}
+
+	function handleSliderPointerDown(e: PointerEvent, type: 'min' | 'max') {
+		draggingThumb = type;
+		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+	}
+
+	function handleSliderPointerMove(e: PointerEvent) {
+		if (!draggingThumb || !sliderTrack) return;
+		const rect = sliderTrack.getBoundingClientRect();
+		let percent = ((e.clientX - rect.left) / rect.width);
+		percent = Math.max(0, Math.min(1, percent));
+		let val = Math.round(MIN_ABS + percent * (MAX_ABS - MIN_ABS));
+
+		if (draggingThumb === 'min') {
+			sliderMinPrice = Math.min(val, sliderMaxPrice);
+		} else {
+			sliderMaxPrice = Math.max(val, sliderMinPrice);
+		}
+	}
+
+	function handleSliderPointerUp(e: PointerEvent) {
+		draggingThumb = null;
+		(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+	}
+
 	const selectedItems = $derived(
 		[...selection.entries()]
 			.filter(([, qty]) => qty > 0)
@@ -236,43 +292,7 @@
 		<!-- Left: Manifest / Seating Map -->
 		<div class="flex min-h-0 flex-1 flex-col bg-white">
 			{#if hasManifest}
-				<div class="mb-3 flex shrink-0 items-center gap-2">
-					{#if activeOfferForSeating}
-						<button
-							type="button"
-							onclick={resetSeating}
-							class="cursor-pointer rounded-md border border-hairline bg-canvas-soft px-3 py-1.5 text-xs font-bold text-ink transition-colors hover:bg-canvas"
-							>← Back to Offers</button
-						>
-						<span class="text-xs text-mute"
-							>Selecting: <strong class="text-ink">{activeOfferForSeating.name}</strong></span
-						>
-					{:else}
-						<button
-							type="button"
-							class="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-hairline bg-canvas-soft px-3 py-1.5 text-xs font-bold text-ink transition-colors hover:bg-canvas"
-						>
-							<svg
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2.5"
-								class="h-3.5 w-3.5"><path d="M3 6h18M3 12h18M3 18h18" /></svg
-							>
-							Filters
-						</button>
-						<button
-							type="button"
-							class="cursor-pointer rounded-md bg-ink px-3 py-1.5 text-xs font-bold text-white"
-							>{selectedItems.reduce((s, i) => s + i.qty, 0) || 0} Tickets</button
-						>
-						<button
-							type="button"
-							class="cursor-pointer rounded-md border border-hairline bg-canvas-soft px-3 py-1.5 text-xs font-bold text-ink transition-colors hover:bg-canvas"
-							>Ticket Types</button
-						>
-					{/if}
-				</div>
+
 
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div
@@ -417,21 +437,7 @@
 					</div>
 				</div>
 
-				{#if data.manifestDetail?.priceLevels?.length > 0}
-					<div class="mt-3 flex shrink-0 flex-wrap items-center gap-3">
-						{#each data.manifestDetail.priceLevels as pl}
-							<div class="flex items-center gap-1.5">
-								<span class="inline-block h-3 w-3 rounded-sm" style="background:{pl.color}"></span>
-								<span class="text-[11px] font-semibold text-mute"
-									>{pl.name} — {new Intl.NumberFormat('vi-VN', {
-										style: 'currency',
-										currency: 'VND'
-									}).format(pl.price)}</span
-								>
-							</div>
-						{/each}
-					</div>
-				{/if}
+
 
 				{#if selectedSeats.length > 0}
 					<div class="mt-3 shrink-0 rounded-lg border border-hairline bg-canvas-soft p-3">
@@ -477,10 +483,10 @@
 		<div class="flex min-h-0 w-full shrink-0 flex-col md:w-[420px] md:border-l md:border-hairline">
 			<div class="relative flex min-h-0 flex-1 flex-col bg-white">
 				<!-- Top Bar: Qty, Unlock, Filters -->
-				<div class="flex items-center justify-between px-4 pt-4">
+				<div class="flex items-center gap-2 px-4 pt-4">
 					<select
 						bind:value={globalQty}
-						class="cursor-pointer rounded-full border border-hairline bg-white px-4 py-2 text-sm font-bold text-ink shadow-sm hover:border-hairline-strong focus:outline-none"
+						class="flex-1 cursor-pointer rounded-full border border-hairline bg-white px-4 py-2 text-sm font-bold text-ink shadow-sm hover:border-hairline-strong focus:outline-none"
 					>
 						<option value={1}>1 Ticket</option>
 						<option value={2}>2 Tickets</option>
@@ -489,66 +495,75 @@
 						<option value={5}>5 Tickets</option>
 						<option value={6}>6 Tickets</option>
 					</select>
-					<div class="flex gap-2">
-						<button
-							class="flex cursor-pointer items-center gap-1.5 rounded-full border border-hairline bg-white px-4 py-2 text-sm font-bold text-ink shadow-sm transition hover:bg-canvas-soft"
+					<button
+						class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-hairline bg-white px-4 py-2 text-sm font-bold text-ink shadow-sm transition hover:bg-canvas-soft"
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							width="14"
+							height="14"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg
 						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								width="14"
-								height="14"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path
-									d="M7 11V7a5 5 0 0 1 10 0v4"
-								></path></svg
-							>
-							Unlock
-						</button>
-						<button
-							class="flex cursor-pointer items-center gap-1.5 rounded-full border border-hairline bg-white px-4 py-2 text-sm font-bold text-ink shadow-sm transition hover:bg-canvas-soft"
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								width="14"
-								height="14"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg
-							>
-							Filters
-						</button>
-					</div>
+						Filters
+					</button>
 				</div>
 
 				<!-- Price Slider -->
-				<div class="px-4 py-5">
+				<div class="px-4 py-5 slider-container">
 					<div class="flex items-center gap-4">
-						<div
-							class="min-w-[50px] rounded-md border border-hairline bg-white px-3 py-1.5 text-center text-[13px] font-bold text-ink shadow-sm"
-						>
-							<span class="text-xs font-normal opacity-70">₫</span>100K
+						<div class="relative flex items-center justify-center rounded-md border border-hairline bg-white shadow-sm focus-within:border-ink">
+							<input
+								type="text"
+								value={isMinFocused ? (sliderMinPrice || '') : formatPrice(sliderMinPrice)}
+								onfocus={() => (isMinFocused = true)}
+								onblur={() => {
+									isMinFocused = false;
+									sliderMinPrice = Math.max(MIN_ABS, Math.min(sliderMinPrice, sliderMaxPrice));
+								}}
+								oninput={handleMinInput}
+								class="w-[100px] bg-transparent py-1.5 px-2 text-center text-[13px] font-bold text-ink focus:outline-none"
+							/>
 						</div>
-						<div class="relative h-1 flex-1 rounded-full bg-ink">
+						<div class="relative h-1 flex-1 rounded-full bg-[#e2e8f0]" bind:this={sliderTrack}>
 							<div
-								class="absolute top-1/2 left-[10%] h-5 w-5 -translate-y-1/2 cursor-pointer rounded-full border-2 border-ink bg-white shadow-sm transition-transform hover:scale-110"
+								class="absolute top-0 bottom-0 rounded-full bg-ink"
+								style="left: {sliderMinPercent}%; right: {100 - sliderMaxPercent}%"
 							></div>
 							<div
-								class="absolute top-1/2 right-[20%] h-5 w-5 -translate-y-1/2 cursor-pointer rounded-full border-2 border-ink bg-white shadow-sm transition-transform hover:scale-110"
+								class="absolute top-1/2 -ml-2.5 h-5 w-5 -translate-y-1/2 cursor-grab rounded-full border-2 border-ink bg-white shadow-sm transition-transform hover:scale-110 active:cursor-grabbing touch-none"
+								style="left: {sliderMinPercent}%"
+								onpointerdown={(e) => handleSliderPointerDown(e, 'min')}
+								onpointermove={handleSliderPointerMove}
+								onpointerup={handleSliderPointerUp}
+								onpointercancel={handleSliderPointerUp}
+							></div>
+							<div
+								class="absolute top-1/2 -ml-2.5 h-5 w-5 -translate-y-1/2 cursor-grab rounded-full border-2 border-ink bg-white shadow-sm transition-transform hover:scale-110 active:cursor-grabbing touch-none"
+								style="left: {sliderMaxPercent}%"
+								onpointerdown={(e) => handleSliderPointerDown(e, 'max')}
+								onpointermove={handleSliderPointerMove}
+								onpointerup={handleSliderPointerUp}
+								onpointercancel={handleSliderPointerUp}
 							></div>
 						</div>
-						<div
-							class="min-w-[50px] rounded-md border border-hairline bg-white px-3 py-1.5 text-center text-[13px] font-bold text-ink shadow-sm"
-						>
-							<span class="text-xs font-normal opacity-70">₫</span>9M+
+						<div class="relative flex items-center justify-center rounded-md border border-hairline bg-white shadow-sm focus-within:border-ink">
+							<input
+								type="text"
+								value={isMaxFocused ? (sliderMaxPrice || '') : formatPrice(sliderMaxPrice)}
+								onfocus={() => (isMaxFocused = true)}
+								onblur={() => {
+									isMaxFocused = false;
+									sliderMaxPrice = Math.min(MAX_ABS, Math.max(sliderMaxPrice, sliderMinPrice));
+								}}
+								oninput={handleMaxInput}
+								class="w-[100px] bg-transparent py-1.5 px-2 text-center text-[13px] font-bold text-ink focus:outline-none"
+							/>
 						</div>
 					</div>
 				</div>

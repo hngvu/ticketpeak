@@ -98,18 +98,7 @@
 		? 'cursor-not-allowed opacity-50'
 		: ''}"
 >
-	<!-- Thumbnail Image -->
-	<div
-		class="h-10 w-14 shrink-0 overflow-hidden rounded-[4px] border border-hairline/50 bg-canvas-soft shadow-xs"
-	>
-		{#if offer.imageUrl}
-			<img src={offer.imageUrl} alt={offer.name} class="h-full w-full object-cover" />
-		{:else}
-			<div class="flex h-full w-full items-center justify-center bg-[#1a1a24]">
-				<span class="text-[8px] font-bold text-white opacity-50">TICKET</span>
-			</div>
-		{/if}
-	</div>
+
 
 	<!-- Info -->
 	<div class="min-w-0 flex-1">
